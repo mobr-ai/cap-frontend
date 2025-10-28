@@ -38,7 +38,7 @@ const WaitingList = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch("/api/wait_list", {
+      const res = await fetch("/api/v1/wait_list", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
