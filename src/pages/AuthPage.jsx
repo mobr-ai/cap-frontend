@@ -1,4 +1,4 @@
-// src/AuthPage.jsx
+// src/pages/AuthPage.jsx
 import i18n from "../i18n";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import reactStringReplace from "react-string-replace";
@@ -25,9 +25,8 @@ import LoadingPage from "./LoadingPage";
  * AuthPage (CAP)
  * - Supports login and signup (props.type = "login" | "create")
  * - Email/password (with confirmation flow + resend)
- * - Google OAuth via @react-oauth/google
+ * - Google OAuth 2 + One Tap (via @react-oauth/google and google.accounts.id)
  * - Cardano wallet login (CIP-30) via <CardanoWalletLogin/>
- *
  */
 function AuthPage(props) {
   const navigate = useNavigate();
@@ -90,7 +89,6 @@ function AuthPage(props) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        // semantic errors include confirmationError / oauthExistsError / loginError
         const errKey = errorData?.detail || errorData?.error || "loginError";
         if (errKey === "confirmationError") {
           setConfirmationError(true);
@@ -116,23 +114,54 @@ function AuthPage(props) {
     }
   };
 
+  // ---- Google OAuth / One Tap -----------------------------------------------
+
   const handleGoogleResponse = async (tokenResponse, onSuccess) => {
     try {
+      setLoading(true);
+
+      const token =
+        tokenResponse?.access_token || tokenResponse?.credential || null;
+      const tokenType = tokenResponse?.access_token
+        ? "access_token"
+        : "id_token";
+
+      if (!token) {
+        throw new Error("missingGoogleToken");
+      }
+
       const res = await fetch("/api/v1/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          token: tokenResponse?.access_token,
+          token,
+          token_type: tokenType,
           remember_me: true,
         }),
       });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.error || "googleAuthFailed");
+        let errMsg = "googleAuthFailed";
+        try {
+          const err = await res.json();
+          errMsg = err?.detail || err?.error || errMsg;
+        } catch {
+          /* ignore JSON parse errors */
+        }
+        throw new Error(errMsg);
       }
 
-      const apiResponse = await res.json();
+      let apiResponse = {};
+      try {
+        apiResponse = await res.json();
+      } catch {
+        throw new Error("invalidApiResponse");
+      }
+
+      if (!apiResponse?.access_token) {
+        throw new Error("invalidApiResponse");
+      }
+
       onSuccess?.(apiResponse);
     } catch (err) {
       console.error("Authentication Error:", err);
@@ -142,33 +171,55 @@ function AuthPage(props) {
     }
   };
 
-  // Email "two-step" UX
+  const loginWithGoogle = useGoogleLogin({
+    scope: "openid email profile",
+    flow: "implicit",
+    onSuccess: (tokenResponse) => {
+      console.log("Google OAuth success", tokenResponse);
+      handleGoogleResponse(tokenResponse, handleLogin);
+    },
+    onError: (error) => {
+      console.error("Google OAuth error", error);
+      showToast(t("googleAuthFailed"), "danger");
+    },
+  });
+
+  // ---- Optional: initialize Google One Tap ----------------------------------
+  useEffect(() => {
+    if (window.google?.accounts?.id) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          callback: (tokenResponse) =>
+            handleGoogleResponse(tokenResponse, handleLogin),
+        });
+        // show One Tap popup automatically
+        window.google.accounts.id.prompt();
+      } catch (e) {
+        console.warn("Google One Tap init failed:", e);
+      }
+    }
+  }, []);
+
+  // ---- Email "two-step" UX --------------------------------------------------
+
   const handleAuthStep = useCallback(() => {
-    // 1st click: capture email from the input
     if (!email) {
       const el = document.getElementById("Auth-input-text");
       const value = el?.value?.trim();
       if (value) setEmail(value);
       return;
     }
-    // 2nd click: commit password (from controlled input) and submit
     if (email && !pass) {
       if (passwordInput?.length > 0) setPass(passwordInput);
       return;
     }
-    // 3rd: actually call API
     if (email && pass && !processing) {
       handleEmailAuth();
     }
   }, [email, pass, passwordInput, processing]);
 
-  // Google login hook
-  const loginWithGoogle = useGoogleLogin({
-    onSuccess: (tokenResponse) =>
-      handleGoogleResponse(tokenResponse, handleLogin),
-  });
-
-  // Auto-submit when both email+pass are set by "Enter" event in password field
+  // Auto-submit when both email+pass are set by "Enter"
   useEffect(() => {
     if (email && pass && !processing) {
       handleEmailAuth();
@@ -176,7 +227,7 @@ function AuthPage(props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [email, pass]);
 
-  // Inspect URL params: session expiration & email confirmation
+  // URL params (session expired, confirmation)
   useEffect(() => {
     if (searchParams.get("sessionExpired") === "1") {
       showToast(t("sessionExpired"), "secondary");
@@ -189,7 +240,7 @@ function AuthPage(props) {
     }
   }, [searchParams, setSearchParams, showToast, t]);
 
-  // ---- Render ----------------------------------------------------------------
+  // ---- Render ---------------------------------------------------------------
 
   return (
     <Container className="Auth-body-wrapper" fluid>
@@ -214,7 +265,7 @@ function AuthPage(props) {
                 {props.type === "create" ? t("signUpMsg") : t("loginMsg")}
               </h2>
 
-              {/* Step 1: email entry */}
+              {/* Step 1: email */}
               {!email && (
                 <InputGroup className="Auth-input-email" size="md">
                   <InputGroup.Text className="Auth-input-label"></InputGroup.Text>
@@ -222,24 +273,17 @@ function AuthPage(props) {
                     id="Auth-input-text"
                     className="Auth-email-input"
                     aria-label="Enter valid e-mail"
-                    aria-describedby="Auth-help-msg"
                     placeholder={t("mailPlaceholder")}
-                    onFocus={() => {
-                      const el = document.getElementById("Auth-input-text");
-                      if (el) el.placeholder = "";
-                    }}
-                    onBlur={() => {
-                      const el = document.getElementById("Auth-input-text");
-                      if (el && el.placeholder === "")
-                        el.placeholder = t("mailPlaceholder");
-                    }}
+                    onFocus={(e) => (e.target.placeholder = "")}
+                    onBlur={(e) =>
+                      (e.target.placeholder = t("mailPlaceholder"))
+                    }
                     size="md"
                   />
-                  <Form.Text id="Auth-help-msg" muted />
                 </InputGroup>
               )}
 
-              {/* Step 1.5: show entered email (click label to edit) */}
+              {/* Step 1.5: entered email */}
               {email && (
                 <InputGroup className="Auth-input-email-entered" size="md">
                   <InputGroup.Text
@@ -252,9 +296,7 @@ function AuthPage(props) {
                     }}
                   />
                   <Form.Control
-                    id="Auth-input-text"
                     className="Auth-email-input"
-                    aria-label="Enter valid e-mail"
                     placeholder={email}
                     readOnly
                     size="md"
@@ -262,7 +304,7 @@ function AuthPage(props) {
                 </InputGroup>
               )}
 
-              {/* Step 2: password entry + remember me */}
+              {/* Step 2: password */}
               {email && (
                 <>
                   <InputGroup className="Auth-input-pass" size="md">
@@ -278,8 +320,6 @@ function AuthPage(props) {
                     <Form.Control
                       id="Auth-input-password-text"
                       className="Auth-password-input"
-                      aria-label="Enter password"
-                      aria-describedby="Auth-help-msg"
                       type={showPassword ? "text" : "password"}
                       placeholder="Password"
                       size="md"
@@ -288,11 +328,10 @@ function AuthPage(props) {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
-                          setPass(passwordInput); // commit on Enter → triggers useEffect
+                          setPass(passwordInput);
                         }
                       }}
                     />
-                    <Form.Text id="Auth-help-msg" muted />
                   </InputGroup>
 
                   <Form.Check
@@ -310,20 +349,18 @@ function AuthPage(props) {
                 <p className="Auth-alternative-link">{t("forgotPass")}</p>
               )}
 
-              {/* CTA: next / resend confirmation */}
+              {/* CTA */}
               <>
                 {!confirmationError && (
-                  <>
-                    <Button
-                      className="Auth-input-button"
-                      variant="dark"
-                      size="md"
-                      onClick={!processing ? handleAuthStep : null}
-                      disabled={processing}
-                    >
-                      {processing ? t("processingMail") : t("authNextStep")}
-                    </Button>
-                  </>
+                  <Button
+                    className="Auth-input-button"
+                    variant="dark"
+                    size="md"
+                    onClick={!processing ? handleAuthStep : null}
+                    disabled={processing}
+                  >
+                    {processing ? t("processingMail") : t("authNextStep")}
+                  </Button>
                 )}
                 {confirmationError && (
                   <>
@@ -343,7 +380,7 @@ function AuthPage(props) {
                 )}
               </>
 
-              {/* Toggle link between login <-> signup */}
+              {/* Switch login/signup */}
               <p>
                 {props.type === "login"
                   ? reactStringReplace(
@@ -379,7 +416,7 @@ function AuthPage(props) {
                 <span className="Auth-divider-or">{t("signUpOR")}</span>
               </div>
 
-              {/* Google OAuth */}
+              {/* Google OAuth Button */}
               <Button
                 id="Auth-oauth-google"
                 className="Auth-oauth-button"
@@ -409,7 +446,7 @@ function AuthPage(props) {
           </Container>
         )}
 
-      {/* "Check your email" view after /api/v1/register */}
+      {/* "Check your email" confirmation view */}
       {searchParams.get("confirmed") === "false" && (
         <Container className="Auth-container confirm-message-box">
           <Image className="Auth-logo" src="./icons/logo.png" alt="CAP logo" />
