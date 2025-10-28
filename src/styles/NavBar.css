@@ -1,0 +1,232 @@
+/* ───────────────────────────────
+   NAVBAR STRUCTURE & LAYOUT
+   ─────────────────────────────── */
+:root {
+  --nav-font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+    Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  --nav-size: 14px;
+  --nav-height: 48px;
+  --nav-fg: #e5e7eb;
+  --nav-fg-dim: #94a3b8;
+  --nav-bg: #0b1222;
+}
+
+/* Bar container */
+.cap-navbar {
+  background: var(--nav-bg);
+  color: var(--nav-fg);
+  font-family: var(--nav-font);
+  font-size: var(--nav-size);
+  height: var(--nav-height);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Grid layout: Brand | Status | Controls */
+.cap-navbar .cap-navbar-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 32vw) 1fr auto;
+  align-items: center;
+  column-gap: 12px;
+}
+
+/* ───────────────────────────────
+   BRAND AREA
+   ─────────────────────────────── */
+.Navbar-brand-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.Navbar-brand-slot {
+  display: inline-block;
+  width: clamp(180px, 26vw, 340px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: #f1f5f9;
+}
+
+/* ───────────────────────────────
+   STATUS STRIP (Analytics)
+   ─────────────────────────────── */
+.navbar-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-left: auto;
+  min-width: 420px;
+  max-width: 680px;
+  flex-wrap: nowrap;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.status-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.status-item .label {
+  color: #94a3b8;
+  font-weight: 500;
+}
+.status-item .value {
+  color: #e5e7eb;
+  font-weight: 600;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* width helpers */
+.w-120 {
+  min-width: 120px;
+}
+.w-140 {
+  min-width: 140px;
+}
+.w-160 {
+  min-width: 160px;
+}
+
+/* Dots */
+.status-item .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9ca3af;
+}
+.status-item.sync .dot {
+  background: #f59e0b;
+} /* amber */
+.status-item.sync.synced .dot {
+  background: #10b981;
+} /* green */
+.status-item.checking .dot {
+  background: #f59e0b;
+}
+.status-item.offline .dot {
+  background: #ef4444;
+}
+
+/* ───────────────────────────────
+   USER MENU & DROPDOWNS
+   ─────────────────────────────── */
+.navbar-user-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.navbar-user-avatar {
+  width: auto;
+  height: 26px;
+}
+.navbar-user-name {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.navbar-user-caret {
+  display: inline-block;
+  line-height: 1;
+  margin-left: 4px;
+}
+
+/* Hide default bootstrap caret */
+#navbar-user .dropdown-toggle::after {
+  display: none !important;
+}
+
+/* Align dropdown menu and make room for submenu (desktop) */
+/* @media (min-width: 992px) {
+  .navbar-user-dropdown > .dropdown-menu {
+    transform: translateX(-140px) !important;
+  }
+} */
+
+/* General dropdown item normalization */
+.navbar .dropdown-menu-dark,
+.dropdown-menu-dark {
+  background-color: #0f172a !important;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  min-width: 220px;
+}
+
+.dropdown-menu-dark .dropdown-item {
+  display: flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--nav-fg);
+  transition: background 0.15s ease-in-out;
+}
+.dropdown-menu-dark .dropdown-item:hover {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+/* Submenu (Language) */
+.submenu {
+  position: relative;
+}
+.submenu-toggle.dropdown-item {
+  padding-right: 1.25rem; /* space for caret */
+}
+.submenu-caret {
+  transition: transform 0.15s ease-in-out;
+  line-height: 1;
+  opacity: 0.9;
+}
+.submenu.show .submenu-caret {
+  transform: rotate(90deg);
+}
+
+/* Right-opening submenu */
+.submenu .dropdown-menu {
+  left: 100% !important;
+  top: 0 !important;
+  margin-left: 0.25rem;
+  min-width: 220px;
+}
+
+/* ───────────────────────────────
+   RESPONSIVE ADJUSTMENTS
+   ─────────────────────────────── */
+@media (max-width: 992px) {
+  .cap-navbar .cap-navbar-row {
+    grid-template-columns: 1fr auto;
+  }
+  .navbar-status-bar {
+    min-width: 0;
+    max-width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+    font-size: 0.8rem;
+  }
+  .Navbar-brand-slot {
+    width: clamp(140px, 40vw, 240px);
+  }
+}
+@media (max-width: 768px) {
+  .navbar-status-bar {
+    justify-content: center;
+  }
+}
+
+.dropdown-toggle::after {
+  display: none !important;
+}
+
+.nav-link {
+  display: flex;
+}

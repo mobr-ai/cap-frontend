@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
         define: {
             // some libs still read these; safe empty shims for browser
             global: {},
-            'process.env': {}
+            // 'process.env': {},
         },
 
         optimizeDeps: {

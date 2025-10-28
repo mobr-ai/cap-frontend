@@ -54,7 +54,7 @@ function AuthPage(props) {
   const handleResendConfirmation = async () => {
     setResendLoading(true);
     try {
-      const res = await fetch("/api/resend_confirmation", {
+      const res = await fetch("/api/v1/resend_confirmation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, language: currentLang() }),
@@ -73,7 +73,8 @@ function AuthPage(props) {
   };
 
   const handleEmailAuth = async () => {
-    const endpoint = props.type === "create" ? "/api/register" : "/api/login";
+    const endpoint =
+      props.type === "create" ? "/api/v1/register" : "/api/v1/login";
     setProcessing(true);
     try {
       const response = await fetch(endpoint, {
@@ -117,7 +118,7 @@ function AuthPage(props) {
 
   const handleGoogleResponse = async (tokenResponse, onSuccess) => {
     try {
-      const res = await fetch("/api/auth/google", {
+      const res = await fetch("/api/v1/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -345,16 +346,32 @@ function AuthPage(props) {
               {/* Toggle link between login <-> signup */}
               <p>
                 {props.type === "login"
-                  ? reactStringReplace(t("signUpAlternativeMsg"), "{}", () => (
-                      <NavLink className="Auth-alternative-link" to="/signup">
-                        {t("signUpButton")}
-                      </NavLink>
-                    ))
-                  : reactStringReplace(t("loginAlternativeMsg"), "{}", () => (
-                      <NavLink className="Auth-alternative-link" to="/login">
-                        {t("loginButton")}
-                      </NavLink>
-                    ))}
+                  ? reactStringReplace(
+                      t("signUpAlternativeMsg"),
+                      "{}",
+                      (_match, i) => (
+                        <NavLink
+                          key={`signup-alt-${i}`}
+                          className="Auth-alternative-link"
+                          to="/signup"
+                        >
+                          {t("signUpButton")}
+                        </NavLink>
+                      )
+                    )
+                  : reactStringReplace(
+                      t("loginAlternativeMsg"),
+                      "{}",
+                      (_match, i) => (
+                        <NavLink
+                          key={`login-alt-${i}`}
+                          className="Auth-alternative-link"
+                          to="/login"
+                        >
+                          {t("loginButton")}
+                        </NavLink>
+                      )
+                    )}
               </p>
 
               {/* Divider */}
@@ -392,7 +409,7 @@ function AuthPage(props) {
           </Container>
         )}
 
-      {/* "Check your email" view after /api/register */}
+      {/* "Check your email" view after /api/v1/register */}
       {searchParams.get("confirmed") === "false" && (
         <Container className="Auth-container confirm-message-box">
           <Image className="Auth-logo" src="./icons/logo.png" alt="CAP logo" />

@@ -111,7 +111,7 @@ export default function CardanoWalletLogin({ onLogin, showToast }) {
       const api = await w[exactKey].enable();
       const walletInfo = await getWalletInfo(exactKey, api);
 
-      const res = await fetch("/api/auth/cardano", {
+      const res = await fetch("/api/v1/auth/cardano", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

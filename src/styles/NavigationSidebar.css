@@ -1,0 +1,99 @@
+/* src/styles/NavigationSidebar.css */
+
+.cap-sidebar {
+  background: #0f172a !important; /* Deep slate */
+  padding: 1.5rem 1rem;
+  font-family: system-ui, sans-serif;
+  color: #e2e8f0;
+}
+
+.bm-menu {
+  background: #0f172a !important;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 0.75rem;
+}
+
+.sidebar-logo {
+  width: 28px;
+  height: 28px;
+}
+
+.sidebar-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #f1f5f9;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  color: #cbd5e1;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.sidebar-item:hover {
+  background: #1e293b;
+  color: #fff;
+}
+
+.sidebar-item.active {
+  background: #334155;
+  color: #fff;
+}
+
+.sidebar-divider {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0.8rem 0;
+}
+
+.sidebar-item.logout {
+  color: #f87171;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sidebar-item.logout:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.sidebar-footer .muted {
+  font-style: italic;
+}
