@@ -232,11 +232,12 @@
   display: inline-block;
   max-width: 100%;
   word-wrap: break-word;
-  white-space: pre-wrap;
+  white-space: pre-wrap; /* good for user/plain text */
+  overflow-wrap: anywhere; /* long hashes/urls */
 }
 
 .cap-root .message.user .message-bubble {
-  background: var(--primary);
+  background: #35466b61;
   color: white;
 }
 
@@ -278,7 +279,6 @@
   background: var(--primary);
   animation: thinking 1.4s infinite;
 }
-
 .cap-root .thinking-animation span:nth-child(2) {
   animation-delay: 0.2s;
 }
@@ -337,12 +337,10 @@
   outline: none;
   border-color: var(--primary);
 }
-
 .cap-root textarea:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
-
 .cap-root textarea::placeholder {
   color: var(--secondary);
 }
@@ -373,13 +371,11 @@
   background: var(--primary-dark);
   transform: translateY(-1px);
 }
-
 .cap-root .send-button:disabled {
   background: var(--secondary);
   cursor: not-allowed;
   opacity: 0.6;
 }
-
 .cap-root .send-button.processing {
   background: var(--secondary);
 }
@@ -392,7 +388,6 @@
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
-
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -424,7 +419,6 @@
   color: var(--text-primary);
   transform: translateY(-1px);
 }
-
 .cap-root .example-chip.disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -500,54 +494,7 @@
   background: var(--secondary);
 }
 
-.messages .message {
-  display: flex;
-  gap: 12px;
-  margin: 10px 0;
-}
-
-.message.user .message-bubble {
-  background: #1f2a44;
-  color: #e6eefc;
-}
-
-.message.assistant .message-bubble {
-  background: #0f2036;
-  color: #e5e7eb;
-}
-
-.message.status .message-bubble {
-  background: #0b1220;
-  color: #cbd5e1;
-}
-
-.message.error .message-bubble {
-  background: #3b0d0d;
-  color: #ffe4e6;
-  border: 1px solid #7f1d1d;
-}
-
-.message-avatar {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  font-size: 18px;
-  border-radius: 50%;
-  background: #0b1220;
-  color: #93c5fd;
-}
-
-.message-bubble {
-  padding: 10px 12px;
-  border-radius: 10px;
-  max-width: 900px;
-}
-
-.message-text {
-  white-space: pre-wrap; /* keeps newlines & wraps long lines */
-  word-break: break-word;
-}
+/* --- Removed duplicate global .messages/.message styles to avoid conflicts --- */
 
 /* Responsive */
 @media (max-width: 768px) {
@@ -567,4 +514,252 @@
   .cap-root .message-content {
     max-width: 85%;
   }
+}
+
+/* Markdown rendering inside chat bubbles */
+.markdown-body {
+  line-height: 1.6;
+  font-size: 0.95rem;
+  /* ⬇️ override bubble's pre-wrap so markdown paragraphs wrap normally */
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.markdown-body h1 {
+  font-size: 1.2rem;
+  margin: 0.4rem 0;
+}
+.markdown-body h2 {
+  font-size: 1.1rem;
+  margin: 0.4rem 0;
+}
+.markdown-body h3 {
+  font-size: 1rem;
+  margin: 0.4rem 0;
+}
+
+.markdown-body p {
+  margin: 0.6em 0;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0.6em 0 0.6em 1.25em;
+  padding-left: 1em;
+  list-style-type: disc;
+}
+
+.markdown-body li {
+  margin: 0.3em 0;
+}
+
+.markdown-body a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.markdown-body blockquote {
+  border-left: 3px solid var(--primary);
+  padding-left: 1rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0;
+  font-style: italic;
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid #334155;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+.markdown-body pre {
+  /* background: #0d1117; */
+  color: #f0f6fc;
+  padding: 0.75rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: "Fira Code", monospace;
+  font-size: 0.85rem;
+  margin: 0.8em 0;
+}
+
+.markdown-body code {
+  background: rgba(240, 246, 252, 0.1);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: "Fira Code", monospace;
+}
+
+.markdown-body strong {
+  color: var(--primary);
+}
+.markdown-body em {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Lists inside markdown bubbles: less indentation + no big gaps */
+.markdown-body ul,
+.markdown-body ol {
+  /* tighten left indentation */
+  margin: 0.4em 0 0.4em 1rem;
+  padding-left: 0.9rem; /* was 1.5rem / 1rem */
+  list-style-position: outside;
+}
+
+/* kill big paragraph gaps *inside* list items */
+.markdown-body li > p {
+  margin: 0.15em 0; /* was 0.6em on .markdown-body p */
+}
+
+/* If a list item contains multiple paragraphs, only the later ones get spacing */
+.markdown-body li > p + p {
+  margin-top: 0.4em;
+}
+
+/* Optional: slightly reduce list-item own margins */
+.markdown-body li {
+  margin: 0.15em 0;
+}
+
+/* KaTeX tweaks inside bubbles */
+.markdown-body .katex-display {
+  margin: 0.6em 0;
+}
+.markdown-body .katex {
+  font-size: 1.02em; /* slight bump for readability */
+}
+
+.markdown-body .katex-display {
+  overflow-x: auto;
+  padding: 0.25rem 0;
+}
+
+/* inside your markdown bubble scope */
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 8px 10px;
+  vertical-align: top;
+}
+
+.markdown-body thead th {
+  position: sticky;
+  top: 0;
+  /* background: rgba(255, 255, 255, 0.04); */
+  backdrop-filter: blur(2px);
+}
+
+.markdown-body tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.markdown-body code {
+  word-break: break-word;
+}
+
+/* --- Compact markdown inside assistant bubbles --- */
+.message-bubble.markdown-body {
+  max-width: 820px; /* nice readable width */
+  line-height: 1.45;
+  font-size: 0.98rem;
+}
+
+/* paragraphs, lists, headings: tighter vertical rhythm */
+.message-bubble.markdown-body p {
+  margin: 0.35em 0;
+}
+.message-bubble.markdown-body h1,
+.message-bubble.markdown-body h2,
+.message-bubble.markdown-body h3 {
+  margin: 0.5em 0 0.35em;
+  line-height: 1.25;
+}
+.message-bubble.markdown-body ul,
+.message-bubble.markdown-body ol {
+  margin: 0.35em 0 0.35em 1.1em; /* smaller indents/margins */
+  padding: 0;
+}
+.message-bubble.markdown-body li {
+  margin: 0.15em 0;
+}
+
+/* bullets look aligned and subtle */
+.message-bubble.markdown-body ul li {
+  list-style: disc;
+}
+.message-bubble.markdown-body ol li {
+  list-style: decimal;
+}
+
+/* inline code chips */
+.message-bubble.markdown-body code:not(pre code) {
+  padding: 0.15em 0.35em;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 0.93em;
+}
+
+/* code blocks */
+.message-bubble.markdown-body pre {
+  margin: 0.5em 0;
+  padding: 0.75em 0.9em;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  overflow: auto;
+}
+
+/* links: subtle, underline on hover */
+.message-bubble.markdown-body a {
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(120, 180, 255, 0.35);
+}
+.message-bubble.markdown-body a:hover {
+  border-bottom-style: solid;
+}
+
+/* compact horizontal “meta” separators if the text uses “ - ” */
+.message-bubble.markdown-body .meta-sep {
+  opacity: 0.65;
+  margin: 0 0.35em;
+}
+
+/* avatar circles a bit crisper */
+.message .message-avatar {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 18px;
 }

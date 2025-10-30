@@ -1,6 +1,16 @@
 // src/pages/LandingPage.jsx
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import rehypeHighlight from "rehype-highlight";
+import "katex/dist/katex.min.css";
+import "highlight.js/styles/github-dark.css";
+
 import { useAuthRequest } from "../hooks/useAuthRequest";
+import { useLLMStream } from "../hooks/useLLMStream";
+import { sanitizeChunk, finalizeForRender } from "../utils/streamSanitizers";
 import "../styles/LandingPage.css";
 
 // LandingPage: Natural Language chat (analytics now lives in NavBar)
@@ -14,6 +24,12 @@ export default function LandingPage() {
   const [query, setQuery] = useState("");
   const [charCount, setCharCount] = useState(0);
   const [topQueries, setTopQueries] = useState([]);
+
+  // streaming buffers/ids
+  const assistantBufRef = useRef("");
+  const assistantMsgIdRef = useRef(null);
+  const statusMsgIdRef = useRef(null);
+  const rafRef = useRef(null);
 
   // polling refs
   const pollTimerRef = useRef(null);
@@ -41,6 +57,7 @@ export default function LandingPage() {
       backoffRef.current = 60_000; // reset cadence to 1 min on success
       return true;
     } catch {
+      // graceful fallback (no infinite hammering)
       setTopQueries([
         { query: "Show me the latest 5 blocks", frequency: 0 },
         { query: "What is the total ADA in circulation?", frequency: 0 },
@@ -110,7 +127,12 @@ export default function LandingPage() {
     };
   }, [runPoll, scheduleNext]);
 
-  // --- Helpers --------------------------------------------------------------
+  // --- Helpers: messages ops ------------------------------------------------
+  const removeMessageById = useCallback((id) => {
+    if (!id) return;
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+  }, []);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -119,137 +141,144 @@ export default function LandingPage() {
   }, [messages]);
 
   const addMessage = useCallback((type, content) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        type,
-        content,
-      },
-    ]);
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setMessages((prev) => [...prev, { id, type, content }]);
+    return id;
   }, []);
 
-  const removeLastOfType = useCallback((type) => {
+  const updateMessageById = useCallback((id, updater) => {
     setMessages((prev) => {
-      const idxFromEnd = [...prev].reverse().findIndex((m) => m.type === type);
-      if (idxFromEnd === -1) return prev;
-      const real = prev.length - 1 - idxFromEnd;
-      return [...prev.slice(0, real), ...prev.slice(real + 1)];
-    });
-  }, []);
-
-  const replaceLastStatusWith = useCallback((type, content) => {
-    setMessages((prev) => {
-      const idx = [...prev].reverse().findIndex((m) => m.type === "status");
-      if (idx === -1)
-        return [...prev, { id: Date.now().toString(), type, content }];
-      const real = prev.length - 1 - idx;
+      const idx = prev.findIndex((m) => m.id === id);
+      if (idx === -1) return prev;
       const copy = [...prev];
-      copy[real] = { ...copy[real], type, content };
+      copy[idx] = { ...copy[idx], ...updater(copy[idx]) };
       return copy;
     });
   }, []);
 
-  // --- Send query (server-sent events / streaming) --------------------------
+  const replaceLastStatusWith = useCallback((toType, newContent) => {
+    setMessages((prev) => {
+      const idxFromEnd = [...prev]
+        .reverse()
+        .findIndex((m) => m.type === "status");
+      if (idxFromEnd === -1) {
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        return [...prev, { id, type: toType, content: newContent }];
+      }
+      const real = prev.length - 1 - idxFromEnd;
+      const copy = [...prev];
+      copy[real] = { ...copy[real], type: toType, content: newContent };
+      return copy;
+    });
+  }, []);
+
+  // --- Streaming via useLLMStream ------------------------------------------
+  const flushRender = useCallback(() => {
+    if (!assistantMsgIdRef.current) return;
+    rafRef.current = null;
+    const finalized = finalizeForRender(assistantBufRef.current);
+    updateMessageById(assistantMsgIdRef.current, () => ({
+      content: finalized,
+    }));
+  }, [updateMessageById]);
+
+  const scheduleFlush = useCallback(() => {
+    if (rafRef.current) return;
+    rafRef.current = requestAnimationFrame(flushRender);
+  }, [flushRender]);
+
+  const onStatus = useCallback(
+    (s) => {
+      if (!statusMsgIdRef.current) {
+        statusMsgIdRef.current = addMessage("status", s);
+      } else {
+        updateMessageById(statusMsgIdRef.current, () => ({ content: s }));
+      }
+    },
+    [addMessage, updateMessageById]
+  );
+
+  const onChunk = useCallback(
+    (payload) => {
+      if (payload === "[DONE]") return;
+      if (!assistantMsgIdRef.current) {
+        assistantMsgIdRef.current = addMessage("assistant", "");
+      }
+      assistantBufRef.current += sanitizeChunk(payload);
+      scheduleFlush();
+    },
+    [addMessage, scheduleFlush]
+  );
+
+  const onDone = useCallback(() => {
+    if (assistantMsgIdRef.current) {
+      const finalized = finalizeForRender(assistantBufRef.current);
+      updateMessageById(assistantMsgIdRef.current, () => ({
+        content: finalized,
+      }));
+    }
+    if (statusMsgIdRef.current) {
+      // remove the thinking bubble entirely
+      removeMessageById(statusMsgIdRef.current);
+      statusMsgIdRef.current = null;
+    }
+    setIsProcessing(false);
+  }, [updateMessageById, removeMessageById]);
+
+  const onError = useCallback(
+    (err) => {
+      replaceLastStatusWith(
+        "error",
+        `Error: ${err?.message || "Unknown"}. Please try again.`
+      );
+      setIsProcessing(false);
+    },
+    [replaceLastStatusWith]
+  );
+
+  const { start, stop } = useLLMStream({
+    fetcher: (url, opts) => authFetchRef.current(url, opts),
+    onStatus,
+    onChunk,
+    onDone,
+    onError,
+  });
+
+  // --- Send query (SSE POST using the hook) ---------------------------------
   const sendQuery = useCallback(async () => {
     const trimmed = query.trim();
     if (!trimmed || isProcessing) return;
 
+    // reset any previous stream buffers
+    assistantBufRef.current = "";
+    assistantMsgIdRef.current = null;
+    statusMsgIdRef.current = null;
+
+    // add user message
     addMessage("user", trimmed);
     setQuery("");
     setCharCount(0);
     setIsProcessing(true);
 
-    // status placeholder
-    addMessage("status", "Planning the query and preparing SPARQL...");
+    // seed a status placeholder
+    statusMsgIdRef.current = addMessage(
+      "status",
+      "Planning the query and preparing SPARQL..."
+    );
 
-    try {
-      const res = await authFetch("/api/v1/nl/query", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: trimmed }),
-      });
-      if (!res.ok || !res.body) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      }
+    // CAP backend expects POST to /api/v1/nl/query with SSE
+    start("/api/v1/nl/query", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify({ query: trimmed }),
+      credentials: "include",
+    });
+  }, [query, isProcessing, addMessage, start]);
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let assistantStarted = false;
-      let assistantText = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const raw of lines) {
-          if (!raw) continue;
-          if (raw === "data: [DONE]" || raw.trim() === "[DONE]") {
-            // finalize status removal
-            removeLastOfType("status");
-            continue;
-          }
-
-          let content = raw.startsWith("data: ") ? raw.slice(6) : raw;
-          const isStatus = content.startsWith("status: ");
-          if (isStatus) content = content.slice(8);
-
-          if (content.startsWith("Error:")) {
-            replaceLastStatusWith("error", content);
-            continue;
-          }
-
-          if (isStatus) {
-            replaceLastStatusWith("status", content);
-          } else {
-            if (!assistantStarted) {
-              // remove status and start assistant bubble
-              replaceLastStatusWith("assistant", "");
-              assistantStarted = true;
-            }
-            assistantText += content;
-            // live update last assistant message
-            setMessages((prev) => {
-              const idx = [...prev]
-                .reverse()
-                .findIndex((m) => m.type === "assistant");
-              if (idx === -1)
-                return [
-                  ...prev,
-                  {
-                    id: Date.now().toString(),
-                    type: "assistant",
-                    content: assistantText,
-                  },
-                ];
-              const real = prev.length - 1 - idx;
-              const copy = [...prev];
-              copy[real] = { ...copy[real], content: assistantText };
-              return copy;
-            });
-          }
-        }
-      }
-    } catch (e) {
-      replaceLastStatusWith(
-        "error",
-        `Error: ${e?.message || "Unknown"}. Please try again.`
-      );
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [
-    query,
-    isProcessing,
-    authFetch,
-    addMessage,
-    replaceLastStatusWith,
-    removeLastOfType,
-  ]);
+  useEffect(() => () => stop(), [stop]);
 
   // --- Render ---------------------------------------------------------------
   return (
@@ -304,7 +333,6 @@ export default function LandingPage() {
                     const v = e.target.value;
                     setQuery(v);
                     setCharCount(v.length);
-                    // autoresize
                     e.target.style.height = "auto";
                     e.target.style.height =
                       Math.min(e.target.scrollHeight, 200) + "px";
@@ -342,11 +370,15 @@ export default function LandingPage() {
   );
 }
 
+// ---------------------- Message renderer ------------------------------------
 function Message({ type, content }) {
+  // Hide empty status entries (prevents stuck spinner)
+  if (type === "status" && !String(content || "").trim()) return null;
+
   if (type === "status") {
     return (
       <div className="message status">
-        <div className="message-avatar" />
+        <div className="message-avatar">…</div>
         <div className="message-content">
           <div className="message-bubble">
             <span>{content || ""}</span>
@@ -360,16 +392,34 @@ function Message({ type, content }) {
       </div>
     );
   }
+
   if (type === "error") {
     return <div className="error-message">{content}</div>;
   }
+
   const isUser = type === "user";
   return (
     <div className={`message ${isUser ? "user" : "assistant"}`}>
       <div className="message-avatar">{isUser ? "🧑" : "🤖"}</div>
       <div className="message-content">
-        <div className="message-bubble">
-          <div className="message-text">{content}</div>
+        <div className="message-bubble markdown-body">
+          {isUser ? (
+            <div className="fade-in">
+              <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{content}</pre>
+            </div>
+          ) : (
+            <div className="fade-in">
+              <ReactMarkdown
+                remarkPlugins={[
+                  [remarkGfm],
+                  [remarkMath, { singleDollarTextMath: true, strict: false }],
+                ]}
+                rehypePlugins={[rehypeKatex, rehypeHighlight]}
+              >
+                {content || ""}
+              </ReactMarkdown>
+            </div>
+          )}
         </div>
       </div>
     </div>
