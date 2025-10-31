@@ -21,6 +21,7 @@ import "./i18n";
 // Pages
 import AuthPage from "./pages/AuthPage";
 import WaitingListPage from "./pages/WaitingListPage";
+import SettingsPage from "./pages/SettingsPage";
 import LandingPage from "./pages/LandingPage";
 
 // Hooks
@@ -81,11 +82,13 @@ function Layout() {
   const outletContext = useMemo(
     () => ({
       session,
-      showToast,
+      user: session, // alias for components expecting `user`
+      setUser: setSession, // alias for components expecting `setUser`
       handleLogout,
       handleLogin,
       setLoading,
       loading,
+      showToast,
     }),
     [session, showToast, handleLogout, handleLogin, loading]
   );
@@ -179,6 +182,7 @@ function AppRouter() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<AuthPage type="login" />} />
             <Route path="/signup" element={<WaitingListPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
