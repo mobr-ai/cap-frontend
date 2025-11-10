@@ -5,129 +5,205 @@ import { useCallback, useRef } from "react";
  * Streaming SSE reader compatible with CAP:
  * - Handles "status:" lines
  * - Handles "data: ..." frames
- * - Also handles plain, non-prefixed content lines
+ * - Handles plain, non-prefixed content lines
  * - Detects [DONE] with or without "data:" prefix
+ * - Parses `kv_results:{...} ... _kv_results_end_` blocks
  *
- * Pass your authenticated fetcher (authFetch) so cookies/headers are preserved.
- *
- * Example:
- * const { start, stop } = useLLMStream({
- *   fetcher: authFetchRef.current,
- *   onStatus, onChunk, onDone, onError
- * });
- *
- * start("/api/v1/nl/query", {
- *   method: "POST",
- *   headers: { "Content-Type": "application/json" },
- *   body: JSON.stringify({ query }),
- *   credentials: "include"
- * });
+ * Whitespace rules:
+ * - Control lines are matched against a trimmed view.
+ * - For "data:" frames we remove at most one protocol space after "data:"
+ *   but preserve any additional spaces in the payload.
+ * - For plain content lines we forward the original line (no trimStart),
+ *   so model-inserted spaces between tokens are kept.
  */
+
 export function useLLMStream({
   fetcher,
   onStatus,
   onChunk,
+  onKVResults,
   onDone,
   onError,
-}) {
+} = {}) {
   const abortRef = useRef(null);
 
-  const start = useCallback(async (url, fetchOpts = {}) => {
-    // Abort previous stream
-    if (abortRef.current) abortRef.current.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    try {
-      if (typeof fetcher !== "function") {
-        throw new Error("useLLMStream: fetcher is required (pass authFetch).");
+  const start = useCallback(
+    async ({ url = "/query", body, method = "POST", headers = {} } = {}) => {
+      if (!fetcher) {
+        throw new Error("useLLMStream: fetcher (authFetch) is required.");
       }
 
-      const mergedHeaders = {
-        Accept: "text/event-stream",
-        ...(fetchOpts.headers || {}),
-      };
-
-      const res = await fetcher(url, {
-        ...fetchOpts,
-        headers: mergedHeaders,
-        signal: controller.signal,
-      });
-
-      if (!res.ok || !res.body) {
-        throw new Error(`HTTP ${res.status}`);
+      // Abort any previous stream
+      if (abortRef.current) {
+        abortRef.current.abort();
       }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let pending = ""; // partial line buffer
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      try {
+        const response = await fetcher(url, {
+          method,
+          headers: {
+            "Content-Type": "application/json",
+            ...headers,
+          },
+          body: body ? JSON.stringify(body) : undefined,
+          signal: controller.signal,
+        });
 
-        pending += decoder.decode(value, { stream: true });
+        if (!response.ok) {
+          const err = new Error(
+            `Streaming request failed: ${response.status} ${response.statusText}`
+          );
+          onError?.(err);
+          return;
+        }
 
-        // Split by lines; keep tail in buffer
-        const lines = pending.split(/\r?\n/);
-        pending = lines.pop() ?? "";
+        if (!response.body || !response.body.getReader) {
+          const text = await response.text();
+          if (text) onChunk?.(text);
+          onDone?.();
+          return;
+        }
 
-        for (let rawLine of lines) {
-          // Keep trailing spaces but normalize CR
-          if (rawLine.endsWith("\r")) rawLine = rawLine.slice(0, -1);
-          const line = rawLine; // no trimStart to preserve leading spaces in payload
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
 
-          if (!line) continue;
+        // kv_results capture mode
+        let inKVBlock = false;
+        let kvBuffer = "";
 
-          // 1) Explicit status lines
-          if (line.startsWith("status:")) {
-            onStatus?.(line.slice(7).trim());
-            continue;
+        const flushKVResults = () => {
+          const raw = kvBuffer.trim();
+          kvBuffer = "";
+          if (!raw) return;
+          try {
+            const parsed = JSON.parse(raw);
+            onKVResults?.(parsed);
+          } catch (err) {
+            console.error("useLLMStream: failed to parse kv_results", err, raw);
+            onError?.(err);
           }
+        };
 
-          // 2) Proper SSE "data:" frames
-          if (line.startsWith("data:")) {
-            const payload = line.slice(5).trimStart();
-            if (payload === "[DONE]") {
-              onDone?.();
-            } else {
-              onChunk?.(payload);
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (!value) continue;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split(/\r?\n/);
+          buffer = lines.pop() ?? "";
+
+          for (let rawLine of lines) {
+            // Strip possible trailing \r but otherwise keep as-is for payload
+            if (rawLine.endsWith("\r")) {
+              rawLine = rawLine.slice(0, -1);
             }
-            continue;
-          }
 
-          // 3) Compatibility: treat any other non-empty line as data
-          //    (your backend streams plain lines for the content)
-          const x = line.trim();
-          if (x === "[DONE]") {
-            onDone?.();
-            continue;
-          }
-          if (
-            !line.startsWith("event:") &&
-            !line.startsWith("id:") &&
-            !line.startsWith("retry:")
-          ) {
-            onChunk?.(line);
+            const trimmed = rawLine.trim();
+
+            // Skip purely empty lines
+            if (!trimmed) {
+              // still, if we were in KV block this is just whitespace inside JSON
+              if (inKVBlock) {
+                kvBuffer += "\n";
+              }
+              continue;
+            }
+
+            // ----- End-of-stream markers -----
+            if (
+              trimmed === "[DONE]" ||
+              trimmed === "data:[DONE]" ||
+              trimmed === "data: [DONE]"
+            ) {
+              if (inKVBlock) {
+                inKVBlock = false;
+                flushKVResults();
+              }
+              onDone?.();
+              return;
+            }
+
+            // ----- Status lines -----
+            if (trimmed.startsWith("status:")) {
+              const status = trimmed.slice("status:".length).trim();
+              if (status) onStatus?.(status);
+              continue;
+            }
+
+            // ----- Start of kv_results block -----
+            if (trimmed.startsWith("kv_results:")) {
+              inKVBlock = true;
+              kvBuffer = "";
+
+              // Capture JSON that may begin on the same line after "kv_results:"
+              const idx = rawLine.indexOf("kv_results:") + "kv_results:".length;
+              const rest = rawLine.slice(idx).trim();
+              if (rest && !rest.startsWith("_kv_results_end_")) {
+                kvBuffer += rest + "\n";
+              }
+              continue;
+            }
+
+            // ----- Inside kv_results block -----
+            if (inKVBlock) {
+              if (trimmed.includes("_kv_results_end_")) {
+                inKVBlock = false;
+                flushKVResults();
+              } else {
+                kvBuffer += rawLine + "\n";
+              }
+              continue;
+            }
+
+            // ----- Standard SSE data frame -----
+            if (trimmed.startsWith("data:")) {
+              // Use the original rawLine to avoid losing meaningful spaces.
+              const idx = rawLine.indexOf("data:") + "data:".length;
+              let data = rawLine.slice(idx);
+
+              // Remove a single protocol space if present, but keep any extra.
+              if (data.startsWith(" ")) {
+                data = data.slice(1);
+              }
+
+              const payload = data;
+              if (!payload || payload === "[DONE]") continue;
+
+              onChunk?.(payload);
+              continue;
+            }
+
+            // ----- Fallback: treat as plain content chunk -----
+            // Use the original rawLine (no trimStart) so leading spaces between tokens are preserved.
+            onChunk?.(rawLine);
           }
         }
-      }
 
-      // Flush any left-over as a final chunk
-      if (pending.trim() && pending.trim() !== "[DONE]") {
-        // If it's a truncated line, still deliver it
-        onChunk?.(pending);
+        // EOF without explicit [DONE]
+        if (inKVBlock) {
+          inKVBlock = false;
+          flushKVResults();
+        }
+        onDone?.();
+      } catch (err) {
+        if (abortRef.current?.signal?.aborted) {
+          return;
+        }
+        onError?.(err);
       }
-
-      onDone?.();
-    } catch (err) {
-      if (abortRef.current?.signal?.aborted) return;
-      onError?.(err);
-    }
-  }, [fetcher, onStatus, onChunk, onDone, onError]);
+    },
+    [fetcher, onStatus, onChunk, onKVResults, onDone, onError]
+  );
 
   const stop = useCallback(() => {
-    if (abortRef.current) abortRef.current.abort();
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
   }, []);
 
   return { start, stop };

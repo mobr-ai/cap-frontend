@@ -50,3 +50,6 @@ pnpm-debug.log*
 *.LSOverride
 Thumbs.db
 
+
+# Local/production env
+.env.production

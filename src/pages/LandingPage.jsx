@@ -13,274 +13,613 @@ import { useLLMStream } from "../hooks/useLLMStream";
 import { sanitizeChunk, finalizeForRender } from "../utils/streamSanitizers";
 import "../styles/LandingPage.css";
 
-// LandingPage: Natural Language chat (analytics now lives in NavBar)
+// ------------ Vega helpers --------------------------------------------------
+
+// Lazy Vega-Lite renderer with graceful fallback
+function VegaChart({ spec }) {
+  const containerRef = useRef(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!spec || !containerRef.current) return;
+
+    let cancelled = false;
+    let view = null;
+
+    async function render() {
+      try {
+        const mod = await import("vega-embed");
+        const embed = mod.default || mod;
+        if (cancelled) return;
+        const result = await embed(containerRef.current, spec, {
+          actions: false,
+        });
+        view = result.view;
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            "Unable to render chart visualization. Please refer to the textual explanation."
+          );
+        }
+      }
+    }
+
+    render();
+
+    return () => {
+      cancelled = true;
+      if (view) {
+        try {
+          view.finalize();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, [spec]);
+
+  if (error) {
+    return <div className="vega-chart-error">{error}</div>;
+  }
+
+  return <div className="vega-chart-container" ref={containerRef} />;
+}
+
+// kv_results → Markdown table
+function kvTableToMarkdown(kv) {
+  const cols = kv?.data?.values || [];
+  if (!Array.isArray(cols) || cols.length === 0) return "";
+
+  let headers =
+    (kv.metadata &&
+      Array.isArray(kv.metadata.columns) &&
+      kv.metadata.columns.length &&
+      kv.metadata.columns) ||
+    cols
+      .map((col) => {
+        const entry = Object.entries(col).find(([key]) => key !== "values");
+        return entry ? entry[1] : "";
+      })
+      .filter(Boolean);
+
+  if (!headers.length) return "";
+
+  const colValues = cols.map((c) => c.values || []);
+  const rowCount = Math.max(
+    ...colValues.map((vs) => (Array.isArray(vs) ? vs.length : 0))
+  );
+  if (!rowCount || !isFinite(rowCount)) return "";
+
+  let md = `| ${headers.join(" | ")} |\n`;
+  md += `| ${headers.map(() => "---").join(" | ")} |\n`;
+  for (let i = 0; i < rowCount; i++) {
+    const row = colValues.map((vs) =>
+      i < vs.length && vs[i] != null ? String(vs[i]) : ""
+    );
+    md += `| ${row.join(" | ")} |\n`;
+  }
+  return md;
+}
+
+// kv_results → Vega-Lite bar chart
+function kvToBarChartSpec(kv) {
+  const values = kv?.data?.values || [];
+  if (!values.length) return null;
+
+  const sample = values[0];
+  const keys = Object.keys(sample);
+  const xField =
+    keys.find((k) => k.toLowerCase().includes("category")) || keys[0];
+  const yFieldCandidate =
+    keys.find((k) => k.toLowerCase().includes("amount")) ||
+    keys.find((k) => k.toLowerCase().includes("value"));
+  const yField = yFieldCandidate || keys[1] || keys[0];
+
+  return {
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    description: "Bar chart from kv_results",
+    data: { values },
+    mark: "bar",
+    encoding: {
+      x: { field: xField, type: "ordinal", title: xField },
+      y: { field: yField, type: "quantitative", title: yField },
+      tooltip: [
+        { field: xField, type: "ordinal" },
+        { field: yField, type: "quantitative" },
+      ],
+    },
+  };
+}
+
+// kv_results → Vega-Lite pie chart
+function kvToPieChartSpec(kv) {
+  const values = kv?.data?.values || [];
+  if (!values.length) return null;
+
+  const sample = values[0];
+  const keys = Object.keys(sample);
+  const catField =
+    keys.find((k) => k.toLowerCase().includes("category")) || keys[0];
+  const valFieldCandidate =
+    keys.find((k) => k.toLowerCase().includes("value")) ||
+    keys.find((k) => k.toLowerCase().includes("amount"));
+  const valField = valFieldCandidate || keys[1] || keys[0];
+
+  return {
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    description: "Pie chart from kv_results",
+    data: { values },
+    mark: "arc",
+    encoding: {
+      theta: { field: valField, type: "quantitative" },
+      color: {
+        field: catField,
+        type: "nominal",
+        legend: { title: null },
+      },
+      tooltip: [
+        { field: catField, type: "nominal" },
+        { field: valField, type: "quantitative" },
+      ],
+    },
+    view: { stroke: null },
+  };
+}
+
+// kv_results → Vega-Lite line chart
+function kvToLineChartSpec(kv) {
+  const values = kv?.data?.values || [];
+  if (!values.length) return null;
+
+  const colNames = kv?.metadata?.columns || [];
+  const seriesNameFor = (c) => {
+    if (colNames.length >= 3) {
+      const idx = Number(c);
+      if (!Number.isNaN(idx) && idx + 1 < colNames.length) {
+        return colNames[idx + 1];
+      }
+    }
+    return `series_${c}`;
+  };
+
+  const prepared = values.map((row) => {
+    const series =
+      row.series != null
+        ? row.series
+        : row.c != null
+        ? seriesNameFor(row.c)
+        : "series";
+    return {
+      x: row.x,
+      y: row.y,
+      series,
+    };
+  });
+
+  return {
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    description: "Line chart from kv_results",
+    data: { values: prepared },
+    mark: "line",
+    encoding: {
+      x: {
+        field: "x",
+        type: "temporal",
+        title: colNames[0] || "x",
+      },
+      y: {
+        field: "y",
+        type: "quantitative",
+        title: "value",
+      },
+      color: {
+        field: "series",
+        type: "nominal",
+        title: "Series",
+      },
+      tooltip: [
+        { field: "x", type: "temporal" },
+        { field: "series", type: "nominal" },
+        { field: "y", type: "quantitative" },
+      ],
+    },
+  };
+}
+
+function kvToChartSpec(kv) {
+  if (!kv || !kv.result_type) return null;
+  switch (kv.result_type) {
+    case "bar_chart":
+      return kvToBarChartSpec(kv);
+    case "pie_chart":
+      return kvToPieChartSpec(kv);
+    case "line_chart":
+      return kvToLineChartSpec(kv);
+    default:
+      return null;
+  }
+}
+
+// Interactive KV Table Component
+function KVTable({ kv }) {
+  const [sortKey, setSortKey] = useState(null);
+  const [sortAsc, setSortAsc] = useState(true);
+
+  const columns = (kv?.metadata?.columns || []).filter(Boolean);
+  const cols = kv?.data?.values || [];
+  if (!columns.length || !cols.length) return null;
+
+  const formatValue = (key, value) => {
+    if (value === null || value === undefined) return "";
+    const raw = String(value).trim();
+    if (!raw) return "";
+
+    // numeric like "6146955.0" → "6146955"
+    const n = Number(raw);
+    if (!Number.isNaN(n)) {
+      if (Number.isInteger(n)) return n.toString();
+      return n.toString();
+    }
+
+    // ISO timestamp: keep as is for now
+    if (!Number.isNaN(Date.parse(raw)) && /T\d{2}:\d{2}/.test(raw)) {
+      return raw;
+    }
+
+    return raw;
+  };
+
+  const rows = [];
+  const maxLen = Math.max(...cols.map((c) => c.values?.length || 0));
+  for (let i = 0; i < maxLen; i++) {
+    const row = {};
+    for (let c = 0; c < cols.length; c++) {
+      const colKey = columns[c] || Object.keys(cols[c])[0];
+      const val = cols[c].values?.[i];
+      row[colKey] = formatValue(colKey, val);
+    }
+    rows.push(row);
+  }
+
+  const detectType = (v) => {
+    if (v === "" || v == null) return "string";
+    if (!isNaN(Number(v))) return "number";
+    if (!isNaN(Date.parse(v))) return "date";
+    return "string";
+  };
+
+  const handleSort = (key) => {
+    if (key === sortKey) setSortAsc((prev) => !prev);
+    else {
+      setSortKey(key);
+      setSortAsc(true);
+    }
+  };
+
+  const sortedRows = React.useMemo(() => {
+    if (!sortKey) return rows;
+    const t = detectType(rows[0]?.[sortKey]);
+    const copy = [...rows];
+
+    copy.sort((a, b) => {
+      const A = a[sortKey];
+      const B = b[sortKey];
+      if (t === "number") return Number(A) - Number(B);
+      if (t === "date") return new Date(A) - new Date(B);
+      return String(A).localeCompare(String(B));
+    });
+
+    return sortAsc ? copy : copy.reverse();
+  }, [rows, sortKey, sortAsc]);
+
+  return (
+    <div className="kv-table-wrapper">
+      <table className="kv-table">
+        <thead>
+          <tr>
+            {columns.map((col) => (
+              <th
+                key={col}
+                onClick={() => handleSort(col)}
+                className={
+                  sortKey === col
+                    ? sortAsc
+                      ? "sorted-asc"
+                      : "sorted-desc"
+                    : ""
+                }
+              >
+                {col}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sortedRows.map((row, idx) => (
+            <tr key={idx}>
+              {columns.map((col) => (
+                <td key={col}>{row[col]}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function appendChunkSmart(prev, chunk) {
+  if (!chunk) return prev || "";
+  if (!prev) return chunk;
+
+  const lastChar = prev[prev.length - 1];
+  const firstChar = chunk[0];
+
+  const isLetter = (ch) => /[A-Za-z]/.test(ch || "");
+  const isDigit = (ch) => /[0-9]/.test(ch || "");
+
+  // 1. If the new chunk already starts with whitespace, trust it.
+  if (/^\s/.test(chunk)) {
+    return prev + chunk;
+  }
+
+  // 2. If prev already ends with whitespace, just append.
+  if (/\s/.test(lastChar)) {
+    return prev + chunk;
+  }
+
+  // 3. Sentence punctuation followed by a letter: ".Next" -> ". Next"
+  if (/[.!?]/.test(lastChar) && isLetter(firstChar)) {
+    return prev + " " + chunk;
+  }
+
+  // 4. Letter -> digit (e.g. "top 10", "Epoch 88"),
+  //    but avoid splitting address-like prefixes (addr1..., stake1..., pool1...).
+  if (isLetter(lastChar) && isDigit(firstChar)) {
+    const tail = prev.slice(-6).toLowerCase();
+    if (
+      tail.endsWith("addr") ||
+      tail.endsWith("stake") ||
+      tail.endsWith("pool")
+    ) {
+      // looks like an address/id prefix: keep glued ("addr1...")
+      return prev + chunk;
+    }
+    return prev + " " + chunk;
+  }
+
+  // 5. Digit -> letter (e.g. "5 blocks") => add space.
+  if (isDigit(lastChar) && isLetter(firstChar)) {
+    return prev + " " + chunk;
+  }
+
+  // 6. For all other cases (including letter-letter and digit-digit),
+  //    don't guess: just concatenate.
+  return prev + chunk;
+}
+
+// ------------ LandingPage ---------------------------------------------------
+
 export default function LandingPage() {
   const { authFetch } = useAuthRequest();
 
-  // --- Refs & state ---------------------------------------------------------
-  const messagesEndRef = useRef(null);
-  const [messages, setMessages] = useState([]); // { id, type: 'user'|'assistant'|'status'|'error', content }
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [messages, setMessages] = useState([]);
   const [query, setQuery] = useState("");
   const [charCount, setCharCount] = useState(0);
-  const [topQueries, setTopQueries] = useState([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [topQueries, setTopQueries] = useState([
+    { query: "List the latest 5 blocks." },
+    {
+      query: "Plot a bar chart showing monthly multi assets created in 2021.",
+    },
+    {
+      query:
+        "Plot a line chart showing monthly number of transactions and outputs.",
+    },
+    {
+      query:
+        "Plot a pie chart of how much the top 1% ADA holders represent of total supply.",
+    },
+  ]);
 
-  // streaming buffers/ids
-  const assistantBufRef = useRef("");
-  const assistantMsgIdRef = useRef(null);
+  const messagesEndRef = useRef(null);
   const statusMsgIdRef = useRef(null);
-  const rafRef = useRef(null);
-
-  // polling refs
-  const pollTimerRef = useRef(null);
-  const inFlightRef = useRef(null);
-  const startedRef = useRef(false); // prevents double-start in StrictMode
-  const runningRef = useRef(false); // prevents re-entry
-  const backoffRef = useRef(60_000); // success cadence (1 min)
-  const MAX_BACKOFF = 60 * 60_000; // 60 min
-
-  // keep authFetch stable for callbacks
-  const authFetchRef = useRef(authFetch);
-  useEffect(() => {
-    authFetchRef.current = authFetch;
-  }, [authFetch]);
-
-  // --- Data: top queries ----------------------------------------------------
-  const loadTopQueries = useCallback(async (signal) => {
-    const doFetch = authFetchRef.current;
-    try {
-      const res = await doFetch("/api/v1/nl/queries/top?limit=5", { signal });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const data = await res.json();
-      const q = Array.isArray(data?.top_queries) ? data.top_queries : [];
-      setTopQueries(q);
-      backoffRef.current = 60_000; // reset cadence to 1 min on success
-      return true;
-    } catch {
-      // graceful fallback (no infinite hammering)
-      setTopQueries([
-        { query: "Show me the latest 5 blocks", frequency: 0 },
-        { query: "What is the total ADA in circulation?", frequency: 0 },
-        { query: "List latest governance votes", frequency: 0 },
-        { query: "Top stake pools by active stake", frequency: 0 },
-        { query: "Find transactions to address X", frequency: 0 },
-      ]);
-      return false;
-    }
-  }, []);
-
-  const scheduleNext = useCallback((delay) => {
-    clearTimeout(pollTimerRef.current);
-    pollTimerRef.current = setTimeout(() => runPoll(), delay);
-  }, []);
-
-  const runPoll = useCallback(async () => {
-    if (runningRef.current) return; // don’t re-enter
-    if (document.hidden) {
-      // pause in background tab
-      scheduleNext(5_000);
-      return;
-    }
-
-    runningRef.current = true;
-    inFlightRef.current?.abort?.();
-    const controller = new AbortController();
-    inFlightRef.current = controller;
-
-    const ok = await loadTopQueries(controller.signal);
-
-    if (!ok) {
-      // exponential backoff + jitter
-      const next = Math.min(backoffRef.current * 2, MAX_BACKOFF);
-      backoffRef.current = next;
-      const jitter = Math.floor(Math.random() * 2_000);
-      scheduleNext(backoffRef.current + jitter);
-    } else {
-      scheduleNext(backoffRef.current);
-    }
-    runningRef.current = false;
-  }, [loadTopQueries, scheduleNext]);
 
   useEffect(() => {
-    // HARD singleton across HMR/StrictMode (dev)
-    if (typeof window !== "undefined") {
-      if (window.__capTopQueriesStop__) window.__capTopQueriesStop__(); // stop any previous
-      window.__capTopQueriesStop__ = () => {
-        clearTimeout(pollTimerRef.current);
-        inFlightRef.current?.abort?.();
-        runningRef.current = false;
-        startedRef.current = false;
-      };
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
     }
-
-    if (!startedRef.current) {
-      startedRef.current = true;
-      runPoll();
-    }
-
-    const onVisible = () => !document.hidden && scheduleNext(0);
-    document.addEventListener("visibilitychange", onVisible);
-
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      window.__capTopQueriesStop__?.();
-    };
-  }, [runPoll, scheduleNext]);
-
-  // --- Helpers: messages ops ------------------------------------------------
-  const removeMessageById = useCallback((id) => {
-    if (!id) return;
-    setMessages((prev) => prev.filter((m) => m.id !== id));
-  }, []);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-  useEffect(() => {
-    scrollToBottom();
   }, [messages]);
 
-  const addMessage = useCallback((type, content) => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    setMessages((prev) => [...prev, { id, type, content }]);
+  const addMessage = useCallback((type, content, extra = {}) => {
+    const id =
+      extra.id ||
+      `${type}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    setMessages((prev) => [...prev, { id, type, content, ...extra }]);
     return id;
   }, []);
 
-  const updateMessageById = useCallback((id, updater) => {
-    setMessages((prev) => {
-      const idx = prev.findIndex((m) => m.id === id);
-      if (idx === -1) return prev;
-      const copy = [...prev];
-      copy[idx] = { ...copy[idx], ...updater(copy[idx]) };
-      return copy;
-    });
+  const updateMessage = useCallback((id, patch) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...patch } : m))
+    );
   }, []);
 
-  const replaceLastStatusWith = useCallback((toType, newContent) => {
-    setMessages((prev) => {
-      const idxFromEnd = [...prev]
-        .reverse()
-        .findIndex((m) => m.type === "status");
-      if (idxFromEnd === -1) {
-        const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        return [...prev, { id, type: toType, content: newContent }];
-      }
-      const real = prev.length - 1 - idxFromEnd;
-      const copy = [...prev];
-      copy[real] = { ...copy[real], type: toType, content: newContent };
-      return copy;
-    });
+  const removeMessage = useCallback((id) => {
+    setMessages((prev) => prev.filter((m) => m.id !== id));
   }, []);
 
-  // --- Streaming via useLLMStream ------------------------------------------
-  const flushRender = useCallback(() => {
-    if (!assistantMsgIdRef.current) return;
-    rafRef.current = null;
-    const finalized = finalizeForRender(assistantBufRef.current);
-    updateMessageById(assistantMsgIdRef.current, () => ({
-      content: finalized,
-    }));
-  }, [updateMessageById]);
+  // --- SSE Handlers ---------------------------------------------------------
 
-  const scheduleFlush = useCallback(() => {
-    if (rafRef.current) return;
-    rafRef.current = requestAnimationFrame(flushRender);
-  }, [flushRender]);
-
-  const onStatus = useCallback(
-    (s) => {
+  const handleStatus = useCallback(
+    (text) => {
+      if (!text) return;
       if (!statusMsgIdRef.current) {
-        statusMsgIdRef.current = addMessage("status", s);
+        statusMsgIdRef.current = addMessage("status", text);
       } else {
-        updateMessageById(statusMsgIdRef.current, () => ({ content: s }));
+        updateMessage(statusMsgIdRef.current, {
+          content: text,
+        });
       }
     },
-    [addMessage, updateMessageById]
+    [addMessage, updateMessage]
   );
 
-  const onChunk = useCallback(
-    (payload) => {
-      if (payload === "[DONE]") return;
-      if (!assistantMsgIdRef.current) {
-        assistantMsgIdRef.current = addMessage("assistant", "");
+  const handleChunk = useCallback((raw) => {
+    const chunk = sanitizeChunk(raw);
+    if (!chunk) return;
+
+    setMessages((prev) => {
+      const next = [...prev];
+      const last = next[next.length - 1];
+
+      if (last && last.type === "assistant" && last.streaming) {
+        last.content = appendChunkSmart(last.content || "", chunk);
+      } else {
+        next.push({
+          id: `assistant_${Date.now()}_${Math.random()
+            .toString(36)
+            .slice(2, 6)}`,
+          type: "assistant",
+          content: chunk,
+          streaming: true,
+        });
       }
-      assistantBufRef.current += sanitizeChunk(payload);
-      scheduleFlush();
-    },
-    [addMessage, scheduleFlush]
-  );
+      return next;
+    });
+  }, []);
 
-  const onDone = useCallback(() => {
-    if (assistantMsgIdRef.current) {
-      const finalized = finalizeForRender(assistantBufRef.current);
-      updateMessageById(assistantMsgIdRef.current, () => ({
-        content: finalized,
-      }));
-    }
+  const handleDone = useCallback(() => {
+    setMessages((prev) => {
+      const next = [...prev];
+      const last = next[next.length - 1];
+      if (last && last.type === "assistant" && last.streaming) {
+        last.streaming = false;
+        last.content = finalizeForRender(last.content || "");
+      }
+      return next;
+    });
+
     if (statusMsgIdRef.current) {
-      // remove the thinking bubble entirely
-      removeMessageById(statusMsgIdRef.current);
+      removeMessage(statusMsgIdRef.current);
       statusMsgIdRef.current = null;
     }
-    setIsProcessing(false);
-  }, [updateMessageById, removeMessageById]);
 
-  const onError = useCallback(
+    setIsProcessing(false);
+  }, [removeMessage]);
+
+  const handleError = useCallback(
     (err) => {
-      replaceLastStatusWith(
-        "error",
-        `Error: ${err?.message || "Unknown"}. Please try again.`
-      );
+      const msg =
+        err?.message || "Unexpected error while processing your query.";
+      addMessage("error", msg);
       setIsProcessing(false);
     },
-    [replaceLastStatusWith]
+    [addMessage]
+  );
+
+  const handleKVResults = useCallback(
+    (kv) => {
+      if (!kv || !kv.result_type) return;
+
+      if (kv.result_type === "table") {
+        addMessage("table", "", { kv });
+        return;
+      }
+
+      const spec = kvToChartSpec(kv);
+      if (!spec) return;
+      addMessage("chart", "", {
+        vegaSpec: spec,
+        kvType: kv.result_type,
+        isKV: true,
+      });
+    },
+    [addMessage]
   );
 
   const { start, stop } = useLLMStream({
-    fetcher: (url, opts) => authFetchRef.current(url, opts),
-    onStatus,
-    onChunk,
-    onDone,
-    onError,
+    fetcher: authFetch,
+    onStatus: handleStatus,
+    onChunk: handleChunk,
+    onKVResults: handleKVResults,
+    onDone: handleDone,
+    onError: handleError,
   });
 
-  // --- Send query (SSE POST using the hook) ---------------------------------
-  const sendQuery = useCallback(async () => {
-    const trimmed = query.trim();
+  // --- Top queries: use correct endpoint + 5min interval --------------------
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTopQueries() {
+      try {
+        const res = await fetch("/api/v1/nl/queries/top?limit=5");
+        if (!res.ok || cancelled) return;
+
+        const data = await res.json();
+        if (cancelled) return;
+
+        const list = data?.top_queries || data?.topQueries || data || [];
+
+        if (Array.isArray(list) && list.length && !cancelled) {
+          const normalized = list.map((item) =>
+            typeof item === "string" ? { query: item } : item
+          );
+          setTopQueries(normalized);
+        }
+      } catch {
+        // silent; keep defaults
+      }
+    }
+
+    loadTopQueries();
+    const intervalId = setInterval(loadTopQueries, 5 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  // --- Send query -----------------------------------------------------------
+
+  const sendQuery = useCallback(() => {
+    const trimmed = (query || "").trim();
     if (!trimmed || isProcessing) return;
 
-    // reset any previous stream buffers
-    assistantBufRef.current = "";
-    assistantMsgIdRef.current = null;
-    statusMsgIdRef.current = null;
-
-    // add user message
     addMessage("user", trimmed);
     setQuery("");
     setCharCount(0);
     setIsProcessing(true);
 
-    // seed a status placeholder
     statusMsgIdRef.current = addMessage(
       "status",
       "Planning the query and preparing SPARQL..."
     );
 
-    // CAP backend expects POST to /api/v1/nl/query with SSE
-    start("/api/v1/nl/query", {
+    start({
+      url: "/api/v1/nl/query",
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "text/event-stream",
       },
-      body: JSON.stringify({ query: trimmed }),
-      credentials: "include",
+      body: { query: trimmed },
     });
   }, [query, isProcessing, addMessage, start]);
 
-  useEffect(() => () => stop(), [stop]);
+  useEffect(
+    () => () => {
+      stop();
+    },
+    [stop]
+  );
 
-  // --- Render ---------------------------------------------------------------
+  // --- Render (original containers preserved) -------------------------------
   return (
     <div className="cap-root">
       <div className="container">
@@ -298,9 +637,30 @@ export default function LandingPage() {
               </div>
             )}
 
-            {messages.map((m) => (
-              <Message key={m.id} type={m.type} content={m.content} />
-            ))}
+            {messages.map((m) =>
+              m.type === "chart" && m.vegaSpec ? (
+                <div key={m.id} className="message assistant">
+                  <div className="message-avatar">🤖</div>
+                  <div className="message-content">
+                    <div className="message-bubble markdown-body">
+                      <VegaChart spec={m.vegaSpec} />
+                    </div>
+                  </div>
+                </div>
+              ) : m.type === "table" && m.kv ? (
+                <div key={m.id} className="message assistant kv-message">
+                  <div className="message-avatar">🤖</div>
+                  <div className="message-content">
+                    <div className="message-bubble markdown-body kv-bubble">
+                      <KVTable kv={m.kv} />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <Message key={m.id} type={m.type} content={m.content} />
+              )
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
@@ -323,7 +683,13 @@ export default function LandingPage() {
                 </button>
               ))}
             </div>
-            <div className="empty-state" style={{ height: 0, padding: 0 }} />
+            <div
+              className="empty-state"
+              style={{
+                height: 0,
+                padding: 0,
+              }}
+            />
 
             <div className="input-wrapper">
               <div className="input-field">
@@ -340,7 +706,9 @@ export default function LandingPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
-                      if (!isProcessing && query.trim()) sendQuery();
+                      if (!isProcessing && query.trim()) {
+                        sendQuery();
+                      }
                     }
                   }}
                   placeholder="Ask a question about Cardano..."
@@ -349,7 +717,8 @@ export default function LandingPage() {
                   disabled={isProcessing}
                 />
                 <div className="char-count">
-                  <span>{charCount}</span>/1000
+                  <span>{charCount}</span>
+                  /1000
                 </div>
               </div>
               <button
@@ -372,7 +741,6 @@ export default function LandingPage() {
 
 // ---------------------- Message renderer ------------------------------------
 function Message({ type, content }) {
-  // Hide empty status entries (prevents stuck spinner)
   if (type === "status" && !String(content || "").trim()) return null;
 
   if (type === "status") {
@@ -405,14 +773,27 @@ function Message({ type, content }) {
         <div className="message-bubble markdown-body">
           {isUser ? (
             <div className="fade-in">
-              <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{content}</pre>
+              <pre
+                style={{
+                  whiteSpace: "pre-wrap",
+                  margin: 0,
+                }}
+              >
+                {content}
+              </pre>
             </div>
           ) : (
             <div className="fade-in">
               <ReactMarkdown
                 remarkPlugins={[
                   [remarkGfm],
-                  [remarkMath, { singleDollarTextMath: true, strict: false }],
+                  [
+                    remarkMath,
+                    {
+                      singleDollarTextMath: true,
+                      strict: false,
+                    },
+                  ],
                 ]}
                 rehypePlugins={[rehypeKatex, rehypeHighlight]}
               >

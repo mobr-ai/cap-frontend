@@ -230,7 +230,7 @@
   padding: 0.875rem 1.125rem;
   border-radius: 12px;
   display: inline-block;
-  max-width: 100%;
+  /*max-width: 100%*/
   word-wrap: break-word;
   white-space: pre-wrap; /* good for user/plain text */
   overflow-wrap: anywhere; /* long hashes/urls */
@@ -489,6 +489,7 @@
 .cap-root .messages::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 4px;
+  cursor: pointer;
 }
 .cap-root .messages::-webkit-scrollbar-thumb:hover {
   background: var(--secondary);
@@ -762,4 +763,135 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   font-size: 18px;
+}
+
+/* ---- Interactive KV Tables ---- */
+/* .cap-root .message.kv-message .message-content {
+  max-width: 100%;
+} */
+
+.cap-root .message-bubble.kv-bubble {
+  width: 100%;
+  /*max-width: 100%*/
+  padding: 0.75rem 0.75rem 0.5rem;
+}
+
+/* Wrapper: only scroll when needed, themed scrollbar */
+.kv-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 0.25rem;
+  padding-bottom: 2px; /* tiny space for scrollbar */
+}
+
+.kv-table-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+.kv-table-wrapper::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+.kv-table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.kv-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary);
+}
+
+/* Firefox */
+.kv-table-wrapper {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--surface);
+}
+
+/* Table styling */
+.kv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  border: 1px solid var(--border);
+  table-layout: auto;
+}
+
+.kv-table th,
+.kv-table td {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+
+/* Headers: centered, no wrap, subtle highlight */
+.kv-table th {
+  background: #3b465a; /* slightly brighter than surface-light */
+  color: var(--text-primary);
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+}
+
+/* Always show a faint sort hint so users know it's interactive */
+.kv-table th::after {
+  content: " ▾";
+  opacity: 0.18;
+  font-size: 0.7em;
+}
+
+/* Active sort states override hint */
+.kv-table th.sorted-asc::after {
+  content: " ▲";
+  opacity: 1;
+  color: var(--primary);
+}
+.kv-table th.sorted-desc::after {
+  content: " ▼";
+  opacity: 1;
+  color: var(--primary);
+}
+
+/* Body cells */
+.kv-table td {
+  color: var(--text-secondary);
+  text-align: left;
+  white-space: nowrap; /* compact by default */
+}
+
+/* Slight zebra + hover */
+.kv-table tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.02);
+}
+.kv-table tr:hover td {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Hash-like / long values break nicely instead of forcing massive scrollbar */
+.kv-table td {
+  word-break: break-all;
+  /* still nowrap for short cells; break-all only affects very long tokens */
+}
+
+/* Normalize textarea scrollbar (user prompt) to match KV table scrollbars */
+.input-field textarea {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--surface);
+}
+
+/* WebKit */
+.input-field textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.input-field textarea::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+.input-field textarea::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.input-field textarea::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary);
 }
