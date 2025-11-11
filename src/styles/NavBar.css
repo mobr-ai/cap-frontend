@@ -230,3 +230,26 @@
 .nav-link {
   display: flex;
 }
+
+/* Language dropdown title + caret */
+.navbar-lang-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.navbar-lang-label {
+  white-space: nowrap;
+}
+
+.navbar-lang-caret {
+  display: inline-block;
+  line-height: 1;
+  margin-left: 2px;
+  opacity: 0.9;
+}
+
+/* (Optional) scope hiding default caret just for safety */
+#navbar-lang .dropdown-toggle::after {
+  display: none !important;
+}

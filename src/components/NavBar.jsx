@@ -7,6 +7,8 @@ import Navbar from "react-bootstrap/Navbar";
 import NavDropdown from "react-bootstrap/NavDropdown";
 import { Link, useNavigate } from "react-router-dom";
 import i18n from "./../i18n";
+import { useTranslation } from "react-i18next";
+
 import avatarImg from "/icons/avatar.png";
 
 function NavBar({
@@ -21,6 +23,7 @@ function NavBar({
   const [brand, setBrand] = useState("");
   const brandRef = useRef("");
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Typing → pause → shrink animation
   useEffect(() => {
@@ -107,6 +110,14 @@ function NavBar({
     []
   );
   const currentLang = (i18n.language || "en").split("-")[0];
+  const langMenuTitle = (
+    <span className="navbar-lang-title nav-text">
+      <span className="navbar-lang-label">{t("language")}</span>
+      <span className="navbar-lang-caret" aria-hidden="true">
+        ▾
+      </span>
+    </span>
+  );
 
   return (
     <>
@@ -200,7 +211,7 @@ function NavBar({
 
               {/* Language dropdown (back outside, to the left of user) */}
               <NavDropdown
-                title="Language"
+                title={langMenuTitle}
                 id="navbar-lang"
                 align="end"
                 menuVariant="dark"
