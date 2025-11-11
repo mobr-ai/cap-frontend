@@ -76,13 +76,34 @@ export function useLLMStream({
         let kvBuffer = "";
 
         const flushKVResults = () => {
-          const raw = kvBuffer.trim();
+          let raw = kvBuffer.trim();
           kvBuffer = "";
           if (!raw) return;
+
           try {
-            const parsed = JSON.parse(raw);
-            onKVResults?.(parsed);
+            // some models may accidentally prefix "kv_results:" inside the block; strip if present
+            if (raw.startsWith("kv_results:")) {
+              raw = raw.slice("kv_results:".length).trim();
+            }
+
+            // try direct parse
+            return onKVResults?.(JSON.parse(raw));
           } catch (err) {
+            // try to rescue by extracting the first {...} block
+            const match = raw.match(/\{[\s\S]*\}/);
+            if (match) {
+              try {
+                onKVResults?.(JSON.parse(match[0]));
+                return;
+              } catch (err2) {
+                console.error(
+                  "useLLMStream: kv_results JSON rescue failed",
+                  err2,
+                  match[0]
+                );
+              }
+            }
+
             console.error("useLLMStream: failed to parse kv_results", err, raw);
             onError?.(err);
           }

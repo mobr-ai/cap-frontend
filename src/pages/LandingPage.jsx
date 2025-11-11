@@ -1,5 +1,6 @@
 // src/pages/LandingPage.jsx
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -401,8 +402,9 @@ function appendChunkSmart(prev, chunk) {
 // ------------ LandingPage ---------------------------------------------------
 
 export default function LandingPage() {
-  const { authFetch } = useAuthRequest();
-
+  const outlet = useOutletContext() || {};
+  const { session, showToast } = outlet;
+  const { authFetch } = useAuthRequest({ session, showToast });
   const [messages, setMessages] = useState([]);
   const [query, setQuery] = useState("");
   const [charCount, setCharCount] = useState(0);
@@ -523,6 +525,8 @@ export default function LandingPage() {
 
   const handleKVResults = useCallback(
     (kv) => {
+      console.log("KV RESULTS RECEIVED", kv); // debug
+
       if (!kv || !kv.result_type) return;
 
       if (kv.result_type === "table") {
@@ -550,7 +554,7 @@ export default function LandingPage() {
     onError: handleError,
   });
 
-  // --- Top queries: use correct endpoint + 5min interval --------------------
+  // --- Top queries: 5min interval --------------------
 
   useEffect(() => {
     let cancelled = false;
@@ -619,7 +623,74 @@ export default function LandingPage() {
     [stop]
   );
 
-  // --- Render (original containers preserved) -------------------------------
+  const pinArtifact = useCallback(
+    async (message) => {
+      if (!authFetch) {
+        return;
+      }
+
+      try {
+        // Find the last user query before this message (for context)
+        const idx = messages.findIndex((m) => m.id === message.id);
+        let sourceQuery;
+        if (idx > 0) {
+          for (let i = idx - 1; i >= 0; i -= 1) {
+            if (messages[i].type === "user") {
+              sourceQuery = messages[i].content;
+              break;
+            }
+          }
+        }
+
+        const artifact_type = message.type === "table" ? "table" : "chart";
+
+        const titleBase = artifact_type === "table" ? "Table" : "Chart";
+        const title =
+          message.title ||
+          (sourceQuery
+            ? `${titleBase}: ${sourceQuery.slice(0, 80)}`
+            : `${titleBase} ${new Date().toLocaleTimeString()}`);
+
+        const config =
+          artifact_type === "table"
+            ? { kv: message.kv }
+            : {
+                vegaSpec: message.vegaSpec,
+                kvType: message.kvType,
+              };
+
+        const body = {
+          artifact_type,
+          title,
+          source_query: sourceQuery,
+          config,
+        };
+
+        const res = await authFetch("/api/v1/dashboard/pin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || "Failed to pin artifact");
+        }
+
+        if (showToast) {
+          showToast("Pinned to your dashboard.", "success");
+        }
+      } catch (err) {
+        console.error("Pin failed", err);
+        if (showToast) {
+          showToast("Could not pin artifact.", "danger");
+        }
+      }
+    },
+    [authFetch, messages, showToast]
+  );
+
+  // --- Render -------------------------------
   return (
     <div className="cap-root">
       <div className="container">
@@ -644,6 +715,14 @@ export default function LandingPage() {
                   <div className="message-content">
                     <div className="message-bubble markdown-body">
                       <VegaChart spec={m.vegaSpec} />
+                      <div className="artifact-actions">
+                        <button
+                          className="artifact-pin-button"
+                          onClick={() => pinArtifact(m)}
+                        >
+                          Pin to dashboard
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -653,6 +732,14 @@ export default function LandingPage() {
                   <div className="message-content">
                     <div className="message-bubble markdown-body kv-bubble">
                       <KVTable kv={m.kv} />
+                      <div className="artifact-actions">
+                        <button
+                          className="artifact-pin-button"
+                          onClick={() => pinArtifact(m)}
+                        >
+                          Pin to dashboard
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

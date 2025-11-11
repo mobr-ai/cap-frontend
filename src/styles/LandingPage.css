@@ -895,3 +895,23 @@
 .input-field textarea::-webkit-scrollbar-thumb:hover {
   background: var(--secondary);
 }
+
+.artifact-actions {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.artifact-pin-button {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid #374151;
+  background: #111827;
+  color: #e5e7eb;
+  cursor: pointer;
+}
+
+.artifact-pin-button:hover {
+  background: #1f2937;
+}
