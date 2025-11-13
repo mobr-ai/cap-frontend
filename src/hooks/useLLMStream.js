@@ -28,7 +28,12 @@ export function useLLMStream({
   const abortRef = useRef(null);
 
   const start = useCallback(
-    async ({ url = "/query", body, method = "POST", headers = {} } = {}) => {
+    async ({
+      url = VITE_NL_ENDPOINT,
+      body,
+      method = "POST",
+      headers = {},
+    } = {}) => {
       if (!fetcher) {
         throw new Error("useLLMStream: fetcher (authFetch) is required.");
       }

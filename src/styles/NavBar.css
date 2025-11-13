@@ -20,6 +20,7 @@
   height: var(--nav-height);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-left: 0;
 }
 
 /* Grid layout: Brand | Status | Controls */
@@ -28,6 +29,11 @@
   grid-template-columns: minmax(220px, 32vw) 1fr auto;
   align-items: center;
   column-gap: 12px;
+}
+
+/* when the burger is present (desktop), shift the navbar content */
+.has-left-burger .cap-navbar {
+  padding-left: 3rem; /* room for the burger */
 }
 
 /* ───────────────────────────────
@@ -216,6 +222,9 @@
   .Navbar-brand-slot {
     width: clamp(140px, 40vw, 240px);
   }
+  .has-left-burger .cap-navbar {
+    padding-left: 0;
+  }
 }
 @media (max-width: 768px) {
   .navbar-status-bar {
@@ -252,4 +261,33 @@
 /* (Optional) scope hiding default caret just for safety */
 #navbar-lang .dropdown-toggle::after {
   display: none !important;
+}
+
+.Navbar-toggle-btn {
+  position: fixed;
+  top: 10px;
+  left: 12px;
+  transform: none; /* remove vertical centering */
+  background: transparent;
+  border: none;
+  color: #e5e7eb;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1100;
+  padding: 0;
+}
+
+/* Hide burger on mobile; mobile uses built-in Nav collapse */
+@media (max-width: 991px) {
+  .Navbar-toggle-btn {
+    display: none;
+  }
+}
+
+/* Shift navbar content so burger sits left of CAP logo */
+.cap-navbar-with-sidebar {
+  padding-left: 3rem; /* keep logo clear of the burger */
 }

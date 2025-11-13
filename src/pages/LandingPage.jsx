@@ -66,42 +66,6 @@ function VegaChart({ spec }) {
   return <div className="vega-chart-container" ref={containerRef} />;
 }
 
-// kv_results → Markdown table
-function kvTableToMarkdown(kv) {
-  const cols = kv?.data?.values || [];
-  if (!Array.isArray(cols) || cols.length === 0) return "";
-
-  let headers =
-    (kv.metadata &&
-      Array.isArray(kv.metadata.columns) &&
-      kv.metadata.columns.length &&
-      kv.metadata.columns) ||
-    cols
-      .map((col) => {
-        const entry = Object.entries(col).find(([key]) => key !== "values");
-        return entry ? entry[1] : "";
-      })
-      .filter(Boolean);
-
-  if (!headers.length) return "";
-
-  const colValues = cols.map((c) => c.values || []);
-  const rowCount = Math.max(
-    ...colValues.map((vs) => (Array.isArray(vs) ? vs.length : 0))
-  );
-  if (!rowCount || !isFinite(rowCount)) return "";
-
-  let md = `| ${headers.join(" | ")} |\n`;
-  md += `| ${headers.map(() => "---").join(" | ")} |\n`;
-  for (let i = 0; i < rowCount; i++) {
-    const row = colValues.map((vs) =>
-      i < vs.length && vs[i] != null ? String(vs[i]) : ""
-    );
-    md += `| ${row.join(" | ")} |\n`;
-  }
-  return md;
-}
-
 // kv_results → Vega-Lite bar chart
 function kvToBarChartSpec(kv) {
   const values = kv?.data?.values || [];
@@ -402,6 +366,7 @@ function appendChunkSmart(prev, chunk) {
 // ------------ LandingPage ---------------------------------------------------
 
 export default function LandingPage() {
+  const NL_ENDPOINT = import.meta.env.VITE_NL_ENDPOINT || "/api/v1/nl/query";
   const outlet = useOutletContext() || {};
   const { session, showToast } = outlet;
   const { authFetch } = useAuthRequest({ session, showToast });
@@ -420,7 +385,7 @@ export default function LandingPage() {
     },
     {
       query:
-        "Plot a pie chart of how much the top 1% ADA holders represent of total supply.",
+        "Plot a pie chart to show how much the top 1% ADA holders represent from the total supply on the Cardano network.",
     },
   ]);
 
@@ -606,7 +571,7 @@ export default function LandingPage() {
     );
 
     start({
-      url: "/api/v1/nl/query",
+      url: NL_ENDPOINT,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
