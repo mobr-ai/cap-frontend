@@ -526,7 +526,7 @@ export default function LandingPage() {
 
     async function loadTopQueries() {
       try {
-        const res = await fetch("/api/v1/nl/queries/top?limit=5");
+        const res = await authFetch("/api/v1/nl/queries/top?limit=5");
         if (!res.ok || cancelled) return;
 
         const data = await res.json();

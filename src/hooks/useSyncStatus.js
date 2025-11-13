@@ -102,7 +102,7 @@ export default function useSyncStatus(authFetch) {
         GROUP BY (?currentCardanoHeight)
       `;
 
-        const res = await authFetch(VITE_NL_ENDPOINT, {
+        const res = await authFetch("/api/v1/query", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query: sparqlQuery, type: "SELECT" }),
