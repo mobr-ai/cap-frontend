@@ -315,6 +315,9 @@ export default function DashboardPage() {
   // If we're on the default dashboard and the hook’s defaultItems changed,
   // reflect it (both in oneshot and polling mode), but only when truly different.
   useEffect(() => {
+    // In oneshot mode, don't force-sync from defaultItems,
+    // we already did the initial load in the other effect.
+    if (DISABLE_DASH) return;
     if (defaultId && activeId === defaultId) {
       setIfChanged(setItems, defaultItems, shallowEqualArray);
     }
@@ -330,6 +333,7 @@ export default function DashboardPage() {
       });
       if (!res.ok) throw new Error();
       setItems((prev) => prev.filter((i) => i.id !== id));
+      refresh && refresh();
     } catch {
       showToast && showToast("Unable to remove widget", "danger");
     }
