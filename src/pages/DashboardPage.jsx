@@ -57,7 +57,6 @@ function VegaWidget({ spec }) {
     }
 
     // Let Vega-Lite resize with the container
-    // "fit" preserves the chart, just scales it
     copy.autosize = {
       type: "fit",
       contains: "padding",
@@ -95,7 +94,9 @@ function VegaWidget({ spec }) {
       if (view)
         try {
           view.finalize();
-        } catch {}
+        } catch {
+          // ignore
+        }
     };
   }, [spec]);
 
@@ -149,7 +150,11 @@ export default function DashboardPage() {
   const { session, showToast } = useOutletContext();
   const { authFetch } = useAuthRequest({ session, showToast });
 
-  // From hook: dashboards list and "default dashboard items" (if poll enabled)
+  const DISABLE_DASH =
+    String(import.meta.env.VITE_CAP_DISABLE_DASHBOARD_POLL ?? "false") ===
+    "true";
+
+  // From hook: dashboards list and "default dashboard items" (oneshot or poll)
   const {
     dashboard: dashboardsRaw,
     items: defaultItemsRaw,
@@ -176,14 +181,14 @@ export default function DashboardPage() {
     return d?.id ?? null;
   }, [dashboards]);
 
-  // Set first/ default dashboard only once when we finally have a list
+  // Set first / default dashboard only once when we finally have a list
   useEffect(() => {
     if (activeId == null && defaultId != null) {
       setActiveId(defaultId);
     }
   }, [activeId, defaultId]);
 
-  // Per-dashboard polling (only when NOT default)
+  // Per-dashboard polling infra (used only when polling is enabled)
   const itemsPollerRef = useRef(null);
   const itemsAbortRef = useRef(null);
 
@@ -200,6 +205,9 @@ export default function DashboardPage() {
 
   const startItemsPoller = useCallback(
     (dashId) => {
+      // In oneshot mode, we do not start a continuous poller
+      if (DISABLE_DASH) return;
+
       stopItemsPoller();
       if (!dashId) return;
 
@@ -230,35 +238,89 @@ export default function DashboardPage() {
 
       itemsPollerRef.current = { unsub };
     },
-    [authFetch, stopItemsPoller]
+    [DISABLE_DASH, authFetch, stopItemsPoller]
   );
 
   // React to activeId changes:
-  // - If active is default, use defaultItems and stop extra poller
-  // - Otherwise, start (or switch) per-dashboard poller
+  // - In oneshot mode:
+  //    * If active is default -> use defaultItems from hook
+  //    * Else -> perform a single fetch for that dashboard's items
+  // - In polling mode (original logic):
+  //    * If active is default -> use defaultItems, stop extra poller
+  //    * Else -> start (or switch) per-dashboard poller
   useEffect(() => {
     if (!activeId) {
       stopItemsPoller();
       setIfChanged(setItems, [], shallowEqualArray);
       return;
     }
+
+    // --- oneshot mode: no continuous polling, just fetch once ---
+    if (DISABLE_DASH) {
+      // Ensure no leftover pollers are running
+      stopItemsPoller();
+
+      // Default dashboard: rely on hook's defaultItems
+      if (defaultId && activeId === defaultId) {
+        setIfChanged(setItems, defaultItems, shallowEqualArray);
+        return;
+      }
+
+      // Non-default dashboard: fetch items once
+      if (!authFetch) return;
+
+      if (itemsAbortRef.current) {
+        itemsAbortRef.current.abort();
+      }
+      const ac = new AbortController();
+      itemsAbortRef.current = ac;
+
+      (async () => {
+        try {
+          const res = await authFetch(`/api/v1/dashboard/${activeId}/items`, {
+            signal: ac.signal,
+          });
+          if (!res.ok) throw new Error(`items ${res.status}`);
+          const data = await res.json();
+          const safe = Array.isArray(data) ? data : [];
+          setIfChanged(setItems, safe, shallowEqualArray);
+        } catch (err) {
+          if (err?.name === "AbortError") return;
+          console.warn("Oneshot items fetch error:", err?.message || err);
+        }
+      })();
+
+      return;
+    }
+
+    // --- polling mode: original behaviour ---
     if (defaultId && activeId === defaultId) {
+      // Use defaultItems and stop extra poller
       stopItemsPoller();
       setIfChanged(setItems, defaultItems, shallowEqualArray);
     } else {
+      // Non-default dashboard -> per-dashboard poller
       startItemsPoller(activeId);
     }
-  }, [activeId, defaultId, defaultItems, startItemsPoller, stopItemsPoller]);
+  }, [
+    DISABLE_DASH,
+    activeId,
+    defaultId,
+    defaultItems,
+    authFetch,
+    startItemsPoller,
+    stopItemsPoller,
+  ]);
 
   // If we're on the default dashboard and the hook’s defaultItems changed,
-  // reflect it but only when truly different to avoid loops.
+  // reflect it (both in oneshot and polling mode), but only when truly different.
   useEffect(() => {
     if (defaultId && activeId === defaultId) {
       setIfChanged(setItems, defaultItems, shallowEqualArray);
     }
   }, [defaultItems, activeId, defaultId]);
 
-  // Cleanup
+  // Cleanup on unmount
   useEffect(() => () => stopItemsPoller(), [stopItemsPoller]);
 
   const handleDeleteItem = async (id) => {
@@ -327,16 +389,10 @@ export default function DashboardPage() {
           </Button>
         </div>
 
-        {error && (
-          <div className="alert alert-warning py-2">
-            Some data failed to load. Retrying with backoff…
-          </div>
-        )}
-
         {!dashboards.length && (
           <p>
-            No dashboard yet. Pin any table or chart from the chat to create
-            your default dashboard automatically.
+            Pin any table or chart from the chat to create your dashboard
+            automatically.
           </p>
         )}
 

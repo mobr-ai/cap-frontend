@@ -18,6 +18,7 @@ function shallowEqualArray(a, b) {
   }
   return true;
 }
+
 const setIfChanged = (set, next, eq) =>
   set((prev) => (eq(prev, next) ? prev : next));
 
@@ -36,9 +37,14 @@ export default function useDashboardData(authFetch) {
 
   // one poller for list, one per default-id for items
   const pollDash = useMemo(
-    () => getPoller("dashboards", { interval: 30_000, maxInterval: 300_000 }),
+    () =>
+      getPoller("dashboards", {
+        interval: 30_000,
+        maxInterval: 300_000,
+      }),
     []
   );
+
   // NOTE: items poller key includes the id so we swap cleanly when id changes
   const getItemsPoller = useCallback(
     (id) =>
@@ -50,10 +56,42 @@ export default function useDashboardData(authFetch) {
   );
   const itemsPollerRef = useRef(null);
 
-  // -------- poll dashboards list ----------
+  // -------- dashboards list: poll OR fetch once ----------
   useEffect(() => {
     if (!authFetch) return;
 
+    // --- oneshot mode (no continuous polling) ---
+    if (DISABLE_DASH) {
+      const ac = new AbortController();
+      acDashRef.current = ac;
+
+      (async () => {
+        try {
+          const res = await authFetch("/api/v1/dashboard", {
+            signal: ac.signal,
+          });
+          if (!res.ok) throw new Error(`dashboards ${res.status}`);
+          const data = await res.json();
+          const list = Array.isArray(data) ? data : [];
+          setError(null);
+          setIfChanged(setDashboard, list, shallowEqualArray);
+
+          // choose default once we have data
+          const preferred = list.find((d) => d.is_default) || list[0] || null;
+          const nextId = preferred?.id ?? null;
+          setDefaultId(nextId);
+        } catch (err) {
+          if (err?.name === "AbortError") return;
+          setError(err);
+        }
+      })();
+
+      return () => {
+        ac.abort();
+      };
+    }
+
+    // --- polling mode (original behaviour) ---
     pollDash.setFetcher(async () => {
       if (acDashRef.current) acDashRef.current.abort();
       acDashRef.current = new AbortController();
@@ -83,13 +121,40 @@ export default function useDashboardData(authFetch) {
       if (acDashRef.current) acDashRef.current.abort();
       unsub();
     };
-  }, [authFetch, pollDash]);
+  }, [DISABLE_DASH, authFetch, pollDash]);
 
-  // -------- poll items for the default dashboard ----------
+  // -------- items for the default dashboard: poll OR fetch once ----------
   useEffect(() => {
-    // stop when disabled, unauth, or we don't know the id yet
-    if (DISABLE_DASH || !authFetch || !defaultId) return () => {};
+    // stop when unauth, or we don't know the id yet
+    if (!authFetch || !defaultId) return () => {};
 
+    // --- oneshot mode (no continuous polling) ---
+    if (DISABLE_DASH) {
+      const ac = new AbortController();
+      acItemsRef.current = ac;
+
+      (async () => {
+        try {
+          const res = await authFetch(`/api/v1/dashboard/${defaultId}/items`, {
+            signal: ac.signal,
+          });
+          if (!res.ok) throw new Error(`items ${res.status}`);
+          const data = await res.json();
+          const list = Array.isArray(data) ? data : [];
+          setError(null);
+          setIfChanged(setItems, list, shallowEqualArray);
+        } catch (err) {
+          if (err?.name === "AbortError") return;
+          setError(err);
+        }
+      })();
+
+      return () => {
+        ac.abort();
+      };
+    }
+
+    // --- polling mode (original behaviour) ---
     // cancel previous
     if (acItemsRef.current) acItemsRef.current.abort();
     if (itemsPollerRef.current?.unsub) {
@@ -102,7 +167,6 @@ export default function useDashboardData(authFetch) {
     poller.setFetcher(async () => {
       if (acItemsRef.current) acItemsRef.current.abort();
       acItemsRef.current = new AbortController();
-      // ✅ include the id here
       const res = await authFetch(`/api/v1/dashboard/${defaultId}/items`, {
         signal: acItemsRef.current.signal,
       });
@@ -130,9 +194,58 @@ export default function useDashboardData(authFetch) {
 
   // expose manual refresh
   const refresh = useCallback(() => {
+    if (DISABLE_DASH) {
+      // In oneshot mode, just re-run the oneshot fetches.
+      if (!authFetch) return;
+
+      // refresh dashboards
+      const acDash = new AbortController();
+      authFetch("/api/v1/dashboard", { signal: acDash.signal })
+        .then((res) => {
+          if (!res.ok) throw new Error(`dashboards ${res.status}`);
+          return res.json();
+        })
+        .then((data) => {
+          const list = Array.isArray(data) ? data : [];
+          setError(null);
+          setIfChanged(setDashboard, list, shallowEqualArray);
+          const preferred = list.find((d) => d.is_default) || list[0] || null;
+          const nextId = preferred?.id ?? null;
+          setDefaultId(nextId);
+        })
+        .catch((err) => {
+          if (err?.name === "AbortError") return;
+          setError(err);
+        });
+
+      // refresh items for current default
+      if (defaultId) {
+        const acItems = new AbortController();
+        authFetch(`/api/v1/dashboard/${defaultId}/items`, {
+          signal: acItems.signal,
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error(`items ${res.status}`);
+            return res.json();
+          })
+          .then((data) => {
+            const list = Array.isArray(data) ? data : [];
+            setError(null);
+            setIfChanged(setItems, list, shallowEqualArray);
+          })
+          .catch((err) => {
+            if (err?.name === "AbortError") return;
+            setError(err);
+          });
+      }
+
+      return;
+    }
+
+    // polling mode: use pollers' forceRefresh
     pollDash.forceRefresh();
     if (defaultId) getItemsPoller(defaultId).forceRefresh();
-  }, [pollDash, defaultId, getItemsPoller]);
+  }, [DISABLE_DASH, authFetch, pollDash, defaultId, getItemsPoller]);
 
   return { dashboard, items, error, refresh };
 }
