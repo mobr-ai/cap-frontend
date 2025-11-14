@@ -112,12 +112,26 @@ export default function useSyncStatus(authFetch) {
         if (!res.ok) throw new Error(String(res.status));
 
         const data = await res.json();
-        const row = data?.results?.results?.bindings?.[0];
-        const cap = Number(row?.capBlockNum?.value ?? NaN);
-        const chain = Number(row?.currentCardanoHeight?.value ?? NaN);
-        if (!Number.isNaN(cap)) setCapBlock(cap);
-        if (!Number.isNaN(chain)) setCardanoBlock(chain);
-        resetFailure();
+
+        // Some backends wrap results twice, some three times.
+        // Try the deepest one first, fall back to the old shape.
+        const bindings =
+          data?.results?.results?.results?.bindings ||
+          data?.results?.results?.bindings;
+
+        const row = bindings?.[0];
+
+        if (row) {
+          const cap = Number(row?.capBlockNum?.value ?? NaN);
+          const chain = Number(row?.currentCardanoHeight?.value ?? NaN);
+
+          if (!Number.isNaN(cap)) setCapBlock(cap);
+          if (!Number.isNaN(chain)) setCardanoBlock(chain);
+          resetFailure();
+        } else {
+          console.debug("Sync info: no bindings in SPARQL response", data);
+          bumpFailure();
+        }
       } catch (e) {
         // Silence expected 500s during local dev
         if (e.message !== "500") {
