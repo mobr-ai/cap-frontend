@@ -35,7 +35,13 @@ export default function useDashboardData(authFetch) {
   const acDashRef = useRef(null);
   const acItemsRef = useRef(null);
 
-  // one poller for list, one per default-id for items
+  // keep latest authFetch in a ref so effects don't depend on its identity
+  const authFetchRef = useRef(authFetch);
+  useEffect(() => {
+    authFetchRef.current = authFetch;
+  }, [authFetch]);
+
+  // pollers (used only when DISABLE_DASH === false)
   const pollDash = useMemo(
     () =>
       getPoller("dashboards", {
@@ -45,7 +51,6 @@ export default function useDashboardData(authFetch) {
     []
   );
 
-  // NOTE: items poller key includes the id so we swap cleanly when id changes
   const getItemsPoller = useCallback(
     (id) =>
       getPoller(`dashboard-items:${id}`, {
@@ -58,7 +63,7 @@ export default function useDashboardData(authFetch) {
 
   // -------- dashboards list: poll OR fetch once ----------
   useEffect(() => {
-    if (!authFetch) return;
+    if (!authFetchRef.current) return;
 
     // --- oneshot mode (no continuous polling) ---
     if (DISABLE_DASH) {
@@ -67,7 +72,7 @@ export default function useDashboardData(authFetch) {
 
       (async () => {
         try {
-          const res = await authFetch("/api/v1/dashboard", {
+          const res = await authFetchRef.current("/api/v1/dashboard", {
             signal: ac.signal,
           });
           if (!res.ok) throw new Error(`dashboards ${res.status}`);
@@ -76,7 +81,6 @@ export default function useDashboardData(authFetch) {
           setError(null);
           setIfChanged(setDashboard, list, shallowEqualArray);
 
-          // choose default once we have data
           const preferred = list.find((d) => d.is_default) || list[0] || null;
           const nextId = preferred?.id ?? null;
           setDefaultId(nextId);
@@ -95,7 +99,7 @@ export default function useDashboardData(authFetch) {
     pollDash.setFetcher(async () => {
       if (acDashRef.current) acDashRef.current.abort();
       acDashRef.current = new AbortController();
-      const res = await authFetch("/api/v1/dashboard", {
+      const res = await authFetchRef.current("/api/v1/dashboard", {
         signal: acDashRef.current.signal,
       });
       if (!res.ok) throw new Error(`dashboards ${res.status}`);
@@ -111,7 +115,6 @@ export default function useDashboardData(authFetch) {
       const list = Array.isArray(data) ? data : [];
       setIfChanged(setDashboard, list, shallowEqualArray);
 
-      // choose default once we have data
       const preferred = list.find((d) => d.is_default) || list[0] || null;
       const nextId = preferred?.id ?? null;
       setDefaultId((prev) => (prev == null ? nextId : prev));
@@ -121,12 +124,11 @@ export default function useDashboardData(authFetch) {
       if (acDashRef.current) acDashRef.current.abort();
       unsub();
     };
-  }, [DISABLE_DASH, authFetch, pollDash]);
+  }, [DISABLE_DASH, pollDash]);
 
   // -------- items for the default dashboard: poll OR fetch once ----------
   useEffect(() => {
-    // stop when unauth, or we don't know the id yet
-    if (!authFetch || !defaultId) return () => {};
+    if (!authFetchRef.current || !defaultId) return () => {};
 
     // --- oneshot mode (no continuous polling) ---
     if (DISABLE_DASH) {
@@ -135,9 +137,10 @@ export default function useDashboardData(authFetch) {
 
       (async () => {
         try {
-          const res = await authFetch(`/api/v1/dashboard/${defaultId}/items`, {
-            signal: ac.signal,
-          });
+          const res = await authFetchRef.current(
+            `/api/v1/dashboard/${defaultId}/items`,
+            { signal: ac.signal }
+          );
           if (!res.ok) throw new Error(`items ${res.status}`);
           const data = await res.json();
           const list = Array.isArray(data) ? data : [];
@@ -155,7 +158,6 @@ export default function useDashboardData(authFetch) {
     }
 
     // --- polling mode (original behaviour) ---
-    // cancel previous
     if (acItemsRef.current) acItemsRef.current.abort();
     if (itemsPollerRef.current?.unsub) {
       itemsPollerRef.current.unsub();
@@ -167,9 +169,10 @@ export default function useDashboardData(authFetch) {
     poller.setFetcher(async () => {
       if (acItemsRef.current) acItemsRef.current.abort();
       acItemsRef.current = new AbortController();
-      const res = await authFetch(`/api/v1/dashboard/${defaultId}/items`, {
-        signal: acItemsRef.current.signal,
-      });
+      const res = await authFetchRef.current(
+        `/api/v1/dashboard/${defaultId}/items`,
+        { signal: acItemsRef.current.signal }
+      );
       if (!res.ok) throw new Error(`items ${res.status}`);
       return res.json();
     });
@@ -190,17 +193,17 @@ export default function useDashboardData(authFetch) {
       if (acItemsRef.current) acItemsRef.current.abort();
       unsub();
     };
-  }, [DISABLE_DASH, authFetch, defaultId, getItemsPoller]);
+  }, [DISABLE_DASH, defaultId, getItemsPoller]);
 
   // expose manual refresh
   const refresh = useCallback(() => {
     if (DISABLE_DASH) {
-      // In oneshot mode, just re-run the oneshot fetches.
-      if (!authFetch) return;
+      if (!authFetchRef.current) return;
 
       // refresh dashboards
       const acDash = new AbortController();
-      authFetch("/api/v1/dashboard", { signal: acDash.signal })
+      authFetchRef
+        .current("/api/v1/dashboard", { signal: acDash.signal })
         .then((res) => {
           if (!res.ok) throw new Error(`dashboards ${res.status}`);
           return res.json();
@@ -221,9 +224,10 @@ export default function useDashboardData(authFetch) {
       // refresh items for current default
       if (defaultId) {
         const acItems = new AbortController();
-        authFetch(`/api/v1/dashboard/${defaultId}/items`, {
-          signal: acItems.signal,
-        })
+        authFetchRef
+          .current(`/api/v1/dashboard/${defaultId}/items`, {
+            signal: acItems.signal,
+          })
           .then((res) => {
             if (!res.ok) throw new Error(`items ${res.status}`);
             return res.json();
@@ -242,10 +246,10 @@ export default function useDashboardData(authFetch) {
       return;
     }
 
-    // polling mode: use pollers' forceRefresh
+    // polling mode
     pollDash.forceRefresh();
     if (defaultId) getItemsPoller(defaultId).forceRefresh();
-  }, [DISABLE_DASH, authFetch, pollDash, defaultId, getItemsPoller]);
+  }, [DISABLE_DASH, pollDash, defaultId, getItemsPoller]);
 
   return { dashboard, items, error, refresh };
 }
