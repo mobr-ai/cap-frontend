@@ -1,26 +1,6 @@
-// src/hooks/useDashboardData.js
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { getPoller } from "@/utils/poller";
-
-// small helpers to avoid useless re-renders
-function shallowEqualArray(a, b) {
-  if (a === b) return true;
-  if (!Array.isArray(a) || !Array.isArray(b)) return false;
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    const x = a[i],
-      y = b[i];
-    if (x?.id != null || y?.id != null) {
-      if (x?.id !== y?.id) return false;
-    } else if (x !== y) {
-      return false;
-    }
-  }
-  return true;
-}
-
-const setIfChanged = (set, next, eq) =>
-  set((prev) => (eq(prev, next) ? prev : next));
+import { shallowEqualArray, setIfChanged } from "@/utils/arrays";
 
 export default function useDashboardData(authFetch) {
   const DISABLE_DASH =
@@ -35,13 +15,11 @@ export default function useDashboardData(authFetch) {
   const acDashRef = useRef(null);
   const acItemsRef = useRef(null);
 
-  // keep latest authFetch in a ref so effects don't depend on its identity
   const authFetchRef = useRef(authFetch);
   useEffect(() => {
     authFetchRef.current = authFetch;
   }, [authFetch]);
 
-  // pollers (used only when DISABLE_DASH === false)
   const pollDash = useMemo(
     () =>
       getPoller("dashboards", {
@@ -61,11 +39,10 @@ export default function useDashboardData(authFetch) {
   );
   const itemsPollerRef = useRef(null);
 
-  // -------- dashboards list: poll OR fetch once ----------
+  // dashboards list
   useEffect(() => {
     if (!authFetchRef.current) return;
 
-    // --- oneshot mode (no continuous polling) ---
     if (DISABLE_DASH) {
       const ac = new AbortController();
       acDashRef.current = ac;
@@ -95,7 +72,7 @@ export default function useDashboardData(authFetch) {
       };
     }
 
-    // --- polling mode (original behaviour) ---
+    // polling mode
     pollDash.setFetcher(async () => {
       if (acDashRef.current) acDashRef.current.abort();
       acDashRef.current = new AbortController();
@@ -126,11 +103,10 @@ export default function useDashboardData(authFetch) {
     };
   }, [DISABLE_DASH, pollDash]);
 
-  // -------- items for the default dashboard: poll OR fetch once ----------
+  // default dashboard items
   useEffect(() => {
     if (!authFetchRef.current || !defaultId) return () => {};
 
-    // --- oneshot mode (no continuous polling) ---
     if (DISABLE_DASH) {
       const ac = new AbortController();
       acItemsRef.current = ac;
@@ -157,7 +133,6 @@ export default function useDashboardData(authFetch) {
       };
     }
 
-    // --- polling mode (original behaviour) ---
     if (acItemsRef.current) acItemsRef.current.abort();
     if (itemsPollerRef.current?.unsub) {
       itemsPollerRef.current.unsub();
@@ -195,15 +170,13 @@ export default function useDashboardData(authFetch) {
     };
   }, [DISABLE_DASH, defaultId, getItemsPoller]);
 
-  // expose manual refresh
   const refresh = useCallback(() => {
     if (DISABLE_DASH) {
       if (!authFetchRef.current) return;
 
       // refresh dashboards
-      const acDash = new AbortController();
       authFetchRef
-        .current("/api/v1/dashboard", { signal: acDash.signal })
+        .current("/api/v1/dashboard")
         .then((res) => {
           if (!res.ok) throw new Error(`dashboards ${res.status}`);
           return res.json();
@@ -221,13 +194,10 @@ export default function useDashboardData(authFetch) {
           setError(err);
         });
 
-      // refresh items for current default
+      // refresh default items
       if (defaultId) {
-        const acItems = new AbortController();
         authFetchRef
-          .current(`/api/v1/dashboard/${defaultId}/items`, {
-            signal: acItems.signal,
-          })
+          .current(`/api/v1/dashboard/${defaultId}/items`)
           .then((res) => {
             if (!res.ok) throw new Error(`items ${res.status}`);
             return res.json();
@@ -251,5 +221,6 @@ export default function useDashboardData(authFetch) {
     if (defaultId) getItemsPoller(defaultId).forceRefresh();
   }, [DISABLE_DASH, pollDash, defaultId, getItemsPoller]);
 
-  return { dashboard, items, error, refresh };
+  // NOTE: items here are always "default dashboard items"
+  return { dashboard, defaultId, items, error, refresh };
 }
