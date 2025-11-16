@@ -1,3 +1,4 @@
+// src/components/artifacts/VegaChart.jsx
 import React from "react";
 
 function normalizeSpec(spec) {
@@ -24,12 +25,12 @@ function normalizeSpec(spec) {
   return copy;
 }
 
-export default function VegaWidget({ spec }) {
-  const ref = React.useRef(null);
+export default function VegaChart({ spec }) {
+  const containerRef = React.useRef(null);
   const [error, setError] = React.useState(null);
 
   React.useEffect(() => {
-    if (!spec || !ref.current) return;
+    if (!spec || !containerRef.current) return;
 
     let cancelled = false;
     let view = null;
@@ -40,14 +41,17 @@ export default function VegaWidget({ spec }) {
         const embed = mod.default || mod;
         if (cancelled) return;
 
-        const result = await embed(ref.current, normalizeSpec(spec), {
+        const result = await embed(containerRef.current, normalizeSpec(spec), {
           actions: false,
           renderer: "canvas",
         });
         view = result.view;
-      } catch (e) {
-        console.error("Vega render error:", e);
-        if (!cancelled) setError("Unable to render chart.");
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            "Unable to render chart visualization. Please refer to the textual explanation."
+          );
+        }
       }
     })();
 
@@ -63,6 +67,9 @@ export default function VegaWidget({ spec }) {
     };
   }, [spec]);
 
-  if (error) return <div className="vega-chart-error">{error}</div>;
-  return <div className="vega-chart-container" ref={ref} />;
+  if (error) {
+    return <div className="vega-chart-error">{error}</div>;
+  }
+
+  return <div className="vega-chart-container" ref={containerRef} />;
 }
