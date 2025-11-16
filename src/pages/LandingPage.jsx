@@ -1,6 +1,6 @@
 // src/pages/LandingPage.jsx
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -9,310 +9,16 @@ import rehypeHighlight from "rehype-highlight";
 import "katex/dist/katex.min.css";
 import "highlight.js/styles/github-dark.css";
 
-import { useAuthRequest } from "../hooks/useAuthRequest";
-import { useLLMStream } from "../hooks/useLLMStream";
-import { sanitizeChunk, finalizeForRender } from "../utils/streamSanitizers";
-import "../styles/LandingPage.css";
+import { useAuthRequest } from "@/hooks/useAuthRequest";
+import { useLLMStream } from "@/hooks/useLLMStream";
+import { sanitizeChunk, finalizeForRender } from "@/utils/streamSanitizers";
+import { kvToChartSpec } from "@/utils/kvCharts";
+import VegaChart from "@/components/artifacts/VegaChart";
+import KVTable from "@/components/artifacts/KVTable";
 
-// ------------ Vega helpers --------------------------------------------------
+import "@/styles/LandingPage.css";
 
-// Lazy Vega-Lite renderer with graceful fallback
-function VegaChart({ spec }) {
-  const containerRef = useRef(null);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!spec || !containerRef.current) return;
-
-    let cancelled = false;
-    let view = null;
-
-    async function render() {
-      try {
-        const mod = await import("vega-embed");
-        const embed = mod.default || mod;
-        if (cancelled) return;
-        const result = await embed(containerRef.current, spec, {
-          actions: false,
-        });
-        view = result.view;
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            "Unable to render chart visualization. Please refer to the textual explanation."
-          );
-        }
-      }
-    }
-
-    render();
-
-    return () => {
-      cancelled = true;
-      if (view) {
-        try {
-          view.finalize();
-        } catch {
-          // ignore
-        }
-      }
-    };
-  }, [spec]);
-
-  if (error) {
-    return <div className="vega-chart-error">{error}</div>;
-  }
-
-  return <div className="vega-chart-container" ref={containerRef} />;
-}
-
-// kv_results → Vega-Lite bar chart
-function kvToBarChartSpec(kv) {
-  const values = kv?.data?.values || [];
-  if (!values.length) return null;
-
-  const sample = values[0];
-  const keys = Object.keys(sample);
-  const xField =
-    keys.find((k) => k.toLowerCase().includes("category")) || keys[0];
-  const yFieldCandidate =
-    keys.find((k) => k.toLowerCase().includes("amount")) ||
-    keys.find((k) => k.toLowerCase().includes("value"));
-  const yField = yFieldCandidate || keys[1] || keys[0];
-
-  return {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    description: "Bar chart from kv_results",
-    data: { values },
-    mark: "bar",
-    encoding: {
-      x: { field: xField, type: "ordinal", title: xField },
-      y: { field: yField, type: "quantitative", title: yField },
-      tooltip: [
-        { field: xField, type: "ordinal" },
-        { field: yField, type: "quantitative" },
-      ],
-    },
-  };
-}
-
-// kv_results → Vega-Lite pie chart
-function kvToPieChartSpec(kv) {
-  const values = kv?.data?.values || [];
-  if (!values.length) return null;
-
-  const sample = values[0];
-  const keys = Object.keys(sample);
-  const catField =
-    keys.find((k) => k.toLowerCase().includes("category")) || keys[0];
-  const valFieldCandidate =
-    keys.find((k) => k.toLowerCase().includes("value")) ||
-    keys.find((k) => k.toLowerCase().includes("amount"));
-  const valField = valFieldCandidate || keys[1] || keys[0];
-
-  return {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    description: "Pie chart from kv_results",
-    data: { values },
-    mark: "arc",
-    encoding: {
-      theta: { field: valField, type: "quantitative" },
-      color: {
-        field: catField,
-        type: "nominal",
-        legend: { title: null },
-      },
-      tooltip: [
-        { field: catField, type: "nominal" },
-        { field: valField, type: "quantitative" },
-      ],
-    },
-    view: { stroke: null },
-  };
-}
-
-// kv_results → Vega-Lite line chart
-function kvToLineChartSpec(kv) {
-  const values = kv?.data?.values || [];
-  if (!values.length) return null;
-
-  const colNames = kv?.metadata?.columns || [];
-  const seriesNameFor = (c) => {
-    if (colNames.length >= 3) {
-      const idx = Number(c);
-      if (!Number.isNaN(idx) && idx + 1 < colNames.length) {
-        return colNames[idx + 1];
-      }
-    }
-    return `series_${c}`;
-  };
-
-  const prepared = values.map((row) => {
-    const series =
-      row.series != null
-        ? row.series
-        : row.c != null
-        ? seriesNameFor(row.c)
-        : "series";
-    return {
-      x: row.x,
-      y: row.y,
-      series,
-    };
-  });
-
-  return {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    description: "Line chart from kv_results",
-    data: { values: prepared },
-    mark: "line",
-    encoding: {
-      x: {
-        field: "x",
-        type: "temporal",
-        title: colNames[0] || "x",
-      },
-      y: {
-        field: "y",
-        type: "quantitative",
-        title: "value",
-      },
-      color: {
-        field: "series",
-        type: "nominal",
-        title: "Series",
-      },
-      tooltip: [
-        { field: "x", type: "temporal" },
-        { field: "series", type: "nominal" },
-        { field: "y", type: "quantitative" },
-      ],
-    },
-  };
-}
-
-function kvToChartSpec(kv) {
-  if (!kv || !kv.result_type) return null;
-  switch (kv.result_type) {
-    case "bar_chart":
-      return kvToBarChartSpec(kv);
-    case "pie_chart":
-      return kvToPieChartSpec(kv);
-    case "line_chart":
-      return kvToLineChartSpec(kv);
-    default:
-      return null;
-  }
-}
-
-// Interactive KV Table Component
-function KVTable({ kv }) {
-  const [sortKey, setSortKey] = useState(null);
-  const [sortAsc, setSortAsc] = useState(true);
-
-  const columns = (kv?.metadata?.columns || []).filter(Boolean);
-  const cols = kv?.data?.values || [];
-  if (!columns.length || !cols.length) return null;
-
-  const formatValue = (key, value) => {
-    if (value === null || value === undefined) return "";
-    const raw = String(value).trim();
-    if (!raw) return "";
-
-    // numeric like "6146955.0" → "6146955"
-    const n = Number(raw);
-    if (!Number.isNaN(n)) {
-      if (Number.isInteger(n)) return n.toString();
-      return n.toString();
-    }
-
-    // ISO timestamp: keep as is for now
-    if (!Number.isNaN(Date.parse(raw)) && /T\d{2}:\d{2}/.test(raw)) {
-      return raw;
-    }
-
-    return raw;
-  };
-
-  const rows = [];
-  const maxLen = Math.max(...cols.map((c) => c.values?.length || 0));
-  for (let i = 0; i < maxLen; i++) {
-    const row = {};
-    for (let c = 0; c < cols.length; c++) {
-      const colKey = columns[c] || Object.keys(cols[c])[0];
-      const val = cols[c].values?.[i];
-      row[colKey] = formatValue(colKey, val);
-    }
-    rows.push(row);
-  }
-
-  const detectType = (v) => {
-    if (v === "" || v == null) return "string";
-    if (!isNaN(Number(v))) return "number";
-    if (!isNaN(Date.parse(v))) return "date";
-    return "string";
-  };
-
-  const handleSort = (key) => {
-    if (key === sortKey) setSortAsc((prev) => !prev);
-    else {
-      setSortKey(key);
-      setSortAsc(true);
-    }
-  };
-
-  const sortedRows = React.useMemo(() => {
-    if (!sortKey) return rows;
-    const t = detectType(rows[0]?.[sortKey]);
-    const copy = [...rows];
-
-    copy.sort((a, b) => {
-      const A = a[sortKey];
-      const B = b[sortKey];
-      if (t === "number") return Number(A) - Number(B);
-      if (t === "date") return new Date(A) - new Date(B);
-      return String(A).localeCompare(String(B));
-    });
-
-    return sortAsc ? copy : copy.reverse();
-  }, [rows, sortKey, sortAsc]);
-
-  return (
-    <div className="kv-table-wrapper">
-      <table className="kv-table">
-        <thead>
-          <tr>
-            {columns.map((col) => (
-              <th
-                key={col}
-                onClick={() => handleSort(col)}
-                className={
-                  sortKey === col
-                    ? sortAsc
-                      ? "sorted-asc"
-                      : "sorted-desc"
-                    : ""
-                }
-              >
-                {col}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sortedRows.map((row, idx) => (
-            <tr key={idx}>
-              {columns.map((col) => (
-                <td key={col}>{row[col]}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
+// Helper to join streaming chunks in a “smart” way
 function appendChunkSmart(prev, chunk) {
   if (!chunk) return prev || "";
   if (!prev) return chunk;
@@ -367,9 +73,12 @@ function appendChunkSmart(prev, chunk) {
 
 export default function LandingPage() {
   const NL_ENDPOINT = import.meta.env.VITE_NL_ENDPOINT || "/api/v1/nl/query";
+
   const outlet = useOutletContext() || {};
   const { session, showToast } = outlet;
   const { authFetch } = useAuthRequest({ session, showToast });
+  const navigate = useNavigate();
+
   const [messages, setMessages] = useState([]);
   const [query, setQuery] = useState("");
   const [charCount, setCharCount] = useState(0);
@@ -392,6 +101,7 @@ export default function LandingPage() {
   const messagesEndRef = useRef(null);
   const statusMsgIdRef = useRef(null);
 
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({
@@ -490,17 +200,18 @@ export default function LandingPage() {
 
   const handleKVResults = useCallback(
     (kv) => {
-      console.log("KV RESULTS RECEIVED", kv); // debug
-
       if (!kv || !kv.result_type) return;
 
+      // Tables
       if (kv.result_type === "table") {
         addMessage("table", "", { kv });
         return;
       }
 
+      // Charts via shared kvCharts helpers
       const spec = kvToChartSpec(kv);
       if (!spec) return;
+
       addMessage("chart", "", {
         vegaSpec: spec,
         kvType: kv.result_type,
@@ -519,15 +230,17 @@ export default function LandingPage() {
     onError: handleError,
   });
 
-  // --- Top queries: 5min interval --------------------
+  // --- Top queries: refresh every 5 minutes --------------------
 
   useEffect(() => {
+    if (!authFetch) return;
+
     let cancelled = false;
 
     async function loadTopQueries() {
       try {
         const res = await authFetch("/api/v1/nl/queries/top?limit=5");
-        if (!res.ok || cancelled) return;
+        if (!res?.ok || cancelled) return;
 
         const data = await res.json();
         if (cancelled) return;
@@ -552,13 +265,13 @@ export default function LandingPage() {
       cancelled = true;
       clearInterval(intervalId);
     };
-  }, []);
+  }, [authFetch]);
 
   // --- Send query -----------------------------------------------------------
 
   const sendQuery = useCallback(() => {
     const trimmed = (query || "").trim();
-    if (!trimmed || isProcessing) return;
+    if (!trimmed || isProcessing || !authFetch) return;
 
     addMessage("user", trimmed);
     setQuery("");
@@ -579,8 +292,9 @@ export default function LandingPage() {
       },
       body: { query: trimmed },
     });
-  }, [query, isProcessing, addMessage, start]);
+  }, [query, isProcessing, authFetch, addMessage, start, NL_ENDPOINT]);
 
+  // Stop SSE when unmounting
   useEffect(
     () => () => {
       stop();
@@ -590,9 +304,7 @@ export default function LandingPage() {
 
   const pinArtifact = useCallback(
     async (message) => {
-      if (!authFetch) {
-        return;
-      }
+      if (!authFetch) return;
 
       try {
         // Find the last user query before this message (for context)
@@ -643,7 +355,10 @@ export default function LandingPage() {
         }
 
         if (showToast) {
-          showToast("Pinned to your dashboard.", "success");
+          // clickable toast → go straight to /dashboard
+          showToast("Pinned to your dashboard (click to open).", "success", {
+            onClick: () => navigate("/dashboard"),
+          });
         }
       } catch (err) {
         console.error("Pin failed", err);
@@ -652,7 +367,7 @@ export default function LandingPage() {
         }
       }
     },
-    [authFetch, messages, showToast]
+    [authFetch, messages, showToast, navigate]
   );
 
   // --- Render -------------------------------

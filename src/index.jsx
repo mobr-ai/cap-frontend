@@ -1,3 +1,4 @@
+// src/index.jsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "react-bootstrap/Image";
 import { createRoot } from "react-dom/client";
@@ -56,10 +57,20 @@ function Layout() {
     show: false,
     message: "",
     variant: "secondary",
+    onClick: null,
   });
-  const showToast = useCallback((message, variant = "secondary") => {
-    setToast({ show: true, message, variant });
-  }, []);
+
+  const showToast = useCallback(
+    (message, variant = "secondary", options = {}) => {
+      setToast({
+        show: true,
+        message,
+        variant,
+        onClick: options.onClick || null,
+      });
+    },
+    []
+  );
 
   // --- Auth & Session -------------------------------------------------------
   const handleLogin = useCallback(
@@ -140,10 +151,12 @@ function Layout() {
         >
           <Toast
             bg={toast.variant}
-            onClose={() => setToast({ ...toast, show: false })}
+            onClose={() => setToast((prev) => ({ ...prev, show: false }))}
             show={toast.show}
             delay={5000}
             autohide
+            onClick={toast.onClick || undefined}
+            style={{ cursor: toast.onClick ? "pointer" : "default" }}
           >
             <Toast.Body className="text-white">
               {toast.message.split("\n").map((line, idx) => (
