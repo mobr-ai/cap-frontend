@@ -201,3 +201,10 @@
 .dashboard-widget-modal-inner .kv-table-wrapper {
   max-height: 60vh;
 }
+
+/* Fix: wide widgets should not span multiple columns on mobile */
+@media (max-width: 768px) {
+  .dashboard-widget.widget-wide {
+    grid-column: span 1 !important;
+  }
+}
