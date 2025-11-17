@@ -231,15 +231,22 @@ export default function LandingPage() {
   });
 
   // --- Top queries: refresh every 5 minutes --------------------
+  const authFetchRef = useRef(null);
+
+  // keep latest authFetch in a ref
+  useEffect(() => {
+    authFetchRef.current = authFetch;
+  }, [authFetch]);
 
   useEffect(() => {
-    if (!authFetch) return;
-
     let cancelled = false;
 
     async function loadTopQueries() {
+      const fetchFn = authFetchRef.current;
+      if (!fetchFn || cancelled) return;
+
       try {
-        const res = await authFetch("/api/v1/nl/queries/top?limit=5");
+        const res = await fetchFn("/api/v1/nl/queries/top?limit=5");
         if (!res?.ok || cancelled) return;
 
         const data = await res.json();
@@ -258,6 +265,7 @@ export default function LandingPage() {
       }
     }
 
+    // initial load + every 5 minutes
     loadTopQueries();
     const intervalId = setInterval(loadTopQueries, 5 * 60 * 1000);
 
@@ -265,7 +273,7 @@ export default function LandingPage() {
       cancelled = true;
       clearInterval(intervalId);
     };
-  }, [authFetch]);
+  }, []); // run once on mount
 
   // --- Send query -----------------------------------------------------------
 
