@@ -11,12 +11,12 @@
   --primary: #2563eb;
   --primary-dark: #1e40af;
   --secondary: #64748b;
-  --background: #0f172a;
-  --surface: #1e293b;
-  --surface-light: #334155;
+  --background: #020617;
+  --surface: #0f172a;
+  --surface-light: #1e293b;
   --text-primary: #f1f5f9;
   --text-secondary: #cbd5e1;
-  --border: #475569;
+  --border: #273549;
   --success: #10b981;
   --error: #ef4444;
   --warning: #f59e0b;
@@ -27,123 +27,12 @@
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
+  width: 100%;
   display: flex;
   flex-direction: column;
 }
 
-.cap-root .header {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 1rem 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.cap-root .header h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.cap-root .header .logo {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-}
-
-.cap-root .header-right {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.cap-root .sync-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-.cap-root .sync-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.cap-root .sync-label {
-  font-weight: 500;
-  min-width: 100px;
-  text-align: right;
-}
-
-.cap-root .sync-value {
-  color: var(--text-primary);
-  font-family: "Courier New", monospace;
-  min-width: 80px;
-}
-
-.cap-root .sync-status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  padding: 0.5rem 0.75rem;
-  background: var(--surface-light);
-  border-radius: 6px;
-}
-
-.cap-root .sync-status-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--secondary);
-}
-
-.cap-root .sync-status-indicator.synced {
-  background: var(--success);
-  animation: pulse 2s infinite;
-}
-
-.cap-root .sync-status-indicator.syncing {
-  background: var(--error);
-  animation: pulse 2s infinite;
-}
-
-.cap-root .status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
-
-.cap-root .status-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--secondary);
-}
-
-.cap-root .status-indicator.online {
-  background: var(--success);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
+/* main page container (also used by DashboardPage) */
 .cap-root .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -155,6 +44,7 @@
   width: 100%;
 }
 
+/* Chat wrapper */
 .cap-root .chat-container {
   flex: 1;
   background: var(--surface);
@@ -166,6 +56,7 @@
   min-height: 500px;
 }
 
+/* Messages list */
 .cap-root .messages {
   flex: 1;
   overflow-y: auto;
@@ -175,6 +66,23 @@
   gap: 1rem;
 }
 
+/* Generic fade-in animation (used for user text) */
+.cap-root .fade-in {
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Message rows */
 .cap-root .message {
   display: flex;
   gap: 1rem;
@@ -226,14 +134,14 @@
   text-align: right;
 }
 
+/* Bubbles */
 .cap-root .message-bubble {
   padding: 0.875rem 1.125rem;
   border-radius: 12px;
   display: inline-block;
-  /*max-width: 100%*/
   word-wrap: break-word;
-  white-space: pre-wrap; /* good for user/plain text */
-  overflow-wrap: anywhere; /* long hashes/urls */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .cap-root .message.user .message-bubble {
@@ -246,6 +154,7 @@
   color: var(--text-primary);
 }
 
+/* Status messages (streaming status) */
 .cap-root .message.status {
   opacity: 0.8;
 }
@@ -266,6 +175,7 @@
   gap: 0.5rem;
 }
 
+/* Typing dots */
 .cap-root .thinking-animation {
   display: inline-flex;
   gap: 0.25rem;
@@ -279,9 +189,11 @@
   background: var(--primary);
   animation: thinking 1.4s infinite;
 }
+
 .cap-root .thinking-animation span:nth-child(2) {
   animation-delay: 0.2s;
 }
+
 .cap-root .thinking-animation span:nth-child(3) {
   animation-delay: 0.4s;
 }
@@ -299,6 +211,7 @@
   }
 }
 
+/* Input area */
 .cap-root .input-container {
   padding: 1.5rem;
   background: var(--background);
@@ -318,6 +231,7 @@
   gap: 0.5rem;
 }
 
+/* Textarea */
 .cap-root textarea {
   width: 100%;
   min-height: 60px;
@@ -337,20 +251,24 @@
   outline: none;
   border-color: var(--primary);
 }
+
 .cap-root textarea:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
 .cap-root textarea::placeholder {
   color: var(--secondary);
 }
 
+/* Char counter */
 .cap-root .char-count {
   font-size: 0.75rem;
   color: var(--text-secondary);
   text-align: right;
 }
 
+/* Send button */
 .cap-root .send-button {
   padding: 0.875rem 1.5rem;
   background: var(--primary);
@@ -371,15 +289,18 @@
   background: var(--primary-dark);
   transform: translateY(-1px);
 }
+
 .cap-root .send-button:disabled {
   background: var(--secondary);
   cursor: not-allowed;
   opacity: 0.6;
 }
+
 .cap-root .send-button.processing {
   background: var(--secondary);
 }
 
+/* Small spinner inside button */
 .cap-root .button-spinner {
   width: 16px;
   height: 16px;
@@ -388,12 +309,14 @@
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
 
+/* Example queries */
 .cap-root .examples {
   display: flex;
   gap: 0.75rem;
@@ -419,11 +342,13 @@
   color: var(--text-primary);
   transform: translateY(-1px);
 }
+
 .cap-root .example-chip.disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
+/* Empty state */
 .cap-root .empty-state {
   display: flex;
   flex-direction: column;
@@ -469,6 +394,7 @@
   line-height: 1.6;
 }
 
+/* Error box */
 .cap-root .error-message {
   padding: 1rem;
   background: rgba(239, 68, 68, 0.1);
@@ -479,430 +405,156 @@
   margin: 0.5rem 0;
 }
 
-/* Scrollbars */
+/* Scrollbars for messages */
 .cap-root .messages::-webkit-scrollbar {
   width: 8px;
 }
+
 .cap-root .messages::-webkit-scrollbar-track {
   background: var(--surface);
 }
+
 .cap-root .messages::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 4px;
   cursor: pointer;
 }
+
 .cap-root .messages::-webkit-scrollbar-thumb:hover {
   background: var(--secondary);
 }
 
-/* --- Removed duplicate global .messages/.message styles to avoid conflicts --- */
-
-/* Responsive */
-@media (max-width: 768px) {
-  .cap-root .container {
-    padding: 1rem;
-  }
-  .cap-root .header {
-    padding: 1rem;
-    flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
-  }
-  .cap-root .header-right {
-    width: 100%;
-    justify-content: space-between;
-  }
-  .cap-root .message-content {
-    max-width: 85%;
-  }
-}
-
-/* Markdown rendering inside chat bubbles */
+/* Markdown rendering inside bubbles */
 .markdown-body {
   line-height: 1.6;
   font-size: 0.95rem;
-  /* ⬇️ override bubble's pre-wrap so markdown paragraphs wrap normally */
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
 }
 
-.markdown-body h1 {
-  font-size: 1.2rem;
-  margin: 0.4rem 0;
-}
-.markdown-body h2 {
-  font-size: 1.1rem;
-  margin: 0.4rem 0;
-}
-.markdown-body h3 {
-  font-size: 1rem;
-  margin: 0.4rem 0;
-}
-
 .markdown-body p {
-  margin: 0.6em 0;
-}
-
-.markdown-body ul,
-.markdown-body ol {
-  margin: 0.6em 0 0.6em 1.25em;
-  padding-left: 1em;
-  list-style-type: disc;
-}
-
-.markdown-body li {
-  margin: 0.3em 0;
-}
-
-.markdown-body a {
-  color: var(--primary);
-  text-decoration: underline;
-}
-
-.markdown-body blockquote {
-  border-left: 3px solid var(--primary);
-  padding-left: 1rem;
-  color: var(--text-secondary);
-  margin: 0.5rem 0;
-  font-style: italic;
-}
-
-.markdown-body table {
-  border-collapse: collapse;
-  margin-top: 0.5rem;
-  width: 100%;
-}
-
-.markdown-body th,
-.markdown-body td {
-  border: 1px solid #334155;
-  padding: 0.4rem 0.6rem;
-  text-align: left;
+  margin-bottom: 0.4rem;
 }
 
 .markdown-body pre {
-  /* background: #0d1117; */
-  color: #f0f6fc;
-  padding: 0.75rem;
-  border-radius: 6px;
-  overflow-x: auto;
-  font-family: "Fira Code", monospace;
+  background: #020617;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
   font-size: 0.85rem;
-  margin: 0.8em 0;
+  overflow-x: auto;
 }
 
 .markdown-body code {
-  background: rgba(240, 246, 252, 0.1);
-  padding: 0.2em 0.4em;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.85em;
+  background: rgba(15, 23, 42, 0.8);
+  padding: 0.15rem 0.3rem;
   border-radius: 4px;
-  font-family: "Fira Code", monospace;
 }
 
-.markdown-body strong {
-  color: var(--primary);
-}
-.markdown-body em {
-  color: var(--text-secondary);
-  font-style: italic;
+.markdown-body pre code {
+  background: transparent;
+  padding: 0;
 }
 
-.fade-in {
-  animation: fadeIn 0.3s ease-in;
-}
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Lists inside markdown bubbles: less indentation + no big gaps */
+/* Lists */
 .markdown-body ul,
 .markdown-body ol {
-  /* tighten left indentation */
-  margin: 0.4em 0 0.4em 1rem;
-  padding-left: 0.9rem; /* was 1.5rem / 1rem */
-  list-style-position: outside;
+  padding-left: 1.25rem;
+  margin-bottom: 0.6rem;
 }
 
-/* kill big paragraph gaps *inside* list items */
-.markdown-body li > p {
-  margin: 0.15em 0; /* was 0.6em on .markdown-body p */
+.markdown-body li + li {
+  margin-top: 0.1rem;
 }
 
-/* If a list item contains multiple paragraphs, only the later ones get spacing */
-.markdown-body li > p + p {
-  margin-top: 0.4em;
-}
-
-/* Optional: slightly reduce list-item own margins */
-.markdown-body li {
-  margin: 0.15em 0;
-}
-
-/* KaTeX tweaks inside bubbles */
-.markdown-body .katex-display {
-  margin: 0.6em 0;
-}
-.markdown-body .katex {
-  font-size: 1.02em; /* slight bump for readability */
-}
-
-.markdown-body .katex-display {
-  overflow-x: auto;
-  padding: 0.25rem 0;
-}
-
-/* inside your markdown bubble scope */
+/* Tables inside markdown (fallback) */
 .markdown-body table {
-  width: 100%;
   border-collapse: collapse;
-  font-size: 0.95rem;
+  border-spacing: 0;
+  width: 100%;
+  margin: 0.5rem 0;
+  font-size: 0.8rem;
 }
 
 .markdown-body th,
 .markdown-body td {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 8px 10px;
-  vertical-align: top;
+  border: 1px solid #1f2937;
+  padding: 0.25rem 0.5rem;
 }
 
-.markdown-body thead th {
-  position: sticky;
-  top: 0;
-  /* background: rgba(255, 255, 255, 0.04); */
-  backdrop-filter: blur(2px);
+.markdown-body th {
+  background: #111827;
+  text-align: left;
 }
 
-.markdown-body tr:nth-child(even) td {
-  background: rgba(255, 255, 255, 0.02);
+/* Links */
+.markdown-body a {
+  color: #93c5fd;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 
-.markdown-body code {
-  word-break: break-word;
+.markdown-body a:hover {
+  color: #bfdbfe;
 }
 
-/* --- Compact markdown inside assistant bubbles --- */
-.message-bubble.markdown-body {
-  max-width: 820px; /* nice readable width */
-  line-height: 1.45;
-  font-size: 0.98rem;
-}
-
-/* paragraphs, lists, headings: tighter vertical rhythm */
-.message-bubble.markdown-body p {
-  margin: 0.35em 0;
-}
-.message-bubble.markdown-body h1,
-.message-bubble.markdown-body h2,
-.message-bubble.markdown-body h3 {
-  margin: 0.5em 0 0.35em;
-  line-height: 1.25;
-}
-.message-bubble.markdown-body ul,
-.message-bubble.markdown-body ol {
-  margin: 0.35em 0 0.35em 1.1em; /* smaller indents/margins */
-  padding: 0;
-}
-.message-bubble.markdown-body li {
-  margin: 0.15em 0;
-}
-
-/* bullets look aligned and subtle */
-.message-bubble.markdown-body ul li {
-  list-style: disc;
-}
-.message-bubble.markdown-body ol li {
-  list-style: decimal;
-}
-
-/* inline code chips */
-.message-bubble.markdown-body code:not(pre code) {
-  padding: 0.15em 0.35em;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  font-size: 0.93em;
-}
-
-/* code blocks */
-.message-bubble.markdown-body pre {
-  margin: 0.5em 0;
-  padding: 0.75em 0.9em;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.35);
-  overflow: auto;
-}
-
-/* links: subtle, underline on hover */
-.message-bubble.markdown-body a {
-  text-decoration: none;
-  border-bottom: 1px dashed rgba(120, 180, 255, 0.35);
-}
-.message-bubble.markdown-body a:hover {
-  border-bottom-style: solid;
-}
-
-/* compact horizontal “meta” separators if the text uses “ - ” */
-.message-bubble.markdown-body .meta-sep {
-  opacity: 0.65;
-  margin: 0 0.35em;
-}
-
-/* avatar circles a bit crisper */
-.message .message-avatar {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  font-size: 18px;
-}
-
-/* ---- Interactive KV Tables ---- */
-/* .cap-root .message.kv-message .message-content {
-  max-width: 100%;
-} */
-
-.cap-root .message-bubble.kv-bubble {
-  width: 100%;
-  /*max-width: 100%*/
-  padding: 0.75rem 0.75rem 0.5rem;
-}
-
-/* Wrapper: only scroll when needed, themed scrollbar */
-.kv-table-wrapper {
-  width: 100%;
-  overflow-x: auto;
-  margin-top: 0.25rem;
-  padding-bottom: 2px; /* tiny space for scrollbar */
-}
-
-.kv-table-wrapper::-webkit-scrollbar {
-  height: 6px;
-}
-.kv-table-wrapper::-webkit-scrollbar-track {
-  background: var(--surface);
-}
-.kv-table-wrapper::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
-  cursor: pointer;
-}
-.kv-table-wrapper::-webkit-scrollbar-thumb:hover {
-  background: var(--secondary);
-}
-
-/* Firefox */
-.kv-table-wrapper {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) var(--surface);
-}
-
-/* Table styling */
-.kv-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.95rem;
-  border: 1px solid var(--border);
-  table-layout: auto;
-}
-
-.kv-table th,
-.kv-table td {
-  border: 1px solid var(--border);
-  padding: 8px 10px;
-  vertical-align: middle;
-}
-
-/* Headers: centered, no wrap, subtle highlight */
-.kv-table th {
-  background: #3b465a; /* slightly brighter than surface-light */
-  color: var(--text-primary);
-  text-align: center;
-  white-space: nowrap;
-  cursor: pointer;
-  user-select: none;
+/* Headings */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  margin: 0.4rem 0 0.3rem;
   font-weight: 600;
 }
 
-/* Always show a faint sort hint so users know it's interactive */
-.kv-table th::after {
-  content: " ▾";
-  opacity: 0.18;
-  font-size: 0.7em;
+.markdown-body h1 {
+  font-size: 1.25rem;
 }
 
-/* Active sort states override hint */
-.kv-table th.sorted-asc::after {
-  content: " ▲";
-  opacity: 1;
-  color: var(--primary);
-}
-.kv-table th.sorted-desc::after {
-  content: " ▼";
-  opacity: 1;
-  color: var(--primary);
+.markdown-body h2 {
+  font-size: 1.15rem;
 }
 
-/* Body cells */
-.kv-table td {
-  color: var(--text-secondary);
-  text-align: left;
-  white-space: nowrap; /* compact by default */
+.markdown-body h3 {
+  font-size: 1.05rem;
 }
 
-/* Slight zebra + hover */
-.kv-table tr:nth-child(even) td {
-  background: rgba(255, 255, 255, 0.02);
-}
-.kv-table tr:hover td {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-/* Hash-like / long values break nicely instead of forcing massive scrollbar */
-.kv-table td {
-  word-break: break-all;
-  /* still nowrap for short cells; break-all only affects very long tokens */
+.markdown-body blockquote {
+  margin: 0.4rem 0;
+  padding-left: 0.75rem;
+  border-left: 3px solid #4b5563;
+  color: #9ca3af;
+  font-style: italic;
 }
 
-/* Normalize textarea scrollbar (user prompt) to match KV table scrollbars */
-.input-field textarea {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) var(--surface);
+/* Artifacts (tables/charts) in bubbles */
+.cap-root .kv-bubble {
+  padding: 0.5rem 0.75rem 0.75rem;
 }
 
-/* WebKit */
-.input-field textarea::-webkit-scrollbar {
-  width: 6px;
+/* Simple table styling for KV results (if rendered as HTML table) */
+.cap-root table {
+  border-collapse: collapse;
 }
 
-.input-field textarea::-webkit-scrollbar-track {
-  background: var(--surface);
+.cap-root table th,
+.cap-root table td {
+  border: 1px solid var(--border);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
 }
 
-.input-field textarea::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
+/* Artifact actions (pin to dashboard) */
+.cap-root .artifact-actions {
+  margin-top: 0.4rem;
+  text-align: right;
 }
 
-.input-field textarea::-webkit-scrollbar-thumb:hover {
-  background: var(--secondary);
-}
-
-.artifact-actions {
-  margin-top: 0.5rem;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.artifact-pin-button {
+.cap-root .artifact-pin-button {
   font-size: 0.75rem;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
@@ -912,6 +564,52 @@
   cursor: pointer;
 }
 
-.artifact-pin-button:hover {
+.cap-root .artifact-pin-button:hover {
   background: #1f2937;
+}
+
+/* ───────────────────────────────
+   Responsive tweaks (mobile)
+   ─────────────────────────────── */
+
+@media (max-width: 768px) {
+  .cap-root .container {
+    padding: 1rem;
+  }
+
+  .cap-root .chat-container {
+    min-height: 420px;
+    border-radius: 10px;
+  }
+
+  .cap-root .messages {
+    padding: 1rem;
+  }
+
+  .cap-root .message-content {
+    max-width: 85%;
+  }
+
+  .cap-root .input-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cap-root .send-button {
+    width: 100%;
+    justify-content: center;
+    align-self: stretch;
+  }
+
+  .cap-root .examples {
+    padding: 0 0.5rem;
+    margin: 0 0 1rem;
+  }
+}
+
+/* Very small screens: let bubbles take full width */
+@media (max-width: 480px) {
+  .cap-root .message-content {
+    max-width: 100%;
+  }
 }

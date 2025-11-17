@@ -1,10 +1,13 @@
+/* src/styles/DashboardPage.css */
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  grid-auto-rows: 420px; /* All cards same height */
+  grid-auto-rows: 420px;
   gap: 1.5rem;
   align-items: stretch;
-  grid-auto-flow: row dense; /* <— important so gaps are filled when some cards span 2 cols */
+  grid-auto-flow: row dense;
+  width: 100%;
 }
 
 /* Card look & shadow */
@@ -22,7 +25,6 @@
     border-color 0.18s ease, background-color 0.18s ease;
 }
 
-/* Hover effect: subtle lift + stronger shadow */
 .dashboard-widget:hover {
   transform: translateY(-2px);
   box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6);
@@ -30,23 +32,22 @@
   background-color: #171f2b;
 }
 
-/* Header styling */
+/* Header */
 .dashboard-widget .card-header {
   background: transparent;
   border-bottom: 1px solid #243047;
   padding: 0.75rem 1rem;
 }
 
-/* Body should fill remaining space and contain scrollable content */
+/* Body */
 .dashboard-widget .card-body {
   flex: 1 1 auto;
   padding: 0.75rem 1rem 1rem;
-  min-height: 0; /* important for flex overflow */
+  min-height: 0;
   overflow: hidden;
   display: flex;
 }
 
-/* Inner wrapper that stretches the content */
 .dashboard-widget-inner {
   flex: 1 1 auto;
   min-width: 0;
@@ -55,7 +56,6 @@
   text-align: center;
 }
 
-/* Make whatever is rendered inside fill available height */
 .dashboard-widget-inner > * {
   flex: 1 1 auto;
   min-width: 0;
@@ -72,35 +72,28 @@
   color: #9ca3af;
 }
 
-/* Vega charts: fill the card while keeping aspect ratio managed by Vega */
+/* Vega charts */
 .vega-chart-container {
   width: 100%;
   height: 100%;
   min-height: 260px;
   position: relative;
-  overflow: hidden; /* optional, just in case */
+  overflow: hidden;
   display: flex;
 }
 
-/* Make the Vega canvas/SVG scale with the card, without cropping */
 .vega-chart-container canvas,
 .vega-chart-container svg {
   width: 100% !important;
   height: 100% !important;
-  object-fit: contain !important; /* show the whole chart */
+  object-fit: contain !important;
   display: block;
   background: white;
   border-block-color: lightslategray;
   border-style: groove;
 }
 
-/* Error text style for charts */
-.vega-chart-error {
-  font-size: 0.85rem;
-  color: #f97373;
-}
-
-/* KV table wrapper: scroll inside card, no card growth */
+/* KV table wrapper */
 .kv-table-wrapper {
   width: 100%;
   height: 100%;
@@ -129,7 +122,7 @@
   z-index: 1;
 }
 
-/* JSON fallback: allow scroll but keep inside card */
+/* JSON fallback */
 .dashboard-json-fallback {
   font-size: 0.75rem;
   width: 100%;
@@ -145,7 +138,7 @@
 @media (max-width: 768px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
-    grid-auto-rows: 380px;
+    grid-auto-rows: auto;
     gap: 1rem;
   }
 
@@ -158,6 +151,7 @@
   grid-column: span 2;
 }
 
+/* Sortable table headers */
 .sortable-header {
   cursor: pointer;
   user-select: none;
@@ -166,7 +160,7 @@
   background: #1e293b;
 }
 
-/* Card looks clickable / zoomable */
+/* Clickable card / zoomable */
 .dashboard-widget-clickable {
   cursor: zoom-in;
   transition: transform 0.12s ease-out, box-shadow 0.12s ease-out;
@@ -198,7 +192,6 @@
   max-height: min(72vh, 800px);
 }
 
-/* Make artifacts behave nicely when maximized */
 .dashboard-widget-modal-inner .vega-chart-container {
   width: 100%;
   height: 60vh;

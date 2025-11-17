@@ -5,7 +5,7 @@
   --nav-font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
     Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   --nav-size: 14px;
-  --nav-height: 48px;
+  --nav-height: 56px; /* slightly taller than before */
   --nav-fg: #e5e7eb;
   --nav-fg-dim: #94a3b8;
   --nav-bg: #0b1222;
@@ -13,32 +13,57 @@
 
 /* Bar container */
 .cap-navbar {
-  background: var(--nav-bg);
+  background: #1e293b !important;
   color: var(--nav-fg);
   font-family: var(--nav-font);
   font-size: var(--nav-size);
-  height: var(--nav-height);
+  min-height: var(--nav-height);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding-left: 0;
+
+  /* a little vertical breathing room so the burger is fully contained */
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
 }
 
-/* Grid layout: Brand | Status | Controls */
+/* grid layout: Brand | Status | Controls */
 .cap-navbar .cap-navbar-row {
-  display: grid;
+  display: flex;
   grid-template-columns: minmax(220px, 32vw) 1fr auto;
   align-items: center;
   column-gap: 12px;
 }
 
-/* when the burger is present (desktop), shift the navbar content */
-.has-left-burger .cap-navbar {
-  padding-left: 3rem; /* room for the burger */
+/* When sidebar burger exists */
+.has-left-burger .cap-navbar-row {
+  /* grid-template-columns: 48px minmax(200px, auto) 1fr auto; */
+  margin-left: 3rem;
 }
 
-/* ───────────────────────────────
-   BRAND AREA
-   ─────────────────────────────── */
+.has-left-burger .Navbar-toggle-btn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Hide sidebar burger on small/mobile screens */
+@media (max-width: 991px) {
+  .Navbar-toggle-btn {
+    display: none;
+  }
+}
+
+/* Brand area */
 .Navbar-brand-container {
   display: flex;
   align-items: center;
@@ -57,9 +82,7 @@
   color: #f1f5f9;
 }
 
-/* ───────────────────────────────
-   STATUS STRIP (Analytics)
-   ─────────────────────────────── */
+/* Status strip */
 .navbar-status-bar {
   display: flex;
   align-items: center;
@@ -79,10 +102,12 @@
   gap: 6px;
   white-space: nowrap;
 }
+
 .status-item .label {
   color: #94a3b8;
   font-weight: 500;
 }
+
 .status-item .value {
   color: #e5e7eb;
   font-weight: 600;
@@ -111,10 +136,10 @@
 }
 .status-item.sync .dot {
   background: #f59e0b;
-} /* amber */
+}
 .status-item.sync.synced .dot {
   background: #10b981;
-} /* green */
+}
 .status-item.checking .dot {
   background: #f59e0b;
 }
@@ -122,43 +147,37 @@
   background: #ef4444;
 }
 
-/* ───────────────────────────────
-   USER MENU & DROPDOWNS
-   ─────────────────────────────── */
+/* User menu */
 .navbar-user-title {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
+
 .navbar-user-avatar {
   width: auto;
   height: 26px;
 }
+
 .navbar-user-name {
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .navbar-user-caret {
   display: inline-block;
   line-height: 1;
   margin-left: 4px;
 }
 
-/* Hide default bootstrap caret */
+/* Dropdown caret override */
 #navbar-user .dropdown-toggle::after {
   display: none !important;
 }
 
-/* Align dropdown menu and make room for submenu (desktop) */
-/* @media (min-width: 992px) {
-  .navbar-user-dropdown > .dropdown-menu {
-    transform: translateX(-140px) !important;
-  }
-} */
-
-/* General dropdown item normalization */
+/* Dropdown styling */
 .navbar .dropdown-menu-dark,
 .dropdown-menu-dark {
   background-color: #0f172a !important;
@@ -177,27 +196,30 @@
   color: var(--nav-fg);
   transition: background 0.15s ease-in-out;
 }
+
 .dropdown-menu-dark .dropdown-item:hover {
   background: rgba(148, 163, 184, 0.12);
 }
 
-/* Submenu (Language) */
+/* Submenu (language) */
 .submenu {
   position: relative;
 }
+
 .submenu-toggle.dropdown-item {
-  padding-right: 1.25rem; /* space for caret */
+  padding-right: 1.25rem;
 }
+
 .submenu-caret {
   transition: transform 0.15s ease-in-out;
   line-height: 1;
   opacity: 0.9;
 }
+
 .submenu.show .submenu-caret {
   transform: rotate(90deg);
 }
 
-/* Right-opening submenu */
 .submenu .dropdown-menu {
   left: 100% !important;
   top: 0 !important;
@@ -205,13 +227,13 @@
   min-width: 220px;
 }
 
-/* ───────────────────────────────
-   RESPONSIVE ADJUSTMENTS
-   ─────────────────────────────── */
+/* Responsive adjustments (tablet/desktop down) */
 @media (max-width: 992px) {
   .cap-navbar .cap-navbar-row {
     grid-template-columns: 1fr auto;
+    margin-left: auto;
   }
+
   .navbar-status-bar {
     min-width: 0;
     max-width: 100%;
@@ -219,17 +241,91 @@
     gap: 8px;
     font-size: 0.8rem;
   }
+
   .Navbar-brand-slot {
     width: clamp(140px, 40vw, 240px);
   }
-  .has-left-burger .cap-navbar {
-    padding-left: 0;
+}
+
+/* Large screens: hide Bootstrap's burger, only sidebar burger is used */
+@media (min-width: 992px) {
+  .cap-navbar .navbar-toggler {
+    display: none !important;
+  }
+  .cap-navbar .cap-navbar-row {
+    display: grid;
   }
 }
-@media (max-width: 768px) {
+
+/* On very small screens hide the heavy status bar entirely
+   so the navbar doesn't look cramped or wrap weirdly */
+@media (max-width: 576px) {
   .navbar-status-bar {
-    justify-content: center;
+    display: none;
   }
+
+  .cap-navbar .cap-navbar-row {
+    grid-template-columns: 1fr auto;
+  }
+}
+
+/* Navbar toggler (burger) */
+.cap-navbar .navbar-toggler {
+  border-radius: 0.9rem;
+  padding: 0.25rem 0.6rem;
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+/* Make the expanded mobile menu use a solid dark background */
+.cap-navbar .navbar-collapse {
+  background-color: transparent;
+}
+
+@media (max-width: 991.98px) {
+  .cap-navbar .navbar-collapse,
+  .cap-navbar .navbar-collapse.collapsing,
+  .cap-navbar .navbar-collapse.show {
+    background-color: var(--nav-bg);
+    padding: 0.5rem 1rem 0.75rem;
+    margin-top: 0.35rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.25);
+  }
+
+  .NavBar-top-container .nav-link,
+  .NavBar-top-container .dropdown-toggle {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+  }
+}
+
+/* Optional left sidebar burger (desktop) */
+.Navbar-toggle-btn {
+  position: fixed;
+  top: 1.2rem;
+  left: 12px;
+  transform: none;
+  background: transparent;
+  border: none;
+  color: #e5e7eb;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1100;
+  padding: 0;
+}
+
+/* Hide sidebar burger on mobile; mobile uses built-in Nav collapse */
+@media (max-width: 991px) {
+  .Navbar-toggle-btn {
+    display: none;
+  }
+}
+
+/* Shift navbar content so burger sits left of CAP logo in desktop sidebar mode */
+.cap-navbar-with-sidebar {
+  padding-left: 3rem;
 }
 
 .dropdown-toggle::after {
@@ -258,36 +354,6 @@
   opacity: 0.9;
 }
 
-/* (Optional) scope hiding default caret just for safety */
 #navbar-lang .dropdown-toggle::after {
   display: none !important;
-}
-
-.Navbar-toggle-btn {
-  position: fixed;
-  top: 10px;
-  left: 12px;
-  transform: none; /* remove vertical centering */
-  background: transparent;
-  border: none;
-  color: #e5e7eb;
-  font-size: 1.4rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 1100;
-  padding: 0;
-}
-
-/* Hide burger on mobile; mobile uses built-in Nav collapse */
-@media (max-width: 991px) {
-  .Navbar-toggle-btn {
-    display: none;
-  }
-}
-
-/* Shift navbar content so burger sits left of CAP logo */
-.cap-navbar-with-sidebar {
-  padding-left: 3rem; /* keep logo clear of the burger */
 }

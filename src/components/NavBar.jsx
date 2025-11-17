@@ -150,7 +150,7 @@ function NavBar({
             <span className="Navbar-brand-slot">{brand || "CAP"}</span>
           </Navbar.Brand>
 
-          {/* Status line */}
+          {/* Status line (hidden on very small screens via CSS) */}
           {userData && (
             <div className="navbar-status-bar">
               <div className="status-item w-140 nav-text">
@@ -194,6 +194,18 @@ function NavBar({
           <Navbar.Toggle aria-controls="cap-navbar" />
           <Navbar.Collapse id="cap-navbar" className="justify-content-end">
             <Nav className="ml-auto NavBar-top-container">
+              {/* Dashboard entry (important for mobile where sidebar is hidden) */}
+              {userData && (
+                <Nav.Link
+                  as={Link}
+                  to="/dashboard"
+                  className="nav-text"
+                  onClick={() => setExpanded(false)}
+                >
+                  Dashboard
+                </Nav.Link>
+              )}
+
               {/* Learn more link */}
               <Nav.Link
                 className="nav-text"
@@ -209,7 +221,7 @@ function NavBar({
                 Learn more
               </Nav.Link>
 
-              {/* Language dropdown (back outside, to the left of user) */}
+              {/* Language dropdown */}
               <NavDropdown
                 title={langMenuTitle}
                 id="navbar-lang"
