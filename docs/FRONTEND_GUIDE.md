@@ -178,12 +178,10 @@ Workflow:
 
 Dashboard features:
 
-- Drag & drop widgets
-- Resize widgets
-- Remove widgets
-- Persistent layout stored in PostgreSQL
+- Widgets (drag & drop, resize planned)
 - Responsive cards (mobile-friendly)
 - Chart modal (click widget to enlarge)
+- Persistent layout stored in PostgreSQL
 
 Each dashboard widget corresponds to a saved **artifact**, not raw data—preserving:
 
