@@ -71,7 +71,7 @@ export default function SettingsPage() {
 
   // ---- Helpers -------------------------------------------------------------
 
-  // Local-only settings updater (no extra POST to /user/{id})
+  // Local-only settings updater (no extra POST to /api/v1/user/{id})
   async function saveSettingsLocally(updated) {
     const current = safeParse(user?.settings) || {};
     const merged = { ...current, ...updated };
@@ -111,7 +111,7 @@ export default function SettingsPage() {
       const avatarUrl = uploadResult?.[0]?.url;
       if (!avatarUrl) throw new Error("No upload URL returned");
 
-      // Update UI state only; no extra POST to /user/{id}
+      // Update UI state only; no extra POST to /api/v1/user/{id}
       await saveSettingsLocally({ avatar: avatarUrl });
     } catch (err) {
       console.error(err);
@@ -168,7 +168,9 @@ export default function SettingsPage() {
     if (!window.confirm(t("confirmAccountDeletion"))) return;
     setIsDeleting(true);
     try {
-      const res = await authFetch(`/user/${user.id}`, { method: "DELETE" });
+      const res = await authFetch(`/api/v1/user/${user.id}`, {
+        method: "DELETE",
+      });
       if (res.ok) {
         localStorage.clear();
         setUser(null);

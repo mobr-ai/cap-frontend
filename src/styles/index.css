@@ -1,3 +1,11 @@
+/* src/styles/index.css */
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
@@ -5,6 +13,11 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Make the whole viewport dark so you don't see white stripes
+     around .cap-root on mobile / narrow layouts */
+  background-color: #020617;
+  color: #e5e7eb;
 }
 
 code {
@@ -12,6 +25,7 @@ code {
     monospace;
 }
 
+/* Global box-sizing reset */
 * {
   box-sizing: border-box;
 }

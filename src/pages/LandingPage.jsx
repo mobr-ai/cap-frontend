@@ -1,5 +1,6 @@
 // src/pages/LandingPage.jsx
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useOutletContext, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -8,279 +9,376 @@ import rehypeHighlight from "rehype-highlight";
 import "katex/dist/katex.min.css";
 import "highlight.js/styles/github-dark.css";
 
-import { useAuthRequest } from "../hooks/useAuthRequest";
-import { useLLMStream } from "../hooks/useLLMStream";
-import { sanitizeChunk, finalizeForRender } from "../utils/streamSanitizers";
-import "../styles/LandingPage.css";
+import { useAuthRequest } from "@/hooks/useAuthRequest";
+import { useLLMStream } from "@/hooks/useLLMStream";
+import { sanitizeChunk, finalizeForRender } from "@/utils/streamSanitizers";
+import { kvToChartSpec } from "@/utils/kvCharts";
+import VegaChart from "@/components/artifacts/VegaChart";
+import KVTable from "@/components/artifacts/KVTable";
 
-// LandingPage: Natural Language chat (analytics now lives in NavBar)
+import "@/styles/LandingPage.css";
+
+// Helper to join streaming chunks in a “smart” way
+function appendChunkSmart(prev, chunk) {
+  if (!chunk) return prev || "";
+  if (!prev) return chunk;
+
+  const lastChar = prev[prev.length - 1];
+  const firstChar = chunk[0];
+
+  const isLetter = (ch) => /[A-Za-z]/.test(ch || "");
+  const isDigit = (ch) => /[0-9]/.test(ch || "");
+
+  // 1. If the new chunk already starts with whitespace, trust it.
+  if (/^\s/.test(chunk)) {
+    return prev + chunk;
+  }
+
+  // 2. If prev already ends with whitespace, just append.
+  if (/\s/.test(lastChar)) {
+    return prev + chunk;
+  }
+
+  // 3. Sentence punctuation followed by a letter: ".Next" -> ". Next"
+  if (/[.!?]/.test(lastChar) && isLetter(firstChar)) {
+    return prev + " " + chunk;
+  }
+
+  // 4. Letter -> digit (e.g. "top 10", "Epoch 88"),
+  //    but avoid splitting address-like prefixes (addr1..., stake1..., pool1...).
+  if (isLetter(lastChar) && isDigit(firstChar)) {
+    const tail = prev.slice(-6).toLowerCase();
+    if (
+      tail.endsWith("addr") ||
+      tail.endsWith("stake") ||
+      tail.endsWith("pool")
+    ) {
+      // looks like an address/id prefix: keep glued ("addr1...")
+      return prev + chunk;
+    }
+    return prev + " " + chunk;
+  }
+
+  // 5. Digit -> letter (e.g. "5 blocks") => add space.
+  if (isDigit(lastChar) && isLetter(firstChar)) {
+    return prev + " " + chunk;
+  }
+
+  // 6. For all other cases (including letter-letter and digit-digit),
+  //    don't guess: just concatenate.
+  return prev + chunk;
+}
+
+// ------------ LandingPage ---------------------------------------------------
+
 export default function LandingPage() {
-  const { authFetch } = useAuthRequest();
+  const NL_ENDPOINT = import.meta.env.VITE_NL_ENDPOINT || "/api/v1/nl/query";
 
-  // --- Refs & state ---------------------------------------------------------
-  const messagesEndRef = useRef(null);
-  const [messages, setMessages] = useState([]); // { id, type: 'user'|'assistant'|'status'|'error', content }
-  const [isProcessing, setIsProcessing] = useState(false);
+  const outlet = useOutletContext() || {};
+  const { session, showToast } = outlet;
+  const { authFetch } = useAuthRequest({ session, showToast });
+  const navigate = useNavigate();
+
+  const [messages, setMessages] = useState([]);
   const [query, setQuery] = useState("");
   const [charCount, setCharCount] = useState(0);
-  const [topQueries, setTopQueries] = useState([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [topQueries, setTopQueries] = useState([
+    { query: "List the latest 5 blocks." },
+    {
+      query: "Plot a bar chart showing monthly multi assets created in 2021.",
+    },
+    {
+      query:
+        "Plot a line chart showing monthly number of transactions and outputs.",
+    },
+    {
+      query:
+        "Plot a pie chart to show how much the top 1% ADA holders represent from the total supply on the Cardano network.",
+    },
+  ]);
 
-  // streaming buffers/ids
-  const assistantBufRef = useRef("");
-  const assistantMsgIdRef = useRef(null);
+  const messagesEndRef = useRef(null);
   const statusMsgIdRef = useRef(null);
-  const rafRef = useRef(null);
 
-  // polling refs
-  const pollTimerRef = useRef(null);
-  const inFlightRef = useRef(null);
-  const startedRef = useRef(false); // prevents double-start in StrictMode
-  const runningRef = useRef(false); // prevents re-entry
-  const backoffRef = useRef(60_000); // success cadence (1 min)
-  const MAX_BACKOFF = 60 * 60_000; // 60 min
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+    }
+  }, [messages]);
 
-  // keep authFetch stable for callbacks
-  const authFetchRef = useRef(authFetch);
+  const addMessage = useCallback((type, content, extra = {}) => {
+    const id =
+      extra.id ||
+      `${type}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    setMessages((prev) => [...prev, { id, type, content, ...extra }]);
+    return id;
+  }, []);
+
+  const updateMessage = useCallback((id, patch) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...patch } : m))
+    );
+  }, []);
+
+  const removeMessage = useCallback((id) => {
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+  }, []);
+
+  // --- SSE Handlers ---------------------------------------------------------
+
+  const handleStatus = useCallback(
+    (text) => {
+      if (!text) return;
+      if (!statusMsgIdRef.current) {
+        statusMsgIdRef.current = addMessage("status", text);
+      } else {
+        updateMessage(statusMsgIdRef.current, {
+          content: text,
+        });
+      }
+    },
+    [addMessage, updateMessage]
+  );
+
+  const handleChunk = useCallback((raw) => {
+    const chunk = sanitizeChunk(raw);
+    if (!chunk) return;
+
+    setMessages((prev) => {
+      const next = [...prev];
+      const last = next[next.length - 1];
+
+      if (last && last.type === "assistant" && last.streaming) {
+        last.content = appendChunkSmart(last.content || "", chunk);
+      } else {
+        next.push({
+          id: `assistant_${Date.now()}_${Math.random()
+            .toString(36)
+            .slice(2, 6)}`,
+          type: "assistant",
+          content: chunk,
+          streaming: true,
+        });
+      }
+      return next;
+    });
+  }, []);
+
+  const handleDone = useCallback(() => {
+    setMessages((prev) => {
+      const next = [...prev];
+      const last = next[next.length - 1];
+      if (last && last.type === "assistant" && last.streaming) {
+        last.streaming = false;
+        last.content = finalizeForRender(last.content || "");
+      }
+      return next;
+    });
+
+    if (statusMsgIdRef.current) {
+      removeMessage(statusMsgIdRef.current);
+      statusMsgIdRef.current = null;
+    }
+
+    setIsProcessing(false);
+  }, [removeMessage]);
+
+  const handleError = useCallback(
+    (err) => {
+      const msg =
+        err?.message || "Unexpected error while processing your query.";
+      addMessage("error", msg);
+      setIsProcessing(false);
+    },
+    [addMessage]
+  );
+
+  const handleKVResults = useCallback(
+    (kv) => {
+      if (!kv || !kv.result_type) return;
+
+      // Tables
+      if (kv.result_type === "table") {
+        addMessage("table", "", { kv });
+        return;
+      }
+
+      // Charts via shared kvCharts helpers
+      const spec = kvToChartSpec(kv);
+      if (!spec) return;
+
+      addMessage("chart", "", {
+        vegaSpec: spec,
+        kvType: kv.result_type,
+        isKV: true,
+      });
+    },
+    [addMessage]
+  );
+
+  const { start, stop } = useLLMStream({
+    fetcher: authFetch,
+    onStatus: handleStatus,
+    onChunk: handleChunk,
+    onKVResults: handleKVResults,
+    onDone: handleDone,
+    onError: handleError,
+  });
+
+  // --- Top queries: refresh every 5 minutes --------------------
+  const authFetchRef = useRef(null);
+
+  // keep latest authFetch in a ref
   useEffect(() => {
     authFetchRef.current = authFetch;
   }, [authFetch]);
 
-  // --- Data: top queries ----------------------------------------------------
-  const loadTopQueries = useCallback(async (signal) => {
-    const doFetch = authFetchRef.current;
-    try {
-      const res = await doFetch("/api/v1/nl/queries/top?limit=5", { signal });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const data = await res.json();
-      const q = Array.isArray(data?.top_queries) ? data.top_queries : [];
-      setTopQueries(q);
-      backoffRef.current = 60_000; // reset cadence to 1 min on success
-      return true;
-    } catch {
-      // graceful fallback (no infinite hammering)
-      setTopQueries([
-        { query: "Show me the latest 5 blocks", frequency: 0 },
-        { query: "What is the total ADA in circulation?", frequency: 0 },
-        { query: "List latest governance votes", frequency: 0 },
-        { query: "Top stake pools by active stake", frequency: 0 },
-        { query: "Find transactions to address X", frequency: 0 },
-      ]);
-      return false;
-    }
-  }, []);
-
-  const scheduleNext = useCallback((delay) => {
-    clearTimeout(pollTimerRef.current);
-    pollTimerRef.current = setTimeout(() => runPoll(), delay);
-  }, []);
-
-  const runPoll = useCallback(async () => {
-    if (runningRef.current) return; // don’t re-enter
-    if (document.hidden) {
-      // pause in background tab
-      scheduleNext(5_000);
-      return;
-    }
-
-    runningRef.current = true;
-    inFlightRef.current?.abort?.();
-    const controller = new AbortController();
-    inFlightRef.current = controller;
-
-    const ok = await loadTopQueries(controller.signal);
-
-    if (!ok) {
-      // exponential backoff + jitter
-      const next = Math.min(backoffRef.current * 2, MAX_BACKOFF);
-      backoffRef.current = next;
-      const jitter = Math.floor(Math.random() * 2_000);
-      scheduleNext(backoffRef.current + jitter);
-    } else {
-      scheduleNext(backoffRef.current);
-    }
-    runningRef.current = false;
-  }, [loadTopQueries, scheduleNext]);
-
   useEffect(() => {
-    // HARD singleton across HMR/StrictMode (dev)
-    if (typeof window !== "undefined") {
-      if (window.__capTopQueriesStop__) window.__capTopQueriesStop__(); // stop any previous
-      window.__capTopQueriesStop__ = () => {
-        clearTimeout(pollTimerRef.current);
-        inFlightRef.current?.abort?.();
-        runningRef.current = false;
-        startedRef.current = false;
-      };
+    let cancelled = false;
+
+    async function loadTopQueries() {
+      const fetchFn = authFetchRef.current;
+      if (!fetchFn || cancelled) return;
+
+      try {
+        const res = await fetchFn("/api/v1/nl/queries/top?limit=5");
+        if (!res?.ok || cancelled) return;
+
+        const data = await res.json();
+        if (cancelled) return;
+
+        const list = data?.top_queries || data?.topQueries || data || [];
+
+        if (Array.isArray(list) && list.length && !cancelled) {
+          const normalized = list.map((item) =>
+            typeof item === "string" ? { query: item } : item
+          );
+          setTopQueries(normalized);
+        }
+      } catch {
+        // silent; keep defaults
+      }
     }
 
-    if (!startedRef.current) {
-      startedRef.current = true;
-      runPoll();
-    }
-
-    const onVisible = () => !document.hidden && scheduleNext(0);
-    document.addEventListener("visibilitychange", onVisible);
+    // initial load + every 5 minutes
+    loadTopQueries();
+    const intervalId = setInterval(loadTopQueries, 5 * 60 * 1000);
 
     return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      window.__capTopQueriesStop__?.();
+      cancelled = true;
+      clearInterval(intervalId);
     };
-  }, [runPoll, scheduleNext]);
+  }, []); // run once on mount
 
-  // --- Helpers: messages ops ------------------------------------------------
-  const removeMessageById = useCallback((id) => {
-    if (!id) return;
-    setMessages((prev) => prev.filter((m) => m.id !== id));
-  }, []);
+  // --- Send query -----------------------------------------------------------
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const sendQuery = useCallback(() => {
+    const trimmed = (query || "").trim();
+    if (!trimmed || isProcessing || !authFetch) return;
 
-  const addMessage = useCallback((type, content) => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    setMessages((prev) => [...prev, { id, type, content }]);
-    return id;
-  }, []);
-
-  const updateMessageById = useCallback((id, updater) => {
-    setMessages((prev) => {
-      const idx = prev.findIndex((m) => m.id === id);
-      if (idx === -1) return prev;
-      const copy = [...prev];
-      copy[idx] = { ...copy[idx], ...updater(copy[idx]) };
-      return copy;
-    });
-  }, []);
-
-  const replaceLastStatusWith = useCallback((toType, newContent) => {
-    setMessages((prev) => {
-      const idxFromEnd = [...prev]
-        .reverse()
-        .findIndex((m) => m.type === "status");
-      if (idxFromEnd === -1) {
-        const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        return [...prev, { id, type: toType, content: newContent }];
-      }
-      const real = prev.length - 1 - idxFromEnd;
-      const copy = [...prev];
-      copy[real] = { ...copy[real], type: toType, content: newContent };
-      return copy;
-    });
-  }, []);
-
-  // --- Streaming via useLLMStream ------------------------------------------
-  const flushRender = useCallback(() => {
-    if (!assistantMsgIdRef.current) return;
-    rafRef.current = null;
-    const finalized = finalizeForRender(assistantBufRef.current);
-    updateMessageById(assistantMsgIdRef.current, () => ({
-      content: finalized,
-    }));
-  }, [updateMessageById]);
-
-  const scheduleFlush = useCallback(() => {
-    if (rafRef.current) return;
-    rafRef.current = requestAnimationFrame(flushRender);
-  }, [flushRender]);
-
-  const onStatus = useCallback(
-    (s) => {
-      if (!statusMsgIdRef.current) {
-        statusMsgIdRef.current = addMessage("status", s);
-      } else {
-        updateMessageById(statusMsgIdRef.current, () => ({ content: s }));
-      }
-    },
-    [addMessage, updateMessageById]
-  );
-
-  const onChunk = useCallback(
-    (payload) => {
-      if (payload === "[DONE]") return;
-      if (!assistantMsgIdRef.current) {
-        assistantMsgIdRef.current = addMessage("assistant", "");
-      }
-      assistantBufRef.current += sanitizeChunk(payload);
-      scheduleFlush();
-    },
-    [addMessage, scheduleFlush]
-  );
-
-  const onDone = useCallback(() => {
-    if (assistantMsgIdRef.current) {
-      const finalized = finalizeForRender(assistantBufRef.current);
-      updateMessageById(assistantMsgIdRef.current, () => ({
-        content: finalized,
-      }));
-    }
-    if (statusMsgIdRef.current) {
-      // remove the thinking bubble entirely
-      removeMessageById(statusMsgIdRef.current);
-      statusMsgIdRef.current = null;
-    }
-    setIsProcessing(false);
-  }, [updateMessageById, removeMessageById]);
-
-  const onError = useCallback(
-    (err) => {
-      replaceLastStatusWith(
-        "error",
-        `Error: ${err?.message || "Unknown"}. Please try again.`
-      );
-      setIsProcessing(false);
-    },
-    [replaceLastStatusWith]
-  );
-
-  const { start, stop } = useLLMStream({
-    fetcher: (url, opts) => authFetchRef.current(url, opts),
-    onStatus,
-    onChunk,
-    onDone,
-    onError,
-  });
-
-  // --- Send query (SSE POST using the hook) ---------------------------------
-  const sendQuery = useCallback(async () => {
-    const trimmed = query.trim();
-    if (!trimmed || isProcessing) return;
-
-    // reset any previous stream buffers
-    assistantBufRef.current = "";
-    assistantMsgIdRef.current = null;
-    statusMsgIdRef.current = null;
-
-    // add user message
     addMessage("user", trimmed);
     setQuery("");
     setCharCount(0);
     setIsProcessing(true);
 
-    // seed a status placeholder
     statusMsgIdRef.current = addMessage(
       "status",
       "Planning the query and preparing SPARQL..."
     );
 
-    // CAP backend expects POST to /api/v1/nl/query with SSE
-    start("/api/v1/nl/query", {
+    start({
+      url: NL_ENDPOINT,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "text/event-stream",
       },
-      body: JSON.stringify({ query: trimmed }),
-      credentials: "include",
+      body: { query: trimmed },
     });
-  }, [query, isProcessing, addMessage, start]);
+  }, [query, isProcessing, authFetch, addMessage, start, NL_ENDPOINT]);
 
-  useEffect(() => () => stop(), [stop]);
+  // Stop SSE when unmounting
+  useEffect(
+    () => () => {
+      stop();
+    },
+    [stop]
+  );
 
-  // --- Render ---------------------------------------------------------------
+  const pinArtifact = useCallback(
+    async (message) => {
+      if (!authFetch) return;
+
+      try {
+        // Find the last user query before this message (for context)
+        const idx = messages.findIndex((m) => m.id === message.id);
+        let sourceQuery;
+        if (idx > 0) {
+          for (let i = idx - 1; i >= 0; i -= 1) {
+            if (messages[i].type === "user") {
+              sourceQuery = messages[i].content;
+              break;
+            }
+          }
+        }
+
+        const artifact_type = message.type === "table" ? "table" : "chart";
+
+        const titleBase = artifact_type === "table" ? "Table" : "Chart";
+        const title =
+          message.title ||
+          (sourceQuery
+            ? `${titleBase}: ${sourceQuery.slice(0, 80)}`
+            : `${titleBase} ${new Date().toLocaleTimeString()}`);
+
+        const config =
+          artifact_type === "table"
+            ? { kv: message.kv }
+            : {
+                vegaSpec: message.vegaSpec,
+                kvType: message.kvType,
+              };
+
+        const body = {
+          artifact_type,
+          title,
+          source_query: sourceQuery,
+          config,
+        };
+
+        const res = await authFetch("/api/v1/dashboard/pin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || "Failed to pin artifact");
+        }
+
+        if (showToast) {
+          // clickable toast → go straight to /dashboard
+          showToast("Pinned to your dashboard (click to open).", "success", {
+            onClick: () => navigate("/dashboard"),
+          });
+        }
+      } catch (err) {
+        console.error("Pin failed", err);
+        if (showToast) {
+          showToast("Could not pin artifact.", "danger");
+        }
+      }
+    },
+    [authFetch, messages, showToast, navigate]
+  );
+
+  // --- Render -------------------------------
   return (
     <div className="cap-root">
       <div className="container">
@@ -298,9 +396,46 @@ export default function LandingPage() {
               </div>
             )}
 
-            {messages.map((m) => (
-              <Message key={m.id} type={m.type} content={m.content} />
-            ))}
+            {messages.map((m) =>
+              m.type === "chart" && m.vegaSpec ? (
+                <div key={m.id} className="message assistant">
+                  <div className="message-avatar">🤖</div>
+                  <div className="message-content">
+                    <div className="message-bubble markdown-body">
+                      <VegaChart spec={m.vegaSpec} />
+                      <div className="artifact-actions">
+                        <button
+                          className="artifact-pin-button"
+                          onClick={() => pinArtifact(m)}
+                        >
+                          Pin to dashboard
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : m.type === "table" && m.kv ? (
+                <div key={m.id} className="message assistant kv-message">
+                  <div className="message-avatar">🤖</div>
+                  <div className="message-content">
+                    <div className="message-bubble markdown-body kv-bubble">
+                      <KVTable kv={m.kv} />
+                      <div className="artifact-actions">
+                        <button
+                          className="artifact-pin-button"
+                          onClick={() => pinArtifact(m)}
+                        >
+                          Pin to dashboard
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <Message key={m.id} type={m.type} content={m.content} />
+              )
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
@@ -323,7 +458,13 @@ export default function LandingPage() {
                 </button>
               ))}
             </div>
-            <div className="empty-state" style={{ height: 0, padding: 0 }} />
+            <div
+              className="empty-state"
+              style={{
+                height: 0,
+                padding: 0,
+              }}
+            />
 
             <div className="input-wrapper">
               <div className="input-field">
@@ -340,7 +481,9 @@ export default function LandingPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
-                      if (!isProcessing && query.trim()) sendQuery();
+                      if (!isProcessing && query.trim()) {
+                        sendQuery();
+                      }
                     }
                   }}
                   placeholder="Ask a question about Cardano..."
@@ -349,7 +492,8 @@ export default function LandingPage() {
                   disabled={isProcessing}
                 />
                 <div className="char-count">
-                  <span>{charCount}</span>/1000
+                  <span>{charCount}</span>
+                  /1000
                 </div>
               </div>
               <button
@@ -372,7 +516,6 @@ export default function LandingPage() {
 
 // ---------------------- Message renderer ------------------------------------
 function Message({ type, content }) {
-  // Hide empty status entries (prevents stuck spinner)
   if (type === "status" && !String(content || "").trim()) return null;
 
   if (type === "status") {
@@ -405,14 +548,27 @@ function Message({ type, content }) {
         <div className="message-bubble markdown-body">
           {isUser ? (
             <div className="fade-in">
-              <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{content}</pre>
+              <pre
+                style={{
+                  whiteSpace: "pre-wrap",
+                  margin: 0,
+                }}
+              >
+                {content}
+              </pre>
             </div>
           ) : (
             <div className="fade-in">
               <ReactMarkdown
                 remarkPlugins={[
                   [remarkGfm],
-                  [remarkMath, { singleDollarTextMath: true, strict: false }],
+                  [
+                    remarkMath,
+                    {
+                      singleDollarTextMath: true,
+                      strict: false,
+                    },
+                  ],
                 ]}
                 rehypePlugins={[rehypeKatex, rehypeHighlight]}
               >
