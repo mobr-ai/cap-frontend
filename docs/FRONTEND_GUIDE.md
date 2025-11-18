@@ -73,11 +73,13 @@ CAP supports **three authentication methods**:
 
 ## Landing Page
 
-After login, you’re greeted with the **Natural Language Query Interface**, where you can ask:
+After login, you’re greeted with the **Natural Language Query Interface**, where you can ask things like:
 
-- “Show me ADA price over time”
-- “Top stake pools by blocks produced in 2023”
-- “Plot a bar chart of multi-asset creations in 2021”
+- “What is a datum?“
+- “Plot a pie chart to show how much the top 1% ADA holders represent from the total supply on the Cardano network.“
+- “Plot a bar chart showing monthly multi assets created in 2021.“
+- “List the latest 5 blocks.“
+- “Plot a line chart showing monthly number of transactions and outputs.“
 
 <p align="center">
   <img src="./images/landing.png"
