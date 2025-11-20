@@ -1,13 +1,61 @@
 // src/components/artifacts/KVTable.jsx
 import React, { useMemo, useState } from "react";
 
+/**
+ * Shared guard to decide if a KV result is a *valid* table.
+ * Use this before rendering or pinning.
+ */
+export function isValidKVTable(kv) {
+  if (!kv || typeof kv !== "object") return false;
+
+  const meta = kv.metadata || {};
+  const dataValues = Array.isArray(kv?.data?.values) ? kv.data.values : [];
+
+  // Hard rule: if backend says count 0, treat as invalid,
+  // even if data.values was mistakenly filled.
+  if (typeof meta.count === "number" && meta.count <= 0) {
+    return false;
+  }
+
+  const rawColumns = Array.isArray(meta.columns) ? meta.columns : [];
+  const columns = rawColumns
+    .map((c) => (typeof c === "string" ? c.trim() : ""))
+    .filter((c) => c.length > 0);
+
+  // Must have declared columns AND column data
+  if (!columns.length || !dataValues.length) return false;
+
+  // Must have at least one non-empty cell
+  const maxLen = Math.max(...dataValues.map((c) => c.values?.length || 0));
+  if (!Number.isFinite(maxLen) || maxLen === 0) return false;
+
+  let hasNonEmpty = false;
+  for (let i = 0; i < maxLen && !hasNonEmpty; i++) {
+    for (let c = 0; c < dataValues.length && !hasNonEmpty; c++) {
+      const val = dataValues[c]?.values?.[i];
+      if (val !== null && val !== undefined && String(val).trim() !== "") {
+        hasNonEmpty = true;
+      }
+    }
+  }
+
+  return hasNonEmpty;
+}
+
 export default function KVTable({ kv, sortable = true }) {
   const [sortKey, setSortKey] = useState(null);
   const [sortAsc, setSortAsc] = useState(true);
 
-  const columns = (kv?.metadata?.columns || []).filter(Boolean);
-  const cols = kv?.data?.values || [];
-  if (!columns.length || !cols.length) return null;
+  // Global guard: if metadata is inconsistent, do not render anything
+  if (!isValidKVTable(kv)) return null;
+
+  const metadata = kv.metadata || {};
+  const rawColumns = Array.isArray(metadata.columns) ? metadata.columns : [];
+  const columns = rawColumns
+    .map((c) => (typeof c === "string" ? c.trim() : ""))
+    .filter((c) => c.length > 0);
+
+  const cols = Array.isArray(kv?.data?.values) ? kv.data.values : [];
 
   const formatValue = (key, value) => {
     if (value === null || value === undefined) return "";
@@ -16,8 +64,7 @@ export default function KVTable({ kv, sortable = true }) {
 
     const n = Number(raw);
     if (!Number.isNaN(n)) {
-      if (Number.isInteger(n)) return n.toString();
-      return n.toString();
+      return Number.isInteger(n) ? n.toString() : n.toString();
     }
 
     if (!Number.isNaN(Date.parse(raw)) && /T\d{2}:\d{2}/.test(raw)) {
@@ -32,12 +79,18 @@ export default function KVTable({ kv, sortable = true }) {
   for (let i = 0; i < maxLen; i++) {
     const row = {};
     for (let c = 0; c < cols.length; c++) {
-      const colKey = columns[c] || Object.keys(cols[c])[0];
-      const val = cols[c].values?.[i];
+      const colKey = columns[c] || Object.keys(cols[c] || {})[0];
+      const val = cols[c]?.values?.[i];
       row[colKey] = formatValue(colKey, val);
     }
     rows.push(row);
   }
+
+  // Filter out rows that are completely empty (extra safety)
+  const nonEmptyRows = rows.filter((row) =>
+    columns.some((col) => row[col] !== "")
+  );
+  if (!nonEmptyRows.length) return null;
 
   const detectType = (v) => {
     if (v === "" || v == null) return "string";
@@ -56,9 +109,10 @@ export default function KVTable({ kv, sortable = true }) {
   };
 
   const sortedRows = useMemo(() => {
-    if (!sortKey || !sortable) return rows;
-    const t = detectType(rows[0]?.[sortKey]);
-    const copy = [...rows];
+    if (!sortKey || !sortable) return nonEmptyRows;
+
+    const t = detectType(nonEmptyRows[0]?.[sortKey]);
+    const copy = [...nonEmptyRows];
 
     copy.sort((a, b) => {
       const A = a[sortKey];
@@ -69,7 +123,7 @@ export default function KVTable({ kv, sortable = true }) {
     });
 
     return sortAsc ? copy : copy.reverse();
-  }, [rows, sortKey, sortAsc, sortable]);
+  }, [nonEmptyRows, sortKey, sortAsc, sortable]);
 
   return (
     <div className="kv-table-wrapper">
