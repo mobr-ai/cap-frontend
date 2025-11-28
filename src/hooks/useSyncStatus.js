@@ -91,8 +91,8 @@ export default function useSyncStatus(authFetch) {
       inFlight.current.sync = true;
       try {
         const sparqlQuery = `
-        PREFIX blockchain: <http://www.mobr.ai/ontologies/blockchain#>
-        PREFIX cardano:   <http://www.mobr.ai/ontologies/cardano#>
+        PREFIX blockchain: <https://mobr.ai/ont/blockchain#>
+        PREFIX cardano:   <https://mobr.ai/ont/cardano#>
         SELECT ?currentCardanoHeight (MAX(?blockNum) AS ?capBlockNum)
         WHERE {
           cardano:Cardano blockchain:hasCurrentBlockHeight ?currentCardanoHeight .
