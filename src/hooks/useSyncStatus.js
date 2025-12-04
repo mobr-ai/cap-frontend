@@ -91,13 +91,13 @@ export default function useSyncStatus(authFetch) {
       inFlight.current.sync = true;
       try {
         const sparqlQuery = `
-        PREFIX blockchain: <https://mobr.ai/ont/blockchain#>
-        PREFIX cardano:   <https://mobr.ai/ont/cardano#>
-        SELECT ?currentCardanoHeight (MAX(?blockNum) AS ?capBlockNum)
+        PREFIX b: <https://mobr.ai/ont/blockchain#>
+        PREFIX c: <https://mobr.ai/ont/cardano#>
+        SELECT ?currentCardanoHeight (MAX(?blockNum) AS ?capBlockNum) (COUNT(?block) AS ?count)
         WHERE {
-          cardano:Cardano blockchain:hasCurrentBlockHeight ?currentCardanoHeight .
-          ?block a blockchain:Block .
-          ?block cardano:hasBlockNumber ?blockNum .
+          c:Cardano c:hasBlockNumber ?currentCardanoHeight .
+          ?block a b:Block .
+          ?block c:hasBlockNumber ?blockNum .
         }
         GROUP BY (?currentCardanoHeight)
       `;
