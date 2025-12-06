@@ -1,0 +1,426 @@
+/* src/styles/AdminPage.css */
+
+.AdminPage {
+  padding-top: 1.5rem;
+  padding-bottom: 2rem;
+  color: #e5e7eb;
+}
+
+/* Center the content and constrain max width */
+.AdminPage-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.admin-header {
+  margin-bottom: 1.5rem;
+}
+
+.admin-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.admin-subtitle {
+  font-size: 0.95rem;
+  color: #9ca3af;
+  margin-bottom: 0;
+}
+
+/* Tabs */
+
+.admin-tabs {
+  display: inline-flex;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle at top left,
+    #020617,
+    #020617 40%,
+    #020617
+  );
+  border: 1px solid rgba(55, 65, 81, 0.8);
+  margin-bottom: 1.25rem;
+}
+
+.admin-tab {
+  border: none;
+  border-radius: 9999px;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #9ca3af;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.admin-tab:hover {
+  color: #e5e7eb;
+  background: rgba(31, 41, 55, 0.8);
+}
+
+.admin-tab--active {
+  color: #f9fafb;
+  /* background: linear-gradient(135deg, #22c55e, #0ea5e9); */
+  background: linear-gradient(135deg, #1a231d, #2189bd);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* Sections */
+
+.admin-section {
+  margin-bottom: 1.5rem;
+}
+
+.admin-section--table {
+  margin-top: 0.5rem;
+}
+
+.admin-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.admin-section-header--compact {
+  margin-bottom: 0.5rem;
+}
+
+.admin-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
+}
+
+.admin-section-subtitle {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* Stats */
+
+.admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-stat-card {
+  background: linear-gradient(135deg, #111827, #020617);
+  border-radius: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 80px;
+}
+
+.admin-stat-card--users {
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+.admin-stat-card--admins {
+  border-color: rgba(248, 250, 109, 0.5);
+}
+
+.admin-stat-card--confirmed {
+  border-color: rgba(45, 212, 191, 0.5);
+}
+
+.admin-stat-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  margin-bottom: 0.25rem;
+}
+
+.admin-stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.admin-stat-caption {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-top: 0.15rem;
+}
+
+.admin-stat-placeholder {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: 0.35rem;
+}
+
+.admin-stat-error {
+  font-size: 0.8rem;
+  color: #f97373;
+  margin-top: 0.35rem;
+}
+
+/* System status color accents */
+
+.status-green {
+  border-color: rgba(16, 185, 129, 0.7);
+}
+
+.status-yellow {
+  border-color: rgba(234, 179, 8, 0.7);
+}
+
+.status-orange {
+  border-color: rgba(249, 115, 22, 0.7);
+}
+
+.status-red {
+  border-color: rgba(248, 113, 113, 0.9);
+}
+
+/* Users table: typography & layout */
+
+.admin-users-table {
+  font-size: 0.85rem;
+  color: #e5e7eb;
+  margin-bottom: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Header: similar vibes to section titles */
+
+.admin-users-table thead th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
+  border-bottom: 1px solid rgba(55, 65, 81, 0.9);
+  padding-top: 0.45rem;
+  padding-bottom: 0.35rem;
+}
+
+/* Body cells a bit tighter, matching the compact dashboard feel */
+
+.admin-users-table tbody td {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  border-top: 1px solid rgba(31, 41, 55, 0.9);
+}
+
+/* Subtle custom striping so it blends with the dark cards */
+
+.admin-users-table tbody tr:nth-child(odd) td {
+  background-color: rgba(15, 23, 42, 0.96);
+}
+
+.admin-users-table tbody tr:nth-child(even) td {
+  background-color: rgba(17, 24, 39, 0.96);
+}
+
+/* Search + table */
+
+.admin-table-section {
+  margin-top: 0.5rem;
+}
+
+.admin-search-wrapper {
+  margin-bottom: 0.75rem;
+}
+
+.admin-search-input {
+  border-radius: 9999px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.admin-table-wrapper {
+  max-height: 420px;
+  border-radius: 0.75rem;
+  overflow: auto;
+  border: 1px solid rgba(55, 65, 81, 0.8);
+}
+
+/* Make table header stand out a bit more */
+.admin-users-table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #020617;
+  z-index: 1;
+}
+
+/* Sticky actions column */
+
+.admin-users-actions-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background-color: #020617;
+}
+
+.admin-users-actions-col--head {
+  width: 80px;
+}
+
+.admin-users-actions-cell {
+  white-space: nowrap;
+}
+
+/* Action buttons */
+
+.admin-user-actions {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.admin-user-action-btn {
+  padding: 0.1rem 0.3rem;
+}
+
+/* Sortable headers */
+
+.admin-sortable-header {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.admin-sortable-header span {
+  vertical-align: middle;
+}
+
+.admin-sort-icon {
+  margin-left: 0.25rem;
+  font-size: 0.7rem;
+  opacity: 0.5;
+}
+
+.admin-sortable-header:hover .admin-sort-icon {
+  opacity: 0.9;
+}
+
+/* User rows */
+
+.admin-user-row td {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.admin-user-row:hover td {
+  background-color: rgba(31, 41, 55, 0.9);
+}
+
+/* Anonymized users */
+
+.admin-user-row--anonymized td {
+  background-color: rgba(15, 23, 42, 0.95);
+  color: #6b7280;
+  font-style: italic;
+}
+
+.admin-user-row--anonymized td.admin-users-actions-cell {
+  background-color: rgba(15, 23, 42, 0.95);
+}
+
+/* Username + anonymized badge */
+
+.admin-user-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.admin-user-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  background-color: rgba(55, 65, 81, 0.9);
+  color: #e5e7eb;
+  flex-shrink: 0;
+}
+
+/* Misc status text */
+
+.admin-status-text {
+  font-size: 0.9rem;
+  color: #9ca3af;
+  margin-bottom: 0.5rem;
+}
+
+.admin-status-text--error {
+  color: #f97373;
+}
+
+/* Notifications card */
+
+.admin-notify-card {
+  background: linear-gradient(135deg, #020617, #030712);
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(75, 85, 99, 0.8);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.admin-notify-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.admin-notify-row--textarea {
+  flex-direction: column;
+  align-items: stretch;
+  margin-bottom: 0.75rem;
+}
+
+.admin-notify-textarea {
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.admin-notify-footer {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+/* Responsive tweaks */
+
+@media (max-width: 768px) {
+  .AdminPage {
+    padding-top: 1rem;
+  }
+
+  .admin-title {
+    font-size: 1.4rem;
+  }
+
+  .admin-section-title {
+    font-size: 0.95rem;
+  }
+
+  .admin-tabs {
+    flex-wrap: wrap;
+    border-radius: 0.75rem;
+  }
+
+  .admin-users-actions-col--head {
+    width: 70px;
+  }
+}
