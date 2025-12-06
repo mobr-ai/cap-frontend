@@ -25,6 +25,7 @@ import WaitingListPage from "./pages/WaitingListPage";
 import SettingsPage from "./pages/SettingsPage";
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/DashboardPage";
+import AdminPage from "./pages/AdminPage";
 
 // Hooks
 import { useAuthRequest } from "./hooks/useAuthRequest";
@@ -184,6 +185,7 @@ function AppRouter() {
           <Route element={<Layout />}>
             <Route path="/" element={<LandingPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="/login" element={<AuthPage type="login" />} />
             <Route path="/signup" element={<WaitingListPage />} />
             <Route path="/settings" element={<SettingsPage />} />
