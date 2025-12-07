@@ -138,6 +138,23 @@
     "systemStatsCpuThreads": "{{threads}} threads ({{cores}} núcleos físicos)",
     "tabOverview": "Visão geral",
     "tabUsers": "Usuários",
-    "tabAlerts": "Alertas"
+    "tabAlerts": "Alertas",
+    "tabSystem": "Sistema",
+    "systemDetailsTitle": "Métricas do nó",
+    "systemDetailsSubtitle": "Métricas detalhadas de CPU, memória, disco e GPU do nó backend do CAP.",
+    "systemStatsDiskRoot": "Uso de disco (raiz)",
+    "systemStatsDiskMount": "Montado em {{mount}}",
+    "systemStatsCpuLoad": "Carga média: {{load1}} (1m), {{load5}} (5m), {{load15}} (15m)",
+    "systemDisksTitle": "Discos e sistemas de arquivos",
+    "systemDisksSubtitle": "Uso por sistema de arquivos montado.",
+    "systemDisksColDevice": "Dispositivo",
+    "systemDisksColMount": "Ponto de montagem",
+    "systemDisksColFs": "FS",
+    "systemDisksColUsed": "Usado",
+    "systemDisksColTotal": "Total",
+    "systemDisksColUsage": "Uso",
+    "systemDisksEmpty": "Nenhuma informação de disco disponível.",
+    "systemGpusTitle": "GPUs",
+    "systemGpusSubtitle": "Uso e memória por dispositivo de GPU."
   }
 }

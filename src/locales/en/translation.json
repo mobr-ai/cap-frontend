@@ -137,6 +137,23 @@
     "systemStatsCpuThreads": "{{threads}} threads ({{cores}} physical cores)",
     "tabOverview": "Overview",
     "tabUsers": "Users",
-    "tabAlerts": "Alerts"
+    "tabAlerts": "Alerts",
+    "tabSystem": "System",
+    "systemDetailsTitle": "Node metrics",
+    "systemDetailsSubtitle": "Detailed CPU, memory, disk and GPU metrics for the CAP backend node.",
+    "systemStatsDiskRoot": "Disk usage (root)",
+    "systemStatsDiskMount": "Mounted at {{mount}}",
+    "systemStatsCpuLoad": "Load avg: {{load1}} (1m), {{load5}} (5m), {{load15}} (15m)",
+    "systemDisksTitle": "Disks & filesystems",
+    "systemDisksSubtitle": "Usage per mounted filesystem.",
+    "systemDisksColDevice": "Device",
+    "systemDisksColMount": "Mount",
+    "systemDisksColFs": "FS",
+    "systemDisksColUsed": "Used",
+    "systemDisksColTotal": "Total",
+    "systemDisksColUsage": "Usage",
+    "systemDisksEmpty": "No disk information available.",
+    "systemGpusTitle": "GPUs",
+    "systemGpusSubtitle": "Usage and memory per GPU device."
   }
 }
