@@ -153,8 +153,8 @@ export function useAdminUsers(authFetch, showToast, t) {
       showToast &&
         showToast(
           targetFlag
-            ? t("admin.toastPromotedToAdmin")
-            : t("admin.toastDemotedFromAdmin"),
+            ? t("admin.toastPromotedAdmin")
+            : t("admin.toastDemotedAdmin"),
           "success"
         );
     } catch (err) {
