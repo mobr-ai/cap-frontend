@@ -52,7 +52,7 @@ function getInitialLoading() {
     const path = window.location.pathname;
     if (!sess) return false;
     // Start with loader ON for dashboard (and optionally landing)
-    return path === "/dashboard" || path === "/";
+    return path === "/dashboard";
   } catch {
     return false;
   }
