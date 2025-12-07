@@ -10,6 +10,7 @@ import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 
 import { AdminTabs } from "@/components/admin/AdminTabs";
 import { SystemOverview } from "@/components/admin/SystemOverview";
+import { SystemDetails } from "@/components/admin/SystemDetails";
 import { UserStatsSummary } from "@/components/admin/UserStatsSummary";
 import { UserDirectory } from "@/components/admin/UserDirectory";
 import { NewUserAlertsPanel } from "@/components/admin/NewUserAlertsPanel";
@@ -27,6 +28,7 @@ export default function AdminPage() {
   const users = useAdminUsers(authFetch, showToast, t);
   const notifications = useAdminNotifications(authFetch, showToast, t);
 
+  // Guard (backend still enforces admin)
   if (!session || !session.is_admin) {
     return (
       <div className="AdminPage container">
@@ -61,6 +63,8 @@ export default function AdminPage() {
             <UserDirectory t={t} showToast={showToast} {...users} />
           </>
         )}
+
+        {activeTab === "system" && <SystemDetails t={t} {...system} />}
 
         {activeTab === "alerts" && (
           <NewUserAlertsPanel t={t} {...notifications} />

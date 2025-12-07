@@ -11,6 +11,7 @@ export function AdminTabs({ activeTab, onChange, t }) {
       >
         {t("admin.tabOverview")}
       </button>
+
       <button
         type="button"
         className={
@@ -20,6 +21,17 @@ export function AdminTabs({ activeTab, onChange, t }) {
       >
         {t("admin.tabUsers")}
       </button>
+
+      <button
+        type="button"
+        className={
+          activeTab === "system" ? "admin-tab admin-tab--active" : "admin-tab"
+        }
+        onClick={() => onChange("system")}
+      >
+        {t("admin.tabSystem")}
+      </button>
+
       <button
         type="button"
         className={
