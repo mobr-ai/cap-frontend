@@ -74,6 +74,7 @@ export function useDashboardItems({
   // React to activeId changes
   useEffect(() => {
     if (!activeId) {
+      // No active dashboard selected
       stopItemsPoller();
       setIfChanged(setItems, [], shallowEqualArray);
       return;
@@ -83,14 +84,21 @@ export function useDashboardItems({
     // We fully trust defaultItems from useDashboardData.
     if (defaultId && activeId === defaultId) {
       stopItemsPoller();
-      setIfChanged(setItems, defaultItems, shallowEqualArray);
+
+      if (defaultItems == null) {
+        // default items still loading: keep items as "loading"
+        setItems((prev) => (prev === null ? prev : null));
+      } else {
+        // default items loaded (possibly []): propagate to items
+        setIfChanged(setItems, defaultItems, shallowEqualArray);
+      }
+
       return;
     }
 
     // Non-default dashboard: mark items as "loading" before fetch/poll
-    setItems((prev) => (prev === null ? prev : null));
+    setItems(null);
 
-    // Non-default dashboard
     if (DISABLE_DASH) {
       // oneshot fetch
       if (!authFetch) return;
@@ -134,12 +142,23 @@ export function useDashboardItems({
   // coming from useDashboardData (both oneshot + polling modes).
   useEffect(() => {
     if (defaultId && activeId === defaultId) {
-      setIfChanged(setItems, defaultItems, shallowEqualArray);
+      if (defaultItems == null) {
+        // still loading → keep items as null so the grid stays in "loading" mode
+        setItems((prev) => (prev === null ? prev : null));
+      } else {
+        // loaded (could be [] if truly no widgets)
+        setIfChanged(setItems, defaultItems, shallowEqualArray);
+      }
     }
   }, [defaultItems, activeId, defaultId]);
 
   // Cleanup
-  useEffect(() => () => stopItemsPoller(), [stopItemsPoller]);
+  useEffect(
+    () => () => {
+      stopItemsPoller();
+    },
+    [stopItemsPoller]
+  );
 
   const activeName = useMemo(() => {
     if (!activeId) return "Select dashboard";
