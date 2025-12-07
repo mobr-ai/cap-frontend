@@ -18,6 +18,7 @@ import "./styles/index.css";
 
 // i18n first
 import "./i18n";
+import { useTranslation } from "react-i18next";
 
 // Pages
 import AuthPage from "./pages/AuthPage";
@@ -26,6 +27,7 @@ import SettingsPage from "./pages/SettingsPage";
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/DashboardPage";
 import AdminPage from "./pages/AdminPage";
+import LoadingPage from "./pages/LoadingPage";
 
 // Hooks
 import { useAuthRequest } from "./hooks/useAuthRequest";
@@ -38,6 +40,7 @@ import Header from "./components/Header";
 // Layout wrapper
 // ---------------------------
 function Layout() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -143,6 +146,13 @@ function Layout() {
           sidebarIsOpen={sidebarIsOpen}
           setSidebarOpen={setSidebarOpen}
         />
+        {loading && (
+          <LoadingPage
+            type="ring" // try "spin", "pulse", "orbit", "ring"
+            fullscreen={true}
+            message={t("loading.workspace")}
+          />
+        )}
 
         <ToastContainer
           position="bottom-end"

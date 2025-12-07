@@ -1,5 +1,5 @@
 // src/pages/DashboardPage.jsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import Modal from "react-bootstrap/Modal";
@@ -15,7 +15,7 @@ import { DashboardWidgetContent } from "@/components/dashboard/DashboardWidget";
 import "@/styles/DashboardPage.css";
 
 export default function DashboardPage() {
-  const { session, showToast } = useOutletContext() || {};
+  const { session, showToast, setLoading } = useOutletContext() || {};
   const { authFetch } = useAuthRequest({ session, showToast });
 
   const [expandedItem, setExpandedItem] = useState(null);
@@ -36,6 +36,15 @@ export default function DashboardPage() {
     error,
     refresh,
   } = useDashboardData(authFetch);
+
+  // --- Optional: simple loading hook based on data presence ---
+  useEffect(() => {
+    if (!dashboardsRaw && !error) {
+      setLoading && setLoading(true);
+    } else {
+      setLoading && setLoading(false);
+    }
+  }, [dashboardsRaw, error, setLoading]);
 
   const dashboards = useMemo(
     () => (Array.isArray(dashboardsRaw) ? dashboardsRaw : []),

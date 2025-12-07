@@ -66,6 +66,10 @@
     "logout": "Sair",
     "admin": "Admin"
   },
+  "loading": {
+    "workspace": "Carregando seu ambiente CAP…",
+    "default": "Carregando..."
+  },
   "admin": {
     "title": "Painel Admin",
     "accessDeniedTitle": "Acesso de administrador necessário",

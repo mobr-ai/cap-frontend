@@ -66,6 +66,10 @@
     "logout": "Logout",
     "admin": "Admin"
   },
+  "loading": {
+    "workspace": "Loading your CAP workspace…",
+    "default": "Loading..."
+  },
   "admin": {
     "title": "Admin Panel",
     "accessDeniedTitle": "Admin access required",
