@@ -424,3 +424,8 @@
     width: 70px;
   }
 }
+
+/* Disks table tweaks (inherits from .admin-users-table) */
+.admin-disks-table tbody td {
+  white-space: nowrap;
+}
