@@ -12,10 +12,13 @@ import DashboardToolbar from "@/components/dashboard/DashboardToolbar";
 import DashboardGrid from "@/components/dashboard/DashboardGrid";
 import { DashboardWidgetContent } from "@/components/dashboard/DashboardWidget";
 
+import { useTranslation } from "react-i18next";
+
 import "@/styles/DashboardPage.css";
 
 export default function DashboardPage() {
-  const { session, showToast, setLoading } = useOutletContext() || {};
+  const { t } = useTranslation();
+  const { session, showToast, setLoading, loading } = useOutletContext() || {};
   const { authFetch } = useAuthRequest({ session, showToast });
 
   const [expandedItem, setExpandedItem] = useState(null);
@@ -39,7 +42,7 @@ export default function DashboardPage() {
 
   // --- Optional: simple loading hook based on data presence ---
   useEffect(() => {
-    if (!dashboardsRaw && !error) {
+    if ((!dashboardsRaw || !dashboardsRaw?.length) && !error) {
       setLoading && setLoading(true);
     } else {
       setLoading && setLoading(false);
@@ -97,11 +100,8 @@ export default function DashboardPage() {
           onRefresh={refresh}
         />
 
-        {!dashboards.length && (
-          <p>
-            Pin any table or chart from the chat to create your dashboard
-            automatically.
-          </p>
+        {!loading && !dashboards.length && !error && (
+          <p>{t("dashboard.emptyPrompt")}</p>
         )}
 
         {error && (
@@ -117,6 +117,7 @@ export default function DashboardPage() {
           hasDashboards={dashboards.length > 0}
           onDelete={handleDeleteItem}
           onExpand={handleExpandItem}
+          isLoading={loading}
         />
 
         {/* Expanded widget modal */}

@@ -67,8 +67,13 @@
     "admin": "Admin"
   },
   "loading": {
+    "default": "Loading...",
     "workspace": "Loading your CAP workspace…",
-    "default": "Loading..."
+    "dashboardItems": "Loading dashboard widgets…"
+  },
+  "dashboard": {
+    "emptyPrompt": "Pin any table or chart from the chat to create your dashboard automatically.",
+    "noWidgetsYet": "No widgets pinned yet for this dashboard."
   },
   "admin": {
     "title": "Admin Panel",

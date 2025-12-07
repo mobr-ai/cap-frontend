@@ -67,8 +67,13 @@
     "admin": "Admin"
   },
   "loading": {
+    "default": "Carregando...",
     "workspace": "Carregando seu ambiente CAP…",
-    "default": "Carregando..."
+    "dashboardItems": "Carregando widgets do dashboard…"
+  },
+  "dashboard": {
+    "emptyPrompt": "Fixe qualquer tabela ou gráfico da conversa para criar seu dashboard automaticamente.",
+    "noWidgetsYet": "Ainda não há widgets fixados neste dashboard."
   },
   "admin": {
     "title": "Painel Admin",
