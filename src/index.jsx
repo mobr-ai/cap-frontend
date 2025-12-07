@@ -36,6 +36,28 @@ import useSyncStatus from "./hooks/useSyncStatus";
 // Components
 import Header from "./components/Header";
 
+function getInitialSession() {
+  try {
+    const raw = localStorage.getItem("cap_user_session");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getInitialLoading() {
+  try {
+    const raw = localStorage.getItem("cap_user_session");
+    const sess = raw ? JSON.parse(raw) : null;
+    const path = window.location.pathname;
+    if (!sess) return false;
+    // Start with loader ON for dashboard (and optionally landing)
+    return path === "/dashboard" || path === "/";
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------
 // Layout wrapper
 // ---------------------------
@@ -44,15 +66,8 @@ function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [loading, setLoading] = useState(false);
-  const [session, setSession] = useState(() => {
-    try {
-      const raw = localStorage.getItem("cap_user_session");
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [loading, setLoading] = useState(getInitialLoading);
+  const [session, setSession] = useState(getInitialSession);
 
   const [sidebarIsOpen, setSidebarOpen] = useState(false);
 

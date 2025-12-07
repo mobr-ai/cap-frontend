@@ -1,6 +1,7 @@
 // src/pages/DashboardPage.jsx
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useLayoutEffect, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import Modal from "react-bootstrap/Modal";
 
@@ -11,8 +12,6 @@ import { useDashboardItems } from "@/hooks/useDashboardItems";
 import DashboardToolbar from "@/components/dashboard/DashboardToolbar";
 import DashboardGrid from "@/components/dashboard/DashboardGrid";
 import { DashboardWidgetContent } from "@/components/dashboard/DashboardWidget";
-
-import { useTranslation } from "react-i18next";
 
 import "@/styles/DashboardPage.css";
 
@@ -40,19 +39,12 @@ export default function DashboardPage() {
     refresh,
   } = useDashboardData(authFetch);
 
-  // --- Optional: simple loading hook based on data presence ---
-  useEffect(() => {
-    if ((!dashboardsRaw || !dashboardsRaw?.length) && !error) {
-      setLoading && setLoading(true);
-    } else {
-      setLoading && setLoading(false);
-    }
-  }, [dashboardsRaw, error, setLoading]);
-
   const dashboards = useMemo(
     () => (Array.isArray(dashboardsRaw) ? dashboardsRaw : []),
     [dashboardsRaw]
   );
+
+  const hasDashboards = dashboards.length > 0;
 
   // These are always the items for the default dashboard (from the hook)
   const defaultItems = useMemo(
@@ -67,6 +59,43 @@ export default function DashboardPage() {
     defaultItems,
     authFetch,
   });
+
+  const isDashboardsLoading =
+    (!dashboardsRaw || !dashboardsRaw?.length) && !error;
+
+  // Widgets are "maybe loading" whenever:
+  // - we already have dashboards
+  // - BUT either we don't yet know the activeId
+  //   or items haven't been populated (null/undefined).
+  const isWidgetsMaybeLoading =
+    hasDashboards &&
+    (!activeId || items === null || typeof items === "undefined") &&
+    !error;
+
+  const isGridLoading = isDashboardsLoading || isWidgetsMaybeLoading;
+
+  // Smooth out micro-flickers by debouncing "loading finished"
+  const [debouncedGridLoading, setDebouncedGridLoading] = useState(true);
+
+  useEffect(() => {
+    if (isGridLoading) {
+      // If something started loading again, show loader immediately
+      setDebouncedGridLoading(true);
+      return;
+    }
+
+    // When loading stops, wait a short delay before hiding the loader
+    const timer = setTimeout(() => {
+      setDebouncedGridLoading(false);
+    }, 250); // tweak: 200–300ms usually feels good
+
+    return () => clearTimeout(timer);
+  }, [isGridLoading]);
+
+  useLayoutEffect(() => {
+    if (!setLoading) return;
+    setLoading(debouncedGridLoading);
+  }, [setLoading, debouncedGridLoading]);
 
   const handleDeleteItem = async (id) => {
     if (!authFetch) return;
@@ -98,17 +127,15 @@ export default function DashboardPage() {
           activeName={activeName}
           onSelectDashboard={setActiveId}
           onRefresh={refresh}
+          isLoading={isGridLoading}
         />
 
-        {!loading && !dashboards.length && !error && (
+        {!debouncedGridLoading && !dashboards.length && !error && (
           <p>{t("dashboard.emptyPrompt")}</p>
         )}
 
         {error && (
-          <p className="text-danger small mb-2">
-            There was a problem loading dashboards or widgets. The view may be
-            stale until it reconnects.
-          </p>
+          <p className="text-danger small mb-2">{t("dashboard.loadError")}</p>
         )}
 
         <DashboardGrid
@@ -117,7 +144,7 @@ export default function DashboardPage() {
           hasDashboards={dashboards.length > 0}
           onDelete={handleDeleteItem}
           onExpand={handleExpandItem}
-          isLoading={loading}
+          isLoading={debouncedGridLoading}
         />
 
         {/* Expanded widget modal */}

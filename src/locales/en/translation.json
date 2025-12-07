@@ -73,7 +73,8 @@
   },
   "dashboard": {
     "emptyPrompt": "Pin any table or chart from the chat to create your dashboard automatically.",
-    "noWidgetsYet": "No widgets pinned yet for this dashboard."
+    "noWidgetsYet": "No widgets pinned yet for this dashboard.",
+    "loadError": "There was a problem loading dashboards or widgets. The view may be incomplete until it reconnects."
   },
   "admin": {
     "title": "Admin Panel",

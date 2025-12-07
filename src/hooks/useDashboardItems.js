@@ -12,7 +12,7 @@ export function useDashboardItems({
   authFetch,
 }) {
   const [activeId, setActiveId] = useState(null);
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(null);
 
   const itemsPollerRef = useRef(null);
   const itemsAbortRef = useRef(null);
@@ -87,6 +87,9 @@ export function useDashboardItems({
       return;
     }
 
+    // Non-default dashboard: mark items as "loading" before fetch/poll
+    setItems((prev) => (prev === null ? prev : null));
+
     // Non-default dashboard
     if (DISABLE_DASH) {
       // oneshot fetch
@@ -108,6 +111,8 @@ export function useDashboardItems({
         } catch (err) {
           if (err?.name === "AbortError") return;
           console.warn("Oneshot items fetch error:", err?.message || err);
+          // Failed oneshot: treat as "loaded but empty" for now
+          setIfChanged(setItems, [], shallowEqualArray);
         }
       })();
 

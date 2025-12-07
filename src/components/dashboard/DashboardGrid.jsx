@@ -2,7 +2,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import DashboardWidget from "@/components/dashboard/DashboardWidget";
-import LoadingPage from "@/pages/LoadingPage";
 
 export default function DashboardGrid({
   items,
@@ -13,20 +12,12 @@ export default function DashboardGrid({
   isLoading,
 }) {
   const { t } = useTranslation();
+  const safeItems = Array.isArray(items) ? items : [];
 
   return (
-    <div className="dashboard-grid">
-      {items.map((item) => (
-        <DashboardWidget
-          key={item.id}
-          item={item}
-          onDelete={onDelete}
-          onExpand={onExpand}
-        />
-      ))}
-
-      {!isLoading &&
-        items.map((item) => (
+    !isLoading && (
+      <div className="dashboard-grid">
+        {safeItems.map((item) => (
           <DashboardWidget
             key={item.id}
             item={item}
@@ -35,9 +26,10 @@ export default function DashboardGrid({
           />
         ))}
 
-      {!isLoading && activeId && hasDashboards && items.length === 0 && (
-        <p>{t("dashboard.noWidgetsYet")}</p>
-      )}
-    </div>
+        {!isLoading && activeId && hasDashboards && safeItems.length === 0 && (
+          <p>{t("dashboard.noWidgetsYet")}</p>
+        )}
+      </div>
+    )
   );
 }

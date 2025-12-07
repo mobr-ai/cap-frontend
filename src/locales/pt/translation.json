@@ -73,7 +73,8 @@
   },
   "dashboard": {
     "emptyPrompt": "Fixe qualquer tabela ou gráfico da conversa para criar seu dashboard automaticamente.",
-    "noWidgetsYet": "Ainda não há widgets fixados neste dashboard."
+    "noWidgetsYet": "Ainda não há widgets fixados neste dashboard.",
+    "loadError": "Houve um problema ao carregar os dashboards ou widgets. A visualização pode ficar incompleta até que a conexão seja restabelecida."
   },
   "admin": {
     "title": "Painel Admin",
