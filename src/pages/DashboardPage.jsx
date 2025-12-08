@@ -55,8 +55,9 @@ export default function DashboardPage() {
   const hasDashboards = dashboards.length > 0;
 
   // These are always the items for the default dashboard (from the hook)
+  // IMPORTANT: keep null/undefined while loading so the hooks/loader can behave correctly.
   const defaultItems = useMemo(
-    () => (Array.isArray(defaultItemsRaw) ? defaultItemsRaw : []),
+    () => (Array.isArray(defaultItemsRaw) ? defaultItemsRaw : null),
     [defaultItemsRaw]
   );
 
