@@ -67,9 +67,10 @@
     "admin": "Admin"
   },
   "loading": {
-    "default": "Loading...",
+    "default": "",
     "workspace": "Loading your CAP workspace…",
-    "dashboardItems": "Loading dashboard widgets…"
+    "dashboardItems": "Loading dashboard widgets…",
+    "wallet": "Waiting wallet connection…"
   },
   "dashboard": {
     "emptyPrompt": "Pin any table or chart from the chat to create your dashboard automatically.",

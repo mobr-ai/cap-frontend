@@ -1,5 +1,11 @@
 // src/pages/DashboardPage.jsx
-import React, { useMemo, useState, useLayoutEffect, useEffect } from "react";
+import React, {
+  useMemo,
+  useState,
+  useLayoutEffect,
+  useEffect,
+  Suspense,
+} from "react";
 import { useOutletContext } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -12,6 +18,8 @@ import { useDashboardItems } from "@/hooks/useDashboardItems";
 import DashboardToolbar from "@/components/dashboard/DashboardToolbar";
 import DashboardGrid from "@/components/dashboard/DashboardGrid";
 import { DashboardWidgetContent } from "@/components/dashboard/DashboardWidget";
+
+import LoadingPage from "@/pages/LoadingPage";
 
 import "@/styles/DashboardPage.css";
 
@@ -138,14 +146,24 @@ export default function DashboardPage() {
           <p className="text-danger small mb-2">{t("dashboard.loadError")}</p>
         )}
 
-        <DashboardGrid
-          items={items}
-          activeId={activeId}
-          hasDashboards={dashboards.length > 0}
-          onDelete={handleDeleteItem}
-          onExpand={handleExpandItem}
-          isLoading={debouncedGridLoading}
-        />
+        <Suspense
+          fallback={
+            <LoadingPage
+              type="ring" // "spin", "pulse", "orbit", "ring"
+              fullscreen={true}
+              message={t("loading.dashboardItems")}
+            />
+          }
+        >
+          <DashboardGrid
+            items={items}
+            activeId={activeId}
+            hasDashboards={dashboards.length > 0}
+            onDelete={handleDeleteItem}
+            onExpand={handleExpandItem}
+            isLoading={debouncedGridLoading}
+          />
+        </Suspense>
 
         {/* Expanded widget modal */}
         <Modal

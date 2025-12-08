@@ -67,9 +67,10 @@
     "admin": "Admin"
   },
   "loading": {
-    "default": "Carregando...",
+    "default": "",
     "workspace": "Carregando seu ambiente CAP…",
-    "dashboardItems": "Carregando widgets do dashboard…"
+    "dashboardItems": "Carregando widgets do dashboard…",
+    "wallet": "Aguardando conexão com carteira…"
   },
   "dashboard": {
     "emptyPrompt": "Fixe qualquer tabela ou gráfico da conversa para criar seu dashboard automaticamente.",
