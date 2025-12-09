@@ -534,6 +534,8 @@
 /* Artifacts (tables/charts) in bubbles */
 .cap-root .kv-bubble {
   padding: 0.5rem 0.75rem 0.75rem;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Simple table styling for KV results (if rendered as HTML table) */

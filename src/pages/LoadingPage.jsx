@@ -1,52 +1,84 @@
-import logo from "/icons/logo.svg";
+// src/pages/LoadingPage.jsx
+import React from "react";
+import logo from "/icons/logo.svg"; // adjust if your path is different
 import "../styles/LoadingPage.css";
+import { useTranslation } from "react-i18next";
 
 function LoadingPage(props) {
-  const switchRender = (type, style) => {
+  const { t } = useTranslation();
+  const {
+    type = "spin", // "spin" | "pulse" | "orbit" | "ring"
+    fullscreen = true, // if false, behaves like an inline loader
+    style,
+    message,
+  } = props;
+
+  const rootClass = fullscreen
+    ? "LoadingPage-root LoadingPage-fullscreen"
+    : "LoadingPage-root";
+
+  const resolvedMessage = message || t("loading.default");
+
+  const renderInner = () => {
     switch (type) {
-      case "simple":
+      case "pulse":
         return (
-          <div
-            style={style || { alignItems: "center", alignSelf: "center" }}
-            className="LoadingPage-simple"
-            alt="loading sign"
-          ></div>
-        );
-      case "ring":
-        return (
-          <div className="loading-ring">
-            <div></div>
-            <div></div>
-            <div></div>
-            <div></div>
+          <div className="LoadingPage-inner">
+            <div className="LoadingPage-pulse">
+              <img src={logo} alt="Loading" className="LoadingPage-logo" />
+              <div className="LoadingPage-pulse-glow" />
+            </div>
           </div>
         );
-      case "magnifier":
+
+      case "orbit":
         return (
-          <div className="loading-spinner">
-            <div className="loading-magnifier-icon">
-              <div>
-                <div>
-                  <div></div>
-                  <div></div>
-                </div>
+          <div className="LoadingPage-inner">
+            <div className="LoadingPage-orbit-wrapper">
+              <img src={logo} alt="Loading" className="LoadingPage-logo" />
+              <div className="LoadingPage-orbit-ring">
+                <span className="LoadingPage-orbit-dot" />
+                <span className="LoadingPage-orbit-dot" />
+                <span className="LoadingPage-orbit-dot" />
+                <span className="LoadingPage-orbit-dot" />
               </div>
             </div>
           </div>
         );
-      default:
+
+      case "ring":
         return (
-          <img
-            style={style || { alignItems: "center", alignSelf: "center" }}
-            src={logo}
-            className="LoadingPage-magnifier"
-            alt="loading sign"
-          ></img>
+          <div className="LoadingPage-inner">
+            <div className="LoadingPage-ring">
+              <img src={logo} alt="Loading" className="LoadingPage-logo" />
+              <div className="LoadingPage-ring-spinner" />
+            </div>
+          </div>
+        );
+
+      case "spin":
+      default:
+        // vanilla spin
+        return (
+          <div className="LoadingPage-inner">
+            <img
+              src={logo}
+              alt="Loading"
+              className="LoadingPage-logo LoadingPage-spin"
+            />
+          </div>
         );
     }
   };
 
-  return switchRender(props.type, props.style);
+  return (
+    <div className={rootClass} style={style}>
+      {renderInner()}
+      {resolvedMessage && (
+        <div className="LoadingPage-message">{resolvedMessage}</div>
+      )}
+    </div>
+  );
 }
 
 export default LoadingPage;

@@ -9,6 +9,7 @@ import {
   faCog,
   faArrowRightFromBracket,
 } from "@fortawesome/free-solid-svg-icons";
+import { useTranslation } from "react-i18next";
 import "../styles/NavigationSidebar.css";
 
 const menuStyles = {
@@ -35,6 +36,7 @@ export default function NavigationSidebar({
 }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   if (typeof window !== "undefined" && window.innerWidth < 1024) return null;
 
@@ -69,7 +71,7 @@ export default function NavigationSidebar({
           className={`sidebar-item ${isActive("/", true) ? "active" : ""}`}
         >
           <FontAwesomeIcon icon={faHouse} />
-          <span>Home</span>
+          <span>{t("nav.home")}</span>
         </Link>
 
         <Link
@@ -78,7 +80,7 @@ export default function NavigationSidebar({
           className={`sidebar-item ${isActive("/dashboard") ? "active" : ""}`}
         >
           <FontAwesomeIcon icon={faGaugeHigh} />
-          <span>Dashboard</span>
+          <span>{t("nav.dashboard")}</span>
         </Link>
 
         <Link
@@ -89,7 +91,7 @@ export default function NavigationSidebar({
           }`}
         >
           <FontAwesomeIcon icon={faCog} />
-          <span>Settings</span>
+          <span>{t("nav.settings")}</span>
         </Link>
 
         {user && (
@@ -103,7 +105,7 @@ export default function NavigationSidebar({
               }}
             >
               <FontAwesomeIcon icon={faArrowRightFromBracket} />
-              <span>Logout</span>
+              <span>{t("nav.logout")}</span>
             </button>
           </>
         )}

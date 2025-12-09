@@ -9,7 +9,7 @@ export default function useDashboardData(authFetch) {
 
   const [dashboard, setDashboard] = useState([]);
   const [defaultId, setDefaultId] = useState(null);
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(null);
   const [error, setError] = useState(null);
 
   const acDashRef = useRef(null);

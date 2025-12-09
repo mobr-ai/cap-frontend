@@ -194,6 +194,17 @@ function NavBar({
           <Navbar.Toggle aria-controls="cap-navbar" />
           <Navbar.Collapse id="cap-navbar" className="justify-content-end">
             <Nav className="ml-auto NavBar-top-container">
+              {/* Admin entry (only for admins) */}
+              {userData?.is_admin && (
+                <Nav.Link
+                  as={Link}
+                  to="/admin"
+                  className="nav-text"
+                  onClick={() => setExpanded(false)}
+                >
+                  {t("nav.admin")}
+                </Nav.Link>
+              )}
               {/* Dashboard entry (important for mobile where sidebar is hidden) */}
               {userData && (
                 <Nav.Link

@@ -1,6 +1,13 @@
 // src/pages/DashboardPage.jsx
-import React, { useMemo, useState } from "react";
+import React, {
+  useMemo,
+  useState,
+  useLayoutEffect,
+  useEffect,
+  Suspense,
+} from "react";
 import { useOutletContext } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import Modal from "react-bootstrap/Modal";
 
@@ -12,10 +19,13 @@ import DashboardToolbar from "@/components/dashboard/DashboardToolbar";
 import DashboardGrid from "@/components/dashboard/DashboardGrid";
 import { DashboardWidgetContent } from "@/components/dashboard/DashboardWidget";
 
+import LoadingPage from "@/pages/LoadingPage";
+
 import "@/styles/DashboardPage.css";
 
 export default function DashboardPage() {
-  const { session, showToast } = useOutletContext() || {};
+  const { t } = useTranslation();
+  const { session, showToast, setLoading, loading } = useOutletContext() || {};
   const { authFetch } = useAuthRequest({ session, showToast });
 
   const [expandedItem, setExpandedItem] = useState(null);
@@ -42,9 +52,12 @@ export default function DashboardPage() {
     [dashboardsRaw]
   );
 
+  const hasDashboards = dashboards.length > 0;
+
   // These are always the items for the default dashboard (from the hook)
+  // IMPORTANT: keep null/undefined while loading so the hooks/loader can behave correctly.
   const defaultItems = useMemo(
-    () => (Array.isArray(defaultItemsRaw) ? defaultItemsRaw : []),
+    () => (Array.isArray(defaultItemsRaw) ? defaultItemsRaw : null),
     [defaultItemsRaw]
   );
 
@@ -55,6 +68,43 @@ export default function DashboardPage() {
     defaultItems,
     authFetch,
   });
+
+  const isDashboardsLoading =
+    (!dashboardsRaw || !dashboardsRaw?.length) && !error;
+
+  // Widgets are "maybe loading" whenever:
+  // - we already have dashboards
+  // - BUT either we don't yet know the activeId
+  //   or items haven't been populated (null/undefined).
+  const isWidgetsMaybeLoading =
+    hasDashboards &&
+    (!activeId || items === null || typeof items === "undefined") &&
+    !error;
+
+  const isGridLoading = isDashboardsLoading || isWidgetsMaybeLoading;
+
+  // Smooth out micro-flickers by debouncing "loading finished"
+  const [debouncedGridLoading, setDebouncedGridLoading] = useState(true);
+
+  useEffect(() => {
+    if (isGridLoading) {
+      // If something started loading again, show loader immediately
+      setDebouncedGridLoading(true);
+      return;
+    }
+
+    // When loading stops, wait a short delay before hiding the loader
+    const timer = setTimeout(() => {
+      setDebouncedGridLoading(false);
+    }, 250); // tweak: 200–300ms usually feels good
+
+    return () => clearTimeout(timer);
+  }, [isGridLoading]);
+
+  useLayoutEffect(() => {
+    if (!setLoading) return;
+    setLoading(debouncedGridLoading);
+  }, [setLoading, debouncedGridLoading]);
 
   const handleDeleteItem = async (id) => {
     if (!authFetch) return;
@@ -86,29 +136,35 @@ export default function DashboardPage() {
           activeName={activeName}
           onSelectDashboard={setActiveId}
           onRefresh={refresh}
+          isLoading={isGridLoading}
         />
 
-        {!dashboards.length && (
-          <p>
-            Pin any table or chart from the chat to create your dashboard
-            automatically.
-          </p>
+        {!debouncedGridLoading && !dashboards.length && !error && (
+          <p>{t("dashboard.emptyPrompt")}</p>
         )}
 
         {error && (
-          <p className="text-danger small mb-2">
-            There was a problem loading dashboards or widgets. The view may be
-            stale until it reconnects.
-          </p>
+          <p className="text-danger small mb-2">{t("dashboard.loadError")}</p>
         )}
 
-        <DashboardGrid
-          items={items}
-          activeId={activeId}
-          hasDashboards={dashboards.length > 0}
-          onDelete={handleDeleteItem}
-          onExpand={handleExpandItem}
-        />
+        <Suspense
+          fallback={
+            <LoadingPage
+              type="ring" // "spin", "pulse", "orbit", "ring"
+              fullscreen={true}
+              message={t("loading.dashboardItems")}
+            />
+          }
+        >
+          <DashboardGrid
+            items={items}
+            activeId={activeId}
+            hasDashboards={dashboards.length > 0}
+            onDelete={handleDeleteItem}
+            onExpand={handleExpandItem}
+            isLoading={debouncedGridLoading}
+          />
+        </Suspense>
 
         {/* Expanded widget modal */}
         <Modal

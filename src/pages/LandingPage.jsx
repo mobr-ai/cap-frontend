@@ -14,7 +14,7 @@ import { useLLMStream } from "@/hooks/useLLMStream";
 import { sanitizeChunk, finalizeForRender } from "@/utils/streamSanitizers";
 import { kvToChartSpec } from "@/utils/kvCharts";
 import VegaChart from "@/components/artifacts/VegaChart";
-import KVTable from "@/components/artifacts/KVTable";
+import KVTable, { isValidKVTable } from "@/components/artifacts/KVTable";
 
 import "@/styles/LandingPage.css";
 
@@ -202,8 +202,12 @@ export default function LandingPage() {
     (kv) => {
       if (!kv || !kv.result_type) return;
 
-      // Tables
+      // Tables – only accept if it passes the validator
       if (kv.result_type === "table") {
+        if (!isValidKVTable(kv)) {
+          // Ignore bogus / empty table results
+          return;
+        }
         addMessage("table", "", { kv });
         return;
       }
@@ -315,6 +319,19 @@ export default function LandingPage() {
       if (!authFetch) return;
 
       try {
+        // Prevent pinning invalid / empty tables
+        if (message.type === "table") {
+          if (!message.kv || !isValidKVTable(message.kv)) {
+            if (showToast) {
+              showToast(
+                "This table result is empty or invalid and cannot be pinned.",
+                "warning"
+              );
+            }
+            return;
+          }
+        }
+
         // Find the last user query before this message (for context)
         const idx = messages.findIndex((m) => m.id === message.id);
         let sourceQuery;
@@ -414,7 +431,7 @@ export default function LandingPage() {
                     </div>
                   </div>
                 </div>
-              ) : m.type === "table" && m.kv ? (
+              ) : m.type === "table" && m.kv && isValidKVTable(m.kv) ? (
                 <div key={m.id} className="message assistant kv-message">
                   <div className="message-avatar">🤖</div>
                   <div className="message-content">

@@ -18,6 +18,7 @@ import "./styles/index.css";
 
 // i18n first
 import "./i18n";
+import { useTranslation } from "react-i18next";
 
 // Pages
 import AuthPage from "./pages/AuthPage";
@@ -25,6 +26,8 @@ import WaitingListPage from "./pages/WaitingListPage";
 import SettingsPage from "./pages/SettingsPage";
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/DashboardPage";
+import AdminPage from "./pages/AdminPage";
+import LoadingPage from "./pages/LoadingPage";
 
 // Hooks
 import { useAuthRequest } from "./hooks/useAuthRequest";
@@ -33,22 +36,38 @@ import useSyncStatus from "./hooks/useSyncStatus";
 // Components
 import Header from "./components/Header";
 
+function getInitialSession() {
+  try {
+    const raw = localStorage.getItem("cap_user_session");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getInitialLoading() {
+  try {
+    const raw = localStorage.getItem("cap_user_session");
+    const sess = raw ? JSON.parse(raw) : null;
+    const path = window.location.pathname;
+    if (!sess) return false;
+    // Start with loader ON for dashboard (and optionally landing)
+    return path === "/dashboard";
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------
 // Layout wrapper
 // ---------------------------
 function Layout() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [loading, setLoading] = useState(false);
-  const [session, setSession] = useState(() => {
-    try {
-      const raw = localStorage.getItem("cap_user_session");
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [loading, setLoading] = useState(getInitialLoading);
+  const [session, setSession] = useState(getInitialSession);
 
   const [sidebarIsOpen, setSidebarOpen] = useState(false);
 
@@ -142,6 +161,13 @@ function Layout() {
           sidebarIsOpen={sidebarIsOpen}
           setSidebarOpen={setSidebarOpen}
         />
+        {loading && (
+          <LoadingPage
+            type="ring" // try "spin", "pulse", "orbit", "ring"
+            fullscreen={true}
+            message={t("loading.workspace")}
+          />
+        )}
 
         <ToastContainer
           position="bottom-end"
@@ -184,6 +210,7 @@ function AppRouter() {
           <Route element={<Layout />}>
             <Route path="/" element={<LandingPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="/login" element={<AuthPage type="login" />} />
             <Route path="/signup" element={<WaitingListPage />} />
             <Route path="/settings" element={<SettingsPage />} />

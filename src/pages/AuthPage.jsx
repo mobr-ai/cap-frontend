@@ -246,7 +246,10 @@ function AuthPage(props) {
     <Container className="Auth-body-wrapper" fluid>
       {loading && (
         <Container className="Auth-body-wrapper" fluid>
-          <LoadingPage />
+          <LoadingPage
+            type="ring" // try "spin", "pulse", "orbit", "ring"
+            fullscreen={true}
+          />{" "}
         </Container>
       )}
 
@@ -436,7 +439,15 @@ function AuthPage(props) {
               </Button>
 
               {/* Cardano Wallet Login */}
-              <Suspense fallback={<LoadingPage type="simple" />}>
+              <Suspense
+                fallback={
+                  <LoadingPage
+                    type="ring" // "spin", "pulse", "orbit", "ring"
+                    fullscreen={true}
+                    message={t("loading.wallet")}
+                  />
+                }
+              >
                 <CardanoWalletLogin
                   onLogin={handleLogin}
                   showToast={showToast}

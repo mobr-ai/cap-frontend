@@ -46,6 +46,7 @@
   min-height: 0;
   overflow: hidden;
   display: flex;
+  cursor: pointer;
 }
 
 .dashboard-widget-inner {
@@ -60,6 +61,7 @@
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
+  cursor: pointer;
 }
 
 /* Titles */
@@ -91,6 +93,7 @@
   background: white;
   border-block-color: lightslategray;
   border-style: groove;
+  cursor: pointer;
 }
 
 /* KV table wrapper */
@@ -120,6 +123,7 @@
   top: 0;
   background-color: #111827;
   z-index: 1;
+  cursor: pointer;
 }
 
 /* JSON fallback */
@@ -190,6 +194,10 @@
 .dashboard-widget-modal-inner {
   width: 100%;
   max-height: min(72vh, 800px);
+}
+
+.dashboard-widget-modal-inner > * {
+  cursor: zoom-out !important;
 }
 
 .dashboard-widget-modal-inner .vega-chart-container {

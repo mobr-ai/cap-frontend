@@ -4,7 +4,7 @@ import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 
 import VegaChart from "@/components/artifacts/VegaChart";
-import KVTable from "@/components/artifacts/KVTable";
+import KVTable, { isValidKVTable } from "@/components/artifacts/KVTable";
 
 export function DashboardWidgetContent({ item }) {
   const cfg = item.config || {};
@@ -13,9 +13,19 @@ export function DashboardWidgetContent({ item }) {
     return <VegaChart spec={cfg.vegaSpec} />;
   }
 
-  if (item.artifact_type === "table" && cfg.kv) {
-    // sortable by default, same UX as chat
-    return <KVTable kv={cfg.kv} />;
+  if (item.artifact_type === "table") {
+    if (cfg.kv && isValidKVTable(cfg.kv)) {
+      // sortable by default, same UX as chat
+      return <KVTable kv={cfg.kv} />;
+    }
+
+    // Table artifact exists but content is invalid/empty – show a small note
+    // instead of an empty table so the user can still remove the widget.
+    return (
+      <div className="dashboard-json-fallback">
+        This table result is empty or invalid and cannot be displayed.
+      </div>
+    );
   }
 
   // Fallback for legacy items / debugging
