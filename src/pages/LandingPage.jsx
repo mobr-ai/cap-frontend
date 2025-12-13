@@ -318,6 +318,32 @@ export default function LandingPage() {
     };
   }, [routeConversationId, showToast, t]);
 
+  // Stream session binding (prevents chunks being rendered into the wrong convo)
+  const activeStreamRef = useRef({
+    requestId: null,
+    startedRouteConversationId: routeConversationId
+      ? Number(routeConversationId)
+      : null,
+    resolvedConversationId: null, // set once we get x-conversation-id
+  });
+
+  const isViewingStreamConversation = useCallback(() => {
+    const routeId = routeConversationId ? Number(routeConversationId) : null;
+    const s = activeStreamRef.current;
+
+    // If stream hasn’t resolved conv id yet, bind to the route where it started.
+    const targetId =
+      typeof s.resolvedConversationId === "number" &&
+      !Number.isNaN(s.resolvedConversationId)
+        ? s.resolvedConversationId
+        : s.startedRouteConversationId;
+
+    // “New conversation” route: allow updates only while user is still on "/"
+    if (!routeId && !targetId) return true;
+
+    return !!routeId && !!targetId && routeId === targetId;
+  }, [routeConversationId]);
+
   // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -325,6 +351,14 @@ export default function LandingPage() {
       block: "end",
     });
   }, [messages]);
+
+  const emitStreamEvent = useCallback((type, detail) => {
+    try {
+      window.dispatchEvent(new CustomEvent(type, { detail }));
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const addMessage = useCallback((type, content, extra = {}) => {
     const id =
@@ -347,6 +381,7 @@ export default function LandingPage() {
   const handleStatus = useCallback(
     (text) => {
       if (!text) return;
+      if (!isViewingStreamConversation()) return;
 
       if (!statusMsgIdRef.current) {
         statusMsgIdRef.current = addMessage("status", text);
@@ -354,72 +389,104 @@ export default function LandingPage() {
         updateMessage(statusMsgIdRef.current, { content: text });
       }
     },
-    [addMessage, updateMessage]
+    [isViewingStreamConversation, addMessage, updateMessage]
   );
 
-  const handleChunk = useCallback((raw) => {
-    const chunk = sanitizeChunk(raw);
-    if (!chunk) return;
+  const handleChunk = useCallback(
+    (raw) => {
+      const chunk = sanitizeChunk(raw);
+      if (!chunk) return;
+      if (!isViewingStreamConversation()) return;
 
-    setMessages((prev) => {
-      const next = [...prev];
-      const last = next[next.length - 1];
+      setMessages((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
 
-      if (last && last.type === "assistant" && last.streaming) {
-        // IMPORTANT: don't mutate existing object in-place
-        next[next.length - 1] = {
-          ...last,
-          content: appendChunkSmart(last.content || "", chunk),
-        };
-      } else {
-        next.push({
-          id: `assistant_${Date.now()}_${Math.random()
-            .toString(36)
-            .slice(2, 6)}`,
-          type: "assistant",
-          content: chunk,
-          streaming: true,
-        });
-      }
-      return next;
-    });
-  }, []);
+        if (last && last.type === "assistant" && last.streaming) {
+          // IMPORTANT: don't mutate existing object in-place
+          next[next.length - 1] = {
+            ...last,
+            content: appendChunkSmart(last.content || "", chunk),
+          };
+        } else {
+          next.push({
+            id: `assistant_${Date.now()}_${Math.random()
+              .toString(36)
+              .slice(2, 6)}`,
+            type: "assistant",
+            content: chunk,
+            streaming: true,
+          });
+        }
+        return next;
+      });
+    },
+    [isViewingStreamConversation]
+  );
 
   const handleDone = useCallback(() => {
-    setMessages((prev) => {
-      const next = [...prev];
-      const last = next[next.length - 1];
+    // Always end processing globally so UI doesn’t get stuck,
+    // but only finalize/remove status in the convo that owns the stream.
+    const shouldMutate = isViewingStreamConversation();
 
-      if (last && last.type === "assistant" && last.streaming) {
-        next[next.length - 1] = {
-          ...last,
-          streaming: false,
-          content: finalizeForRender(last.content || ""),
-        };
+    if (shouldMutate) {
+      setMessages((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+
+        if (last && last.type === "assistant" && last.streaming) {
+          next[next.length - 1] = {
+            ...last,
+            streaming: false,
+            content: finalizeForRender(last.content || ""),
+          };
+        }
+        return next;
+      });
+
+      if (statusMsgIdRef.current) {
+        removeMessage(statusMsgIdRef.current);
+        statusMsgIdRef.current = null;
       }
-      return next;
-    });
-
-    if (statusMsgIdRef.current) {
-      removeMessage(statusMsgIdRef.current);
+    } else {
+      // If user navigated away, just clear the status ref to avoid leaks
       statusMsgIdRef.current = null;
     }
 
     setIsProcessing(false);
-  }, [removeMessage]);
+
+    const cid =
+      activeStreamRef.current.resolvedConversationId ||
+      activeStreamRef.current.startedRouteConversationId ||
+      null;
+
+    if (cid) emitStreamEvent("cap:stream-end", { conversationId: cid });
+  }, [isViewingStreamConversation, removeMessage]);
 
   const handleError = useCallback(
     (err) => {
+      // Always unblock processing
+      setIsProcessing(false);
+
+      if (!isViewingStreamConversation()) return;
+
       const msg = err?.message || t("landing.unexpectedError");
       addMessage("error", msg);
-      setIsProcessing(false);
+
+      const cid =
+        activeStreamRef.current.resolvedConversationId ||
+        activeStreamRef.current.startedRouteConversationId ||
+        null;
+
+      if (cid) emitStreamEvent("cap:stream-end", { conversationId: cid });
     },
-    [addMessage, t]
+    [isViewingStreamConversation, addMessage, t]
   );
 
   const handleKVResults = useCallback(
     (kv) => {
       if (!kv || !kv.result_type) return;
+      if (!isViewingStreamConversation()) return;
 
       if (kv.result_type === "table") {
         if (!isValidKVTable(kv)) return;
@@ -455,7 +522,22 @@ export default function LandingPage() {
     onError: handleError,
     onMetadata: (meta) => {
       conversationMetaRef.current = { ...conversationMetaRef.current, ...meta };
+
+      const cidRaw = meta?.conversationId;
+      const cid = cidRaw ? Number(cidRaw) : null;
+
+      if (cid && !Number.isNaN(cid)) {
+        // bind stream to real conversation id (needed for correct routing + UI)
+        activeStreamRef.current = {
+          ...activeStreamRef.current,
+          resolvedConversationId: cid,
+        };
+
+        // notify sidebar which convo is generating
+        emitStreamEvent("cap:stream-start", { conversationId: cid });
+      }
     },
+
     onDone: () => {
       handleDone();
 
@@ -519,6 +601,16 @@ export default function LandingPage() {
     const body = {
       query: trimmed,
       conversation_id: routeConversationId ? Number(routeConversationId) : null,
+    };
+
+    const requestId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+    activeStreamRef.current = {
+      requestId,
+      startedRouteConversationId: routeConversationId
+        ? Number(routeConversationId)
+        : null,
+      resolvedConversationId: null,
     };
 
     start({
