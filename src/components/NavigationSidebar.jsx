@@ -135,14 +135,41 @@ export default function NavigationSidebar({
   }, [isOpen]);
 
   const collapsed = !isOpen;
-
   const handleNav = (path) => navigate(path);
-
   const isActive = (path, exact = false) =>
     exact ? location.pathname === path : location.pathname.startsWith(path);
-
   const isConversationActive = (id) =>
     location.pathname === `/conversations/${id}`;
+
+  const [processingConversationId, setProcessingConversationId] =
+    useState(null);
+
+  useEffect(() => {
+    const onStart = (e) => {
+      const cid = e?.detail?.conversationId
+        ? Number(e.detail.conversationId)
+        : null;
+      if (cid && !Number.isNaN(cid)) setProcessingConversationId(cid);
+    };
+
+    const onEnd = (e) => {
+      const cid = e?.detail?.conversationId
+        ? Number(e.detail.conversationId)
+        : null;
+      setProcessingConversationId((prev) => {
+        if (!cid) return null;
+        return prev === cid ? null : prev;
+      });
+    };
+
+    window.addEventListener("cap:stream-start", onStart);
+    window.addEventListener("cap:stream-end", onEnd);
+
+    return () => {
+      window.removeEventListener("cap:stream-start", onStart);
+      window.removeEventListener("cap:stream-end", onEnd);
+    };
+  }, []);
 
   // Shift the app layout using #page-wrap padding (NOT navbar margin hacks)
   useEffect(() => {
@@ -409,12 +436,11 @@ export default function NavigationSidebar({
 
                 {!conversationsLoading &&
                   safeConvos.map((c) => {
-                    console.log("convo", c.id, c.title, c._justCreated);
-
                     const title = c.title || t("nav.untitledConversation");
                     const preview = c.last_message_preview;
 
                     const isActiveConv = isConversationActive(c.id);
+                    const isProcessingConv = processingConversationId === c.id;
                     const isJustCreated = c._justCreated === true;
                     const typingDone = typedDoneById[c.id] === true;
                     const shouldShowPreview =
@@ -433,7 +459,7 @@ export default function NavigationSidebar({
                           type="button"
                           className={`sidebar-conversation ${
                             isActiveConv ? "active" : ""
-                          }`}
+                          } ${isProcessingConv ? "processing" : ""}`}
                           onClick={() => handleNav(`/conversations/${c.id}`)}
                           title={preview || title}
                         >
