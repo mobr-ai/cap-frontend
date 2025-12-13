@@ -67,6 +67,17 @@ export function kvToLineChartSpec(kv) {
   if (!values.length) return null;
 
   const colNames = kv?.metadata?.columns || [];
+  const sample = values[0] || {};
+  const keys = Object.keys(sample);
+
+  const toTemporalMonth = (v) => {
+    if (typeof v === "string" && /^\d{4}-\d{2}$/.test(v)) return `${v}-01`;
+    return v;
+  };
+
+  // Existing "long" format: {x, y, series?} or {x, y, c}
+  const looksLong = keys.includes("x") && keys.includes("y");
+
   const seriesNameFor = (c) => {
     if (colNames.length >= 3) {
       const idx = Number(c);
@@ -77,19 +88,39 @@ export function kvToLineChartSpec(kv) {
     return `series_${c}`;
   };
 
-  const prepared = values.map((row) => {
-    const series =
-      row.series != null
-        ? row.series
-        : row.c != null
-        ? seriesNameFor(row.c)
-        : "series";
-    return {
-      x: row.x,
-      y: row.y,
-      series,
-    };
-  });
+  let prepared = [];
+
+  if (looksLong) {
+    prepared = values.map((row) => {
+      const series =
+        row.series != null
+          ? row.series
+          : row.c != null
+          ? seriesNameFor(row.c)
+          : "series";
+
+      return {
+        x: toTemporalMonth(row.x),
+        y: row.y,
+        series,
+      };
+    });
+  } else {
+    // Wide format: first column is x, remaining numeric columns are series
+    const xField = colNames[0] || keys[0];
+    const measureFields = (
+      colNames.length >= 2 ? colNames.slice(1) : keys.slice(1)
+    ).filter((f) => f !== xField);
+
+    prepared = values.flatMap((row) => {
+      const xVal = toTemporalMonth(row[xField]);
+      return measureFields.map((mf) => ({
+        x: xVal,
+        y: row[mf],
+        series: mf,
+      }));
+    });
+  }
 
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",

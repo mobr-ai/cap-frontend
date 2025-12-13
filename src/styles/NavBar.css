@@ -37,7 +37,7 @@
 /* When sidebar burger exists */
 .has-left-burger .cap-navbar-row {
   /* grid-template-columns: 48px minmax(200px, auto) 1fr auto; */
-  margin-left: 3rem;
+  margin-left: 1rem;
 }
 
 .has-left-burger .Navbar-toggle-btn {
