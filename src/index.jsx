@@ -27,6 +27,7 @@ import SettingsPage from "./pages/SettingsPage";
 import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/DashboardPage";
 import AdminPage from "./pages/AdminPage";
+import AnalysesPage from "./pages/AnalysesPage";
 import LoadingPage from "./pages/LoadingPage";
 
 // Hooks
@@ -216,6 +217,7 @@ function AppRouter() {
             />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            + <Route path="/analyses" element={<AnalysesPage />} />
             <Route path="/login" element={<AuthPage type="login" />} />
             <Route path="/signup" element={<WaitingListPage />} />
             <Route path="/settings" element={<SettingsPage />} />
