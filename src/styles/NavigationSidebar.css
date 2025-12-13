@@ -300,7 +300,8 @@
 
 /* Scrollable conversations area */
 .sidebar-conversations-list {
-  max-height: 50vh; /* tweak if you want more/less */
+  max-height: 50vh;
+  min-height: 50vh;
   overflow-y: auto;
   padding-right: 6px; /* space for scrollbar */
 }
