@@ -279,6 +279,17 @@ function NavBar({
                   <NavDropdown.Item
                     className="nav-text"
                     onClick={() => {
+                      navigate("/analyses");
+                      setExpanded(false);
+                    }}
+                  >
+                    {t("nav.analyses")}
+                  </NavDropdown.Item>
+
+                  <NavDropdown.Divider />
+                  <NavDropdown.Item
+                    className="nav-text"
+                    onClick={() => {
                       navigate("/settings");
                       setExpanded(false);
                     }}

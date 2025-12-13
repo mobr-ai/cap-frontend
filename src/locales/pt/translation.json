@@ -75,7 +75,20 @@
     "collapseSidebar": "Recolher barra lateral",
     "conversationsLoadFailed": "Falha ao carregar análises",
     "renameFailed": "Falha ao renomear análise",
-    "deleteFailed": "Falha ao deletar análise"
+    "deleteFailed": "Falha ao deletar análise",
+    "analyses": "Minhas análises"
+  },
+  "analyses": {
+    "title": "Minhas Análises",
+    "subtitle": "Navegue pelas suas conversas em uma visão dedicada.",
+    "tip": "Ótimo no desktop e no celular",
+    "searchPlaceholder": "Buscar por título, prévia ou id…",
+    "loading": "Carregando análises…",
+    "empty": "Nenhuma análise encontrada.",
+    "noPreview": "Ainda não há prévia disponível.",
+    "loadError": "Falha ao carregar análises.",
+    "accessDeniedTitle": "Acesso negado",
+    "accessDeniedText": "Faça login para ver suas análises."
   },
   "landing": {
     "emptyTitle": "Pergunte sobre a Cardano",

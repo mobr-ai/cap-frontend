@@ -75,7 +75,20 @@
     "collapseSidebar": "Collapse sidebar",
     "conversationsLoadFailed": "Failed to load conversations",
     "renameFailed": "Failed to rename conversation",
-    "deleteFailed": "Failed to delete conversation"
+    "deleteFailed": "Failed to delete conversation",
+    "analyses": "My analyses"
+  },
+  "analyses": {
+    "title": "My Analyses",
+    "subtitle": "Browse your conversations on a dedicated view.",
+    "tip": "Great on desktop and mobile",
+    "searchPlaceholder": "Search by title, preview, or id…",
+    "loading": "Loading analyses…",
+    "empty": "No analyses found.",
+    "noPreview": "No preview available yet.",
+    "loadError": "Failed to load analyses.",
+    "accessDeniedTitle": "Access denied",
+    "accessDeniedText": "Please log in to view your analyses."
   },
   "landing": {
     "emptyTitle": "Ask about Cardano",
