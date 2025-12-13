@@ -160,6 +160,7 @@ function Layout() {
           healthOnline={healthOnline}
           sidebarIsOpen={sidebarIsOpen}
           setSidebarOpen={setSidebarOpen}
+          authFetch={authFetch}
         />
         {loading && (
           <LoadingPage
@@ -209,6 +210,10 @@ function AppRouter() {
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<LandingPage />} />
+            <Route
+              path="/conversations/:conversationId"
+              element={<LandingPage />}
+            />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/login" element={<AuthPage type="login" />} />
