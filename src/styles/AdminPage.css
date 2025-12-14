@@ -31,6 +31,7 @@
 /* Tabs */
 
 .admin-tabs {
+  position: relative;
   display: inline-flex;
   gap: 0.5rem;
   padding: 0.25rem;
@@ -43,6 +44,29 @@
   );
   border: 1px solid rgba(55, 65, 81, 0.8);
   margin-bottom: 1.25rem;
+
+  /* Needed for pill animation + mobile scroll */
+  overflow: hidden;
+  touch-action: pan-y; /* allow vertical scroll; we still track horizontal swipe in JS */
+}
+
+.admin-tabs--animated .admin-tab {
+  position: relative;
+  z-index: 2; /* above the indicator pill */
+}
+
+/* Sliding indicator pill (rendered by AdminTabs.jsx) */
+.admin-tab-indicator {
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: 0;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #1a231d, #2189bd);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  z-index: 1;
+  transition: transform 200ms ease, width 200ms ease;
+  will-change: transform, width;
 }
 
 .admin-tab {
@@ -54,20 +78,46 @@
   color: #9ca3af;
   background: transparent;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
   white-space: nowrap;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
+/* Hover style for non-active tabs */
 .admin-tab:hover {
   color: #e5e7eb;
   background: rgba(31, 41, 55, 0.8);
 }
 
+/*
+  Active tab: the indicator provides the background.
+  Keep button itself transparent so we don't "double paint".
+*/
 .admin-tab--active {
   color: #f9fafb;
-  /* background: linear-gradient(135deg, #22c55e, #0ea5e9); */
-  background: linear-gradient(135deg, #1a231d, #2189bd);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Always let active tab win over hover/pressed/focus */
+.admin-tab--active,
+.admin-tab--active:hover,
+.admin-tab--active:active,
+.admin-tab--active:focus-visible {
+  color: #f9fafb;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .admin-tab-indicator {
+    transition: none;
+  }
+  .admin-tab {
+    transition: none;
+  }
 }
 
 /* Sections */
@@ -415,9 +465,23 @@
     font-size: 0.95rem;
   }
 
+  /*
+    On mobile, keep tabs in one line and allow horizontal scroll.
+    This pairs well with swipe switching.
+  */
   .admin-tabs {
-    flex-wrap: wrap;
-    border-radius: 0.75rem;
+    display: flex;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.5rem;
+    border-radius: 9999px;
+  }
+
+  .admin-tab {
+    flex: 0 0 auto;
   }
 
   .admin-users-actions-col--head {
@@ -428,4 +492,16 @@
 /* Disks table tweaks (inherits from .admin-users-table) */
 .admin-disks-table tbody td {
   white-space: nowrap;
+}
+
+.admin-stat-card--waitlist {
+  border-color: rgba(147, 197, 253, 0.45); /* soft blue */
+}
+
+.admin-stat-card--waitlistRef {
+  border-color: rgba(167, 243, 208, 0.45); /* mint */
+}
+
+.admin-stat-card--waitlistLang {
+  border-color: rgba(252, 211, 77, 0.45); /* amber */
 }

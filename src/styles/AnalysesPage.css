@@ -248,3 +248,7 @@
     animation: none;
   }
 }
+
+.AdminPage {
+  touch-action: pan-y;
+}
