@@ -42,6 +42,66 @@ export function isValidKVTable(kv) {
   return hasNonEmpty;
 }
 
+/** Convert some non-http schemes to clickable web URLs. */
+function normalizeHref(href) {
+  if (!href) return "";
+  const h = String(href).trim();
+  if (!h) return "";
+
+  // Handle protocol-relative: //example.com
+  if (h.startsWith("//")) return `https:${h}`;
+
+  // Handle ipfs://CID/path -> https://ipfs.io/ipfs/CID/path
+  if (h.toLowerCase().startsWith("ipfs://")) {
+    return `https://ipfs.io/ipfs/${h.slice("ipfs://".length)}`;
+  }
+
+  // Handle www.example.com
+  if (/^www\./i.test(h)) return `https://${h}`;
+
+  return h;
+}
+
+/**
+ * Parse a cell string that might contain:
+ * - a literal <a href="...">label</a>
+ * - a plain URL
+ *
+ * Returns { href, label } or null.
+ */
+function parseLink(rawValue) {
+  if (rawValue === null || rawValue === undefined) return null;
+  const raw = String(rawValue).trim();
+  if (!raw) return null;
+
+  // 1) Literal <a ...>...</a> (common from backend rendering as string)
+  // Keep it simple and safe: only extract href and inner text.
+  const anchorMatch = raw.match(
+    /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i
+  );
+  if (anchorMatch) {
+    const href = normalizeHref(anchorMatch[1]);
+    const label = String(anchorMatch[2] || "")
+      .replace(/<[^>]+>/g, "")
+      .trim();
+    if (href) return { href, label: label || href };
+  }
+
+  // 2) Plain URL (only auto-link when the whole cell is a URL)
+  // Supports http(s)://..., www...., ipfs://...
+  const isWholeUrl =
+    /^(https?:\/\/\S+)$/i.test(raw) ||
+    /^(www\.\S+)$/i.test(raw) ||
+    /^(ipfs:\/\/\S+)$/i.test(raw);
+
+  if (isWholeUrl) {
+    const href = normalizeHref(raw);
+    if (href) return { href, label: raw };
+  }
+
+  return null;
+}
+
 export default function KVTable({ kv, sortable = true }) {
   const [sortKey, setSortKey] = useState(null);
   const [sortAsc, setSortAsc] = useState(true);
@@ -125,6 +185,23 @@ export default function KVTable({ kv, sortable = true }) {
     return sortAsc ? copy : copy.reverse();
   }, [nonEmptyRows, sortKey, sortAsc, sortable]);
 
+  const renderCell = (value) => {
+    const link = parseLink(value);
+    if (!link) return value;
+
+    return (
+      <a
+        href={link.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="kv-table-link"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {link.label}
+      </a>
+    );
+  };
+
   return (
     <div className="kv-table-wrapper">
       <table className="kv-table">
@@ -151,7 +228,7 @@ export default function KVTable({ kv, sortable = true }) {
           {sortedRows.map((row, idx) => (
             <tr key={idx}>
               {columns.map((col) => (
-                <td key={col}>{row[col]}</td>
+                <td key={col}>{renderCell(row[col])}</td>
               ))}
             </tr>
           ))}
