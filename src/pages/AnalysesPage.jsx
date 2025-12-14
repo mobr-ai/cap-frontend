@@ -8,7 +8,6 @@ import React, {
 } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-
 import { useAuthRequest } from "@/hooks/useAuthRequest";
 import useConversations from "@/hooks/useConversations";
 import LoadingPage from "@/pages/LoadingPage";
@@ -21,6 +20,36 @@ export default function AnalysesPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { session, showToast, handleLogout } = useOutletContext() || {};
+
+  const [processingConversationId, setProcessingConversationId] =
+    useState(null);
+
+  // Gleam effect for processing convos
+  useEffect(() => {
+    const onStart = (e) => {
+      const cid = e?.detail?.conversationId
+        ? Number(e.detail.conversationId)
+        : null;
+      if (cid && !Number.isNaN(cid)) setProcessingConversationId(cid);
+    };
+
+    const onEnd = (e) => {
+      const cid = e?.detail?.conversationId
+        ? Number(e.detail.conversationId)
+        : null;
+      setProcessingConversationId((prev) => {
+        if (!cid) return null;
+        return prev === cid ? null : prev;
+      });
+    };
+
+    window.addEventListener("cap:stream-start", onStart);
+    window.addEventListener("cap:stream-end", onEnd);
+    return () => {
+      window.removeEventListener("cap:stream-start", onStart);
+      window.removeEventListener("cap:stream-end", onEnd);
+    };
+  }, []);
 
   // Keep using your existing hook as-is
   const { authFetch } = useAuthRequest({
@@ -114,12 +143,16 @@ export default function AnalysesPage() {
             {filtered.map((c) => {
               const title = c?.title || t("nav.untitledConversation");
               const preview = c?.last_message_preview;
+              const isProcessingConv =
+                Number(processingConversationId) === Number(c?.id);
 
               return (
                 <button
                   key={c.id}
                   type="button"
-                  className="analyses-card"
+                  className={`analyses-card ${
+                    isProcessingConv ? "processing" : ""
+                  }`}
                   onClick={() => navigate(`/conversations/${c.id}`)}
                   title={preview || title}
                 >
