@@ -144,12 +144,26 @@ export default function NavigationSidebar({
   const [processingConversationId, setProcessingConversationId] =
     useState(null);
 
+  const setGlobalProcessingId = (cid) => {
+    // Keep a single source of truth that survives route changes.
+    window.__capProcessingConversationId = cid ?? null;
+    // Optional: notify late subscribers if you want
+    window.dispatchEvent(
+      new CustomEvent("cap:stream-state", {
+        detail: { conversationId: cid ?? null },
+      })
+    );
+  };
+
   useEffect(() => {
     const onStart = (e) => {
       const cid = e?.detail?.conversationId
         ? Number(e.detail.conversationId)
         : null;
-      if (cid && !Number.isNaN(cid)) setProcessingConversationId(cid);
+      if (cid && !Number.isNaN(cid)) {
+        setProcessingConversationId(cid);
+        setGlobalProcessingId(cid);
+      }
     };
 
     const onEnd = (e) => {
@@ -158,7 +172,9 @@ export default function NavigationSidebar({
         : null;
       setProcessingConversationId((prev) => {
         if (!cid) return null;
-        return prev === cid ? null : prev;
+        const next = prev === cid ? null : prev;
+        if (prev === cid) setGlobalProcessingId(null);
+        return next;
       });
     };
 
