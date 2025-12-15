@@ -200,7 +200,8 @@ export function useLLMStream({
                 inKVBlock = false;
                 flushKVResults();
               }
-              completeOnce();
+              // allow React to process KV insertions first
+              queueMicrotask(() => completeOnce());
               return;
             }
 

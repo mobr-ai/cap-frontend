@@ -205,9 +205,9 @@ export default function LandingPage() {
 
   const outlet = useOutletContext() || {};
   const { session, showToast } = outlet;
-
   const { authFetch } = useAuthRequest({ session, showToast });
   const authFetchRef = useRef(null);
+
   useEffect(() => {
     authFetchRef.current = authFetch;
   }, [authFetch]);
@@ -221,6 +221,7 @@ export default function LandingPage() {
   const [query, setQuery] = useState("");
   const [charCount, setCharCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const streamingAssistantIdRef = useRef(null);
 
   const conversationMetaRef = useRef({
     conversationId: routeConversationId ? Number(routeConversationId) : null,
@@ -404,16 +405,18 @@ export default function LandingPage() {
         const last = next[next.length - 1];
 
         if (last && last.type === "assistant" && last.streaming) {
-          // IMPORTANT: don't mutate existing object in-place
           next[next.length - 1] = {
             ...last,
             content: appendChunkSmart(last.content || "", chunk),
           };
         } else {
+          const id = `assistant_${Date.now()}_${Math.random()
+            .toString(36)
+            .slice(2, 6)}`;
+          streamingAssistantIdRef.current = id;
+
           next.push({
-            id: `assistant_${Date.now()}_${Math.random()
-              .toString(36)
-              .slice(2, 6)}`,
+            id,
             type: "assistant",
             content: chunk,
             streaming: true,
@@ -431,19 +434,19 @@ export default function LandingPage() {
     const shouldMutate = isViewingStreamConversation();
 
     if (shouldMutate) {
-      setMessages((prev) => {
-        const next = [...prev];
-        const last = next[next.length - 1];
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === streamingAssistantIdRef.current && m.streaming
+            ? {
+                ...m,
+                streaming: false,
+                content: finalizeForRender(m.content || ""),
+              }
+            : m
+        )
+      );
 
-        if (last && last.type === "assistant" && last.streaming) {
-          next[next.length - 1] = {
-            ...last,
-            streaming: false,
-            content: finalizeForRender(last.content || ""),
-          };
-        }
-        return next;
-      });
+      streamingAssistantIdRef.current = null;
 
       if (statusMsgIdRef.current) {
         removeMessage(statusMsgIdRef.current);
@@ -455,6 +458,7 @@ export default function LandingPage() {
     }
 
     setIsProcessing(false);
+    streamingAssistantIdRef.current = null;
 
     const cid =
       activeStreamRef.current.resolvedConversationId ||
@@ -462,7 +466,7 @@ export default function LandingPage() {
       null;
 
     if (cid) emitStreamEvent("cap:stream-end", { conversationId: cid });
-  }, [isViewingStreamConversation, removeMessage]);
+  }, [isViewingStreamConversation, removeMessage, emitStreamEvent]);
 
   const handleError = useCallback(
     (err) => {
@@ -512,7 +516,7 @@ export default function LandingPage() {
         isKV: true,
       });
     },
-    [addMessage]
+    [addMessage, isViewingStreamConversation]
   );
 
   const { start, stop } = useLLMStream({
@@ -590,6 +594,8 @@ export default function LandingPage() {
 
     if (!trimmed || isProcessing || !fetchFn) return;
 
+    streamingAssistantIdRef.current = null;
+    statusMsgIdRef.current = null;
     conversationMetaRef.current.emittedCreatedEvent = false;
 
     addMessage("user", trimmed);
