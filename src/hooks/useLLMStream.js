@@ -77,7 +77,6 @@ export function useLLMStream({
                 id: convId,
                 updated_at: new Date().toISOString(),
                 _localUpdatedAt: Date.now(),
-                // if we have a title candidate, include it to help sidebar display
                 title: makeTitleCandidate(),
               },
             },
@@ -89,6 +88,21 @@ export function useLLMStream({
         emitTouched();
         onDone?.({ ...streamMeta });
       };
+
+      // SSE rule: payload for "data:" lines must preserve spacing.
+      // We only remove ONE optional leading space after "data:" (common SSE formatting).
+      const extractDataPayload = (rawLine) => {
+        const idx = rawLine.indexOf("data:");
+        if (idx < 0) return null;
+        let payload = rawLine.slice(idx + "data:".length);
+        if (payload.startsWith(" ")) payload = payload.slice(1);
+        return payload;
+      };
+
+      const isDoneLine = (trimmed) =>
+        trimmed === "[DONE]" ||
+        trimmed === "data:[DONE]" ||
+        trimmed === "data: [DONE]";
 
       try {
         const response = await fetcher(url, {
@@ -126,7 +140,6 @@ export function useLLMStream({
             onMetadata?.({ ...streamMeta });
           }
 
-          // IMPORTANT: emit "created" right away, so typing animation is visible
           emitCreatedIfNeeded();
         } catch (metaErr) {
           console.warn(
@@ -136,9 +149,10 @@ export function useLLMStream({
         }
         // -----------------------------------
 
+        // Non-streaming fallback
         if (!response.body || !response.body.getReader) {
           const text = await response.text();
-          if (text) onChunk?.(normalizeTextChunk(text));
+          if (text) onChunk?.(text);
           completeOnce();
           return;
         }
@@ -150,37 +164,30 @@ export function useLLMStream({
         let inKVBlock = false;
         let kvBuffer = "";
 
-        // Normalize non-JSON text chunks. (KV blocks must remain untouched.)
-        const normalizeTextChunk = (s) => {
-          if (!s) return "";
-          const str = String(s);
-
-          const hadLeading = /^\s+/.test(str);
-          const core = str.replace(/\s+/g, " ").trim();
-
-          if (!core) return "";
-          return hadLeading ? " " + core : core;
-        };
-
         const flushKVResults = () => {
-          let raw = kvBuffer.trim();
+          let raw = kvBuffer;
           kvBuffer = "";
           if (!raw) return;
 
+          // Do not aggressively trim; only clean the wrapper markers.
+          // We tolerate "kv_results:" prefix and trailing whitespace/newlines.
+          let s = String(raw);
+          s = s.replace(/^\s+|\s+$/g, "");
+
           try {
-            if (raw.startsWith("kv_results:")) {
-              raw = raw.slice("kv_results:".length).trim();
+            if (s.startsWith("kv_results:")) {
+              s = s.slice("kv_results:".length).replace(/^\s+/, "");
             }
-            onKVResults?.(JSON.parse(raw));
+            onKVResults?.(JSON.parse(s));
           } catch (err) {
-            const match = raw.match(/\{[\s\S]*\}/);
+            const match = s.match(/\{[\s\S]*\}/);
             if (match) {
               try {
                 onKVResults?.(JSON.parse(match[0]));
                 return;
               } catch {}
             }
-            console.error("useLLMStream: failed to parse kv_results", err, raw);
+            console.error("useLLMStream: failed to parse kv_results", err, s);
             onError?.(err);
           }
         };
@@ -196,45 +203,48 @@ export function useLLMStream({
 
           for (let rawLine of lines) {
             if (rawLine.endsWith("\r")) rawLine = rawLine.slice(0, -1);
+
             const trimmed = rawLine.trim();
 
+            // keep-alive / blank line
             if (!trimmed) {
               if (inKVBlock) kvBuffer += "\n";
               continue;
             }
 
-            if (
-              trimmed === "[DONE]" ||
-              trimmed === "data:[DONE]" ||
-              trimmed === "data: [DONE]"
-            ) {
+            if (isDoneLine(trimmed)) {
               if (inKVBlock) {
                 inKVBlock = false;
                 flushKVResults();
               }
-              // allow React to process KV insertions first
               queueMicrotask(() => completeOnce());
               return;
             }
 
+            // status: lines are control messages; trimming is fine here
             if (trimmed.startsWith("status:")) {
               const status = trimmed.slice("status:".length).trim();
               if (status) onStatus?.(status);
               continue;
             }
 
+            // kv_results: start marker
             if (trimmed.startsWith("kv_results:")) {
               inKVBlock = true;
               kvBuffer = "";
 
+              // Capture anything after kv_results: on the same line WITHOUT normalizing JSON spacing
               const idx = rawLine.indexOf("kv_results:") + "kv_results:".length;
-              const rest = rawLine.slice(idx).trim();
-              if (rest && !rest.startsWith("_kv_results_end_")) {
+              const rest = rawLine.slice(idx);
+              const restTrimmed = rest.trim();
+
+              if (restTrimmed && !restTrimmed.startsWith("_kv_results_end_")) {
                 kvBuffer += rest + "\n";
               }
               continue;
             }
 
+            // Inside kv block
             if (inKVBlock) {
               if (trimmed.includes("_kv_results_end_")) {
                 inKVBlock = false;
@@ -245,24 +255,21 @@ export function useLLMStream({
               continue;
             }
 
+            // SSE data line: preserve payload EXACTLY
             if (trimmed.startsWith("data:")) {
-              const idx = rawLine.indexOf("data:") + "data:".length;
-              let data = rawLine.slice(idx); // keep boundary cue as one space, normalizeTextChunk handles it
+              const payload = extractDataPayload(rawLine);
 
-              const payload = data;
-              if (!payload || payload === "[DONE]") continue;
+              if (payload == null) continue;
+              if (!payload) continue; // empty data: ignore
+              if (payload === "[DONE]") continue;
 
-              // If SSE ever sends JSON events, don't normalize them.
-              const looksJson =
-                (payload.startsWith("{") && payload.endsWith("}")) ||
-                (payload.startsWith("[") && payload.endsWith("]"));
-              onChunk?.(looksJson ? payload : normalizeTextChunk(payload));
+              onChunk?.(payload);
               continue;
             }
 
-            // pass rawLine (not trimmed) so hadLeading can be detected,
-            // but without keeping the giant indentation
-            onChunk?.(normalizeTextChunk(rawLine));
+            // If backend ever writes raw text lines (not prefixed with data:),
+            // pass them through unchanged (do NOT trim/collapse).
+            onChunk?.(rawLine);
           }
         }
 
@@ -271,7 +278,6 @@ export function useLLMStream({
           flushKVResults();
         }
 
-        // EOF without [DONE]
         completeOnce();
       } catch (err) {
         if (abortRef.current?.signal?.aborted) return;

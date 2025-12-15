@@ -19,34 +19,6 @@ import KVTable, { isValidKVTable } from "@/components/artifacts/KVTable";
 
 import "@/styles/LandingPage.css";
 
-const artifactsKey = (id) => `cap.convArtifacts.${id}`;
-
-function safeJsonParse(s, fallback) {
-  try {
-    return JSON.parse(s);
-  } catch {
-    return fallback;
-  }
-}
-
-function hashArtifact(a) {
-  // Stable stringify (order matters)
-  const payload = JSON.stringify({
-    type: a.type,
-    kvType: a.kvType,
-    vegaSpec: a.vegaSpec || null,
-    rows: Array.isArray(a.rows) ? a.rows.length : null,
-    cols: Array.isArray(a.columns) ? a.columns.length : null,
-  });
-
-  // Modern, safe base64 encoding
-  return btoa(
-    new TextEncoder()
-      .encode(payload)
-      .reduce((s, b) => s + String.fromCharCode(b), "")
-  );
-}
-
 function artifactToMessage(a) {
   if (!a || !a.id || !a.artifact_type || !a.config) return null;
 
@@ -158,18 +130,54 @@ function appendChunkSmart(prev, chunk) {
   const lastChar = prev[prev.length - 1];
   const firstChar = chunk[0];
 
+  const isWS = (ch) => /\s/.test(ch || "");
+  const isAlphaNum = (ch) => /[A-Za-z0-9]/.test(ch || "");
   const isLetter = (ch) => /[A-Za-z]/.test(ch || "");
   const isDigit = (ch) => /[0-9]/.test(ch || "");
 
+  // If chunk already starts with whitespace, keep it (rare with your current stream parser)
   if (/^\s/.test(chunk)) return prev + chunk;
-  if (/\s/.test(lastChar)) return prev + chunk;
+  if (isWS(lastChar)) return prev + chunk;
 
-  if (/[.!?]/.test(lastChar) && isLetter(firstChar)) {
+  // If chunk starts with punctuation that should hug the previous token, don't add space
+  if (/^[,.;:!?)\]}%]/.test(firstChar)) return prev + chunk;
+
+  // If previous ends with punctuation that should be followed by a space, add one
+  if (/[,.!?;:]/.test(lastChar) && isLetter(firstChar)) {
     return prev + " " + chunk;
   }
 
-  if (isLetter(lastChar) && isDigit(firstChar)) {
-    const tail = prev.slice(-6).toLowerCase();
+  // Join very short lowercase fragments (common tokenization like "mi" + "nt" + "ed")
+  // Only triggers for tiny pieces, so it won't eat normal spaces like "The data".
+  const lastWordMatch = prev.match(/([A-Za-z]+)$/);
+  const lastWord = lastWordMatch ? lastWordMatch[1] : "";
+  if (
+    lastWord &&
+    lastWord.length <= 3 &&
+    /^[a-z]{1,3}$/.test(lastWord) &&
+    /^[a-z]{1,3}$/.test(chunk)
+  ) {
+    return prev + chunk;
+  }
+
+  // Avoid spacing before common suffixes (mint + ed, token + s, 11 + th, etc.)
+  if (isLetter(lastChar) && /^[A-Za-z]+$/.test(chunk)) {
+    const lower = chunk.toLowerCase();
+    if (["ed", "ing", "ly", "er", "ers", "est", "s", "es"].includes(lower)) {
+      return prev + chunk;
+    }
+  }
+  if (isDigit(lastChar) && /^[A-Za-z]+$/.test(chunk)) {
+    const lower = chunk.toLowerCase();
+    if (["st", "nd", "rd", "th"].includes(lower)) {
+      return prev + chunk;
+    }
+  }
+
+  // Default: if we have alnum touching alnum, insert a space
+  if (isAlphaNum(lastChar) && isAlphaNum(firstChar)) {
+    // Special-case: addresses / ids where you really don't want spaces
+    const tail = prev.slice(-8).toLowerCase();
     if (
       tail.endsWith("addr") ||
       tail.endsWith("stake") ||
@@ -177,10 +185,6 @@ function appendChunkSmart(prev, chunk) {
     ) {
       return prev + chunk;
     }
-    return prev + " " + chunk;
-  }
-
-  if (isDigit(lastChar) && isLetter(firstChar)) {
     return prev + " " + chunk;
   }
 
@@ -232,16 +236,17 @@ export default function LandingPage() {
   const lastLoadedConversationIdRef = useRef(null);
 
   const [topQueries, setTopQueries] = useState([
-    { query: "List the latest 5 blocks." },
+    { query: "Current trends" },
+    { query: "List the latest 5 blocks" },
     { query: "Show the last 5 proposals" },
-    { query: "Plot a bar chart showing monthly multi assets created in 2021." },
+    { query: "Plot a bar chart showing monthly multi assets created in 2021" },
     {
       query:
-        "Plot a line chart showing monthly number of transactions and outputs.",
+        "Plot a line chart showing monthly number of transactions and outputs",
     },
     {
       query:
-        "Plot a pie chart to show how much the top 1% ADA holders represent from the total supply on the Cardano network.",
+        "Plot a pie chart to show how much the top 1% ADA holders represent from the total supply on the Cardano network",
     },
   ]);
 
@@ -284,7 +289,10 @@ export default function LandingPage() {
         const restoredMsgs = (data?.messages || []).map((m) => ({
           id: `conv_${m.id}`,
           type: m.role === "user" ? "user" : "assistant",
-          content: m.content,
+          content:
+            m.role === "assistant"
+              ? finalizeForRender(m.content || "")
+              : m.content || "",
         }));
 
         const restoredWithArtifacts = injectArtifactsAfterMessage(
@@ -407,7 +415,7 @@ export default function LandingPage() {
         if (last && last.type === "assistant" && last.streaming) {
           next[next.length - 1] = {
             ...last,
-            content: appendChunkSmart(last.content || "", chunk),
+            content: (last.content || "") + chunk, // <- no heuristics
           };
         } else {
           const id = `assistant_${Date.now()}_${Math.random()
