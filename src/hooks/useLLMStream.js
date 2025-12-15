@@ -1,22 +1,6 @@
 // src/hooks/useLLMStream.js
 import { useCallback, useRef } from "react";
 
-/**
- * Streaming SSE reader compatible with CAP:
- * - Handles "status:" lines
- * - Handles "data: ..." frames
- * - Handles plain, non-prefixed content lines
- * - Detects [DONE] with or without "data:" prefix
- * - Parses `kv_results:{...} ... _kv_results_end_` blocks
- *
- * Whitespace rules:
- * - Control lines are matched against a trimmed view.
- * - For "data:" frames we remove at most one protocol space after "data:"
- *   but preserve any additional spaces in the payload.
- * - For plain content lines we forward the original line (no trimStart),
- *   so model-inserted spaces between tokens are kept.
- */
-
 export function useLLMStream({
   fetcher,
   onStatus,
@@ -24,6 +8,7 @@ export function useLLMStream({
   onKVResults,
   onDone,
   onError,
+  onMetadata,
 } = {}) {
   const abortRef = useRef(null);
 
@@ -38,21 +23,77 @@ export function useLLMStream({
         throw new Error("useLLMStream: fetcher (authFetch) is required.");
       }
 
-      // Abort any previous stream
-      if (abortRef.current) {
-        abortRef.current.abort();
-      }
+      const requestedConversationId =
+        body?.conversation_id ?? body?.conversationId ?? null;
+      const isNewConversation = !requestedConversationId;
 
+      const streamMeta = { conversationId: null, userMessageId: null };
+      let createdEventEmitted = false;
+
+      if (abortRef.current) abortRef.current.abort();
       const controller = new AbortController();
       abortRef.current = controller;
+
+      const rawTitleCandidate = String(body?.query || "").trim();
+      const makeTitleCandidate = () => {
+        let title = rawTitleCandidate;
+        if (title.length > 80) title = title.slice(0, 77) + "...";
+        return title || null;
+      };
+
+      const emitCreatedIfNeeded = () => {
+        if (!isNewConversation) return;
+        if (createdEventEmitted) return;
+        const convId = streamMeta.conversationId;
+        if (!convId) return;
+
+        createdEventEmitted = true;
+
+        window.dispatchEvent(
+          new CustomEvent("cap:conversation-created", {
+            detail: {
+              conversation: {
+                id: convId,
+                title: makeTitleCandidate(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                last_message_preview: null,
+                _justCreated: true,
+                _localUpdatedAt: Date.now(),
+              },
+            },
+          })
+        );
+      };
+
+      const emitTouched = () => {
+        const convId = streamMeta.conversationId;
+        if (!convId) return;
+
+        window.dispatchEvent(
+          new CustomEvent("cap:conversation-touched", {
+            detail: {
+              conversation: {
+                id: convId,
+                updated_at: new Date().toISOString(),
+                _localUpdatedAt: Date.now(),
+                // if we have a title candidate, include it to help sidebar display
+                title: makeTitleCandidate(),
+              },
+            },
+          })
+        );
+      };
+
+      const completeOnce = () => {
+        emitTouched();
+        onDone?.({ ...streamMeta });
+      };
 
       try {
         const response = await fetcher(url, {
           method,
-          headers: {
-            "Content-Type": "application/json",
-            ...headers,
-          },
+          headers: { "Content-Type": "application/json", ...headers },
           body: body ? JSON.stringify(body) : undefined,
           signal: controller.signal,
         });
@@ -65,10 +106,40 @@ export function useLLMStream({
           return;
         }
 
+        // ---- Read metadata headers EARLY ----
+        try {
+          const convIdHeader =
+            response.headers.get("x-conversation-id") ||
+            response.headers.get("X-Conversation-Id");
+          const userMsgIdHeader =
+            response.headers.get("x-user-message-id") ||
+            response.headers.get("X-User-Message-Id");
+
+          streamMeta.conversationId = convIdHeader
+            ? Number(convIdHeader)
+            : null;
+          streamMeta.userMessageId = userMsgIdHeader
+            ? Number(userMsgIdHeader)
+            : null;
+
+          if (streamMeta.conversationId || streamMeta.userMessageId) {
+            onMetadata?.({ ...streamMeta });
+          }
+
+          // IMPORTANT: emit "created" right away, so typing animation is visible
+          emitCreatedIfNeeded();
+        } catch (metaErr) {
+          console.warn(
+            "useLLMStream: failed to read metadata headers",
+            metaErr
+          );
+        }
+        // -----------------------------------
+
         if (!response.body || !response.body.getReader) {
           const text = await response.text();
           if (text) onChunk?.(text);
-          onDone?.();
+          completeOnce();
           return;
         }
 
@@ -76,7 +147,6 @@ export function useLLMStream({
         const decoder = new TextDecoder("utf-8");
         let buffer = "";
 
-        // kv_results capture mode
         let inKVBlock = false;
         let kvBuffer = "";
 
@@ -86,29 +156,18 @@ export function useLLMStream({
           if (!raw) return;
 
           try {
-            // some models may accidentally prefix "kv_results:" inside the block; strip if present
             if (raw.startsWith("kv_results:")) {
               raw = raw.slice("kv_results:".length).trim();
             }
-
-            // try direct parse
-            return onKVResults?.(JSON.parse(raw));
+            onKVResults?.(JSON.parse(raw));
           } catch (err) {
-            // try to rescue by extracting the first {...} block
             const match = raw.match(/\{[\s\S]*\}/);
             if (match) {
               try {
                 onKVResults?.(JSON.parse(match[0]));
                 return;
-              } catch (err2) {
-                console.error(
-                  "useLLMStream: kv_results JSON rescue failed",
-                  err2,
-                  match[0]
-                );
-              }
+              } catch {}
             }
-
             console.error("useLLMStream: failed to parse kv_results", err, raw);
             onError?.(err);
           }
@@ -124,23 +183,14 @@ export function useLLMStream({
           buffer = lines.pop() ?? "";
 
           for (let rawLine of lines) {
-            // Strip possible trailing \r but otherwise keep as-is for payload
-            if (rawLine.endsWith("\r")) {
-              rawLine = rawLine.slice(0, -1);
-            }
-
+            if (rawLine.endsWith("\r")) rawLine = rawLine.slice(0, -1);
             const trimmed = rawLine.trim();
 
-            // Skip purely empty lines
             if (!trimmed) {
-              // still, if we were in KV block this is just whitespace inside JSON
-              if (inKVBlock) {
-                kvBuffer += "\n";
-              }
+              if (inKVBlock) kvBuffer += "\n";
               continue;
             }
 
-            // ----- End-of-stream markers -----
             if (
               trimmed === "[DONE]" ||
               trimmed === "data:[DONE]" ||
@@ -150,23 +200,21 @@ export function useLLMStream({
                 inKVBlock = false;
                 flushKVResults();
               }
-              onDone?.();
+              // allow React to process KV insertions first
+              queueMicrotask(() => completeOnce());
               return;
             }
 
-            // ----- Status lines -----
             if (trimmed.startsWith("status:")) {
               const status = trimmed.slice("status:".length).trim();
               if (status) onStatus?.(status);
               continue;
             }
 
-            // ----- Start of kv_results block -----
             if (trimmed.startsWith("kv_results:")) {
               inKVBlock = true;
               kvBuffer = "";
 
-              // Capture JSON that may begin on the same line after "kv_results:"
               const idx = rawLine.indexOf("kv_results:") + "kv_results:".length;
               const rest = rawLine.slice(idx).trim();
               if (rest && !rest.startsWith("_kv_results_end_")) {
@@ -175,7 +223,6 @@ export function useLLMStream({
               continue;
             }
 
-            // ----- Inside kv_results block -----
             if (inKVBlock) {
               if (trimmed.includes("_kv_results_end_")) {
                 inKVBlock = false;
@@ -186,16 +233,10 @@ export function useLLMStream({
               continue;
             }
 
-            // ----- Standard SSE data frame -----
             if (trimmed.startsWith("data:")) {
-              // Use the original rawLine to avoid losing meaningful spaces.
               const idx = rawLine.indexOf("data:") + "data:".length;
               let data = rawLine.slice(idx);
-
-              // Remove a single protocol space if present, but keep any extra.
-              if (data.startsWith(" ")) {
-                data = data.slice(1);
-              }
+              if (data.startsWith(" ")) data = data.slice(1);
 
               const payload = data;
               if (!payload || payload === "[DONE]") continue;
@@ -204,32 +245,27 @@ export function useLLMStream({
               continue;
             }
 
-            // ----- Fallback: treat as plain content chunk -----
-            // Use the original rawLine (no trimStart) so leading spaces between tokens are preserved.
             onChunk?.(rawLine);
           }
         }
 
-        // EOF without explicit [DONE]
         if (inKVBlock) {
           inKVBlock = false;
           flushKVResults();
         }
-        onDone?.();
+
+        // EOF without [DONE]
+        completeOnce();
       } catch (err) {
-        if (abortRef.current?.signal?.aborted) {
-          return;
-        }
+        if (abortRef.current?.signal?.aborted) return;
         onError?.(err);
       }
     },
-    [fetcher, onStatus, onChunk, onKVResults, onDone, onError]
+    [fetcher, onStatus, onChunk, onKVResults, onDone, onError, onMetadata]
   );
 
   const stop = useCallback(() => {
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
+    if (abortRef.current) abortRef.current.abort();
   }, []);
 
   return { start, stop };
