@@ -23,6 +23,15 @@ export default function useSyncStatus(authFetch) {
   const [capBlock, setCapBlock] = useState(null);
   const [cardanoBlock, setCardanoBlock] = useState(null);
 
+  // Demo/offline simulation state
+  const demoRef = useRef({
+    startedAt: Date.now(),
+    phase: 0,
+    baseChain: 12_755_323,
+    baseCap: 12_755_124,
+    lastTick: 0,
+  });
+
   // failure/cooldown bookkeeping via refs (won't retrigger effects)
   const failCountRef = useRef(0);
   const coolingUntilRef = useRef(0);
@@ -31,7 +40,7 @@ export default function useSyncStatus(authFetch) {
   const acRef = useRef(null);
 
   const canPoll = useCallback(() => {
-    if (!authFetch) return false;
+    if (!authFetch && !OFFLINE) return false;
     if (document.hidden) return false;
     // Pause on heavy pages
     if (location.pathname.startsWith("/dashboard")) return false;
@@ -63,8 +72,73 @@ export default function useSyncStatus(authFetch) {
     coolingUntilRef.current = 0;
   };
 
+  const demoTick = useCallback(() => {
+    const d = demoRef.current;
+    const now = Date.now();
+    const elapsed = now - d.startedAt;
+
+    // Phases:
+    // 0: Checking (0–2s)  => healthOnline=null, no blocks
+    // 1: Offline  (2–5s)  => healthOnline=false, no blocks
+    // 2: Syncing  (5–18s) => healthOnline=true, cap lags then catches up
+    // 3: Synced   (18–26s)=> healthOnline=true, cap within 0–3 blocks
+    // Loop every 26s
+    const loopMs = 26_000;
+    const t = elapsed % loopMs;
+
+    let phase = 0;
+    if (t >= 2_000 && t < 5_000) phase = 1;
+    else if (t >= 5_000 && t < 18_000) phase = 2;
+    else if (t >= 18_000) phase = 3;
+
+    d.phase = phase;
+
+    if (phase === 0) {
+      setHealthOnline(null);
+      setCapBlock(null);
+      setCardanoBlock(null);
+      return;
+    }
+
+    if (phase === 1) {
+      setHealthOnline(false);
+      setCapBlock(null);
+      setCardanoBlock(null);
+      return;
+    }
+
+    // Online phases
+    setHealthOnline(true);
+
+    // Advance chain slowly over time seeing "live" movement
+    // (~1 block/sec equivalent for demo)
+    const chainAdvance = Math.floor((elapsed - 5_000) / 1_000);
+    const chain = d.baseChain + Math.max(0, chainAdvance);
+
+    let cap;
+    if (phase === 2) {
+      // Start behind and catch up
+      // lag shrinks from ~900 to ~30 blocks during syncing window
+      const syncingProgress = (t - 5_000) / (18_000 - 5_000); // 0..1
+      const lag = Math.round(900 - syncingProgress * 870); // 900 -> 30
+      cap = chain - Math.max(0, lag);
+    } else {
+      // Synced: keep within 0..3 blocks
+      const wobble = Math.floor(now / 900) % 4; // 0..3
+      cap = chain - wobble;
+    }
+
+    setCardanoBlock(chain);
+    setCapBlock(cap);
+  }, []);
+
   const checkHealth = useCallback(
     async (signal) => {
+      if (OFFLINE) {
+        // Demo mode controls health state
+        demoTick();
+        return;
+      }
       if (inFlight.current.health) return;
       inFlight.current.health = true;
       try {
@@ -80,12 +154,16 @@ export default function useSyncStatus(authFetch) {
         inFlight.current.health = false;
       }
     },
-    [authFetch]
+    [authFetch, demoTick]
   );
 
   const fetchSyncInfo = useCallback(
     async (signal) => {
-      if (OFFLINE) return; // skip entirely in local/offline runs
+      if (OFFLINE) {
+        // Demo mode controls block values as well
+        demoTick();
+        return;
+      }
 
       if (inFlight.current.sync) return;
       inFlight.current.sync = true;
@@ -142,7 +220,7 @@ export default function useSyncStatus(authFetch) {
         inFlight.current.sync = false;
       }
     },
-    [authFetch]
+    [authFetch, demoTick]
   );
 
   const syncStatus = useMemo(() => {
@@ -156,6 +234,19 @@ export default function useSyncStatus(authFetch) {
       Math.min(100, Math.round((capBlock / Math.max(1, cardanoBlock)) * 100))
     );
     return { text: `Syncing (${pct}%)`, cls: "syncing" };
+  }, [capBlock, cardanoBlock]);
+
+  const syncPct = useMemo(() => {
+    if (capBlock == null || cardanoBlock == null) return null;
+    return Math.max(
+      0,
+      Math.min(100, Math.round((capBlock / Math.max(1, cardanoBlock)) * 100))
+    );
+  }, [capBlock, cardanoBlock]);
+
+  const syncLag = useMemo(() => {
+    if (capBlock == null || cardanoBlock == null) return null;
+    return Math.max(0, cardanoBlock - capBlock);
   }, [capBlock, cardanoBlock]);
 
   // Stable loop: no dependency on backoff/failCount
@@ -181,10 +272,12 @@ export default function useSyncStatus(authFetch) {
       await checkHealth(acRef.current.signal);
       await fetchSyncInfo(acRef.current.signal);
 
-      const delay = Math.max(
-        5_000, // minimum 5s when healthy
-        computeBackoff()
-      );
+      const delay = OFFLINE
+        ? 2500
+        : Math.max(
+            5_000, // minimum 5s when healthy
+            computeBackoff()
+          );
       loopTimerRef.current = setTimeout(loop, delay);
     };
 
@@ -203,5 +296,13 @@ export default function useSyncStatus(authFetch) {
     fetchSyncInfo(ac.signal);
   }, [checkHealth, fetchSyncInfo]);
 
-  return { healthOnline, capBlock, cardanoBlock, syncStatus, refreshAll };
+  return {
+    healthOnline,
+    capBlock,
+    cardanoBlock,
+    syncStatus,
+    syncPct,
+    syncLag,
+    refreshAll,
+  };
 }

@@ -17,6 +17,8 @@ function NavBar({
   capBlock,
   cardanoBlock,
   syncStatus,
+  syncLag,
+  syncPct,
   healthOnline,
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -24,9 +26,12 @@ function NavBar({
   const brandRef = useRef("");
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const brandRanRef = useRef(false);
 
   // Typing → pause → shrink animation
   useEffect(() => {
+    if (brandRanRef.current) return;
+    brandRanRef.current = true;
     const FULL = "Cardano Analytics Platform";
     const TARGET = "CAP";
     const TYPE_MS = 40,
@@ -119,6 +124,59 @@ function NavBar({
     </span>
   );
 
+  function SyncRadial({ pct, state, tooltip }) {
+    const size = 18;
+    const stroke = 2.5;
+    const r = (size - stroke) / 2;
+    const c = 2 * Math.PI * r;
+
+    const hasPct = typeof pct === "number" && Number.isFinite(pct);
+    const clamped = hasPct ? Math.max(0, Math.min(100, pct)) : 0;
+    const dash = (clamped / 100) * c;
+
+    return (
+      <span className="cap-sync" data-state={state}>
+        <span className="cap-sync-label">SYNC</span>
+
+        <span className="cap-sync-ring" aria-label={tooltip}>
+          <svg
+            className="cap-sync-svg"
+            width={size}
+            height={size}
+            viewBox={`0 0 ${size} ${size}`}
+            aria-hidden="true"
+          >
+            <circle
+              className="cap-sync-track"
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+            />
+            <circle
+              className="cap-sync-progress"
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              strokeDasharray={`${dash} ${c - dash}`}
+            />
+            <path
+              className="cap-sync-slash"
+              d={`M${size * 0.28} ${size * 0.72} L${size * 0.72} ${
+                size * 0.28
+              }`}
+            />
+          </svg>
+        </span>
+
+        <span className="cap-sync-pct">{hasPct ? `${clamped}%` : "—"}</span>
+
+        <span className="cap-sync-tooltip" role="tooltip">
+          {tooltip}
+        </span>
+      </span>
+    );
+  }
+
   return (
     <>
       <style>{`
@@ -153,41 +211,63 @@ function NavBar({
           {/* Status line (hidden on very small screens via CSS) */}
           {userData && (
             <div className="navbar-status-bar">
-              <div className="status-item w-140 nav-text">
-                <span className="label">CAP:</span>
-                <span className="value">
-                  {capBlock == null ? "—" : capBlock.toLocaleString()}
-                </span>
-              </div>
-              <div className="status-item w-160 nav-text">
-                <span className="label">Cardano:</span>
-                <span className="value">
-                  {cardanoBlock == null ? "—" : cardanoBlock.toLocaleString()}
-                </span>
-              </div>
+              {(() => {
+                const showChecking = healthOnline === null;
+                const showOffline = healthOnline === false;
+                const showSync = healthOnline === true;
 
-              {showSync && (
-                <div
-                  className={`status-item w-160 sync ${
-                    syncStatus?.cls || ""
-                  } nav-text`}
-                >
-                  <span className="dot" />
-                  <span className="value">{syncStatus?.text || "—"}</span>
-                </div>
-              )}
-              {showChecking && (
-                <div className="status-item w-120 checking nav-text">
-                  <span className="dot amber" />
-                  <span className="value">Checking…</span>
-                </div>
-              )}
-              {showOffline && (
-                <div className="status-item w-120 offline nav-text">
-                  <span className="dot red" />
-                  <span className="value">Offline</span>
-                </div>
-              )}
+                const isSynced =
+                  typeof syncLag === "number" ? syncLag <= 3 : syncPct >= 100;
+                const state = showOffline
+                  ? "offline"
+                  : showChecking
+                  ? "checking"
+                  : isSynced
+                  ? "synced"
+                  : "syncing";
+
+                const pct = showSync ? syncPct : null;
+
+                const tooltip = showOffline
+                  ? [
+                      "Status: Offline",
+                      "CAP: —",
+                      "Cardano: —",
+                      "Lag: — blocks",
+                    ].join("\n")
+                  : showChecking
+                  ? [
+                      "Status: Checking…",
+                      `CAP: ${
+                        capBlock == null ? "—" : capBlock.toLocaleString()
+                      }`,
+                      `Cardano: ${
+                        cardanoBlock == null
+                          ? "—"
+                          : cardanoBlock.toLocaleString()
+                      }`,
+                    ].join("\n")
+                  : [
+                      `Status: ${syncStatus?.text || "—"}`,
+                      `CAP: ${
+                        capBlock == null ? "—" : capBlock.toLocaleString()
+                      }`,
+                      `Cardano: ${
+                        cardanoBlock == null
+                          ? "—"
+                          : cardanoBlock.toLocaleString()
+                      }`,
+                      `Lag: ${
+                        syncLag == null ? "—" : syncLag.toLocaleString()
+                      } blocks`,
+                    ].join("\n");
+
+                return (
+                  <div className="status-item nav-text">
+                    <SyncRadial pct={pct} state={state} tooltip={tooltip} />
+                  </div>
+                );
+              })()}
             </div>
           )}
 

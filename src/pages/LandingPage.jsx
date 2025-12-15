@@ -232,6 +232,7 @@ export default function LandingPage() {
 
   const [topQueries, setTopQueries] = useState([
     { query: "List the latest 5 blocks." },
+    { query: "Show the last 5 proposals" },
     { query: "Plot a bar chart showing monthly multi assets created in 2021." },
     {
       query:

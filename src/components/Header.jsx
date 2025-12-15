@@ -10,6 +10,8 @@ export default function Header({
   capBlock,
   cardanoBlock,
   syncStatus,
+  syncPct,
+  syncLag,
   healthOnline,
   sidebarIsOpen,
   setSidebarOpen,
@@ -42,6 +44,8 @@ export default function Header({
           capBlock={capBlock}
           cardanoBlock={cardanoBlock}
           syncStatus={syncStatus}
+          syncLag={syncLag}
+          syncPct={syncPct}
           healthOnline={healthOnline}
         />
       </div>

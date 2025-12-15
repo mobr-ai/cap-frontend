@@ -132,9 +132,8 @@ function Layout() {
   const { authFetch } = useAuthRequest({ session, showToast, handleLogout });
 
   // --- CAP status polling (health + sync)
-  const { healthOnline, capBlock, cardanoBlock, syncStatus } = useSyncStatus(
-    session ? authFetch : null
-  );
+  const { healthOnline, capBlock, cardanoBlock, syncStatus, syncPct, syncLag } =
+    useSyncStatus(session ? authFetch : null);
 
   // --- Enforce allowed routes when not logged in ---------------------------
   useEffect(() => {
@@ -158,6 +157,8 @@ function Layout() {
           capBlock={capBlock}
           cardanoBlock={cardanoBlock}
           syncStatus={syncStatus}
+          syncLag={syncLag}
+          syncPct={syncPct}
           healthOnline={healthOnline}
           sidebarIsOpen={sidebarIsOpen}
           setSidebarOpen={setSidebarOpen}
