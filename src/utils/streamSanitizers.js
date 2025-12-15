@@ -144,8 +144,55 @@ function fixTokenizedWordSplitsOnlyWhenNeeded(s) {
 }
 
 function joinSoftWraps(s) {
-  // convert single newlines into spaces, but preserve blank-line paragraphs
-  return s.replace(/([^\n])\n(?!\n)([^\n])/g, "$1 $2");
+  const lines = String(s).split("\n");
+  const out = [];
+
+  const isBlockStart = (ln) => {
+    const t = (ln || "").trimStart();
+
+    // headings, hr
+    if (/^#{1,6}\s+/.test(t)) return true;
+    if (/^(?:-{3,}|\*{3,}|_{3,})\s*$/.test(t)) return true;
+
+    // lists (ul/ol/task)
+    if (/^([-*+])\s+/.test(t)) return true;
+    if (/^\d{1,3}\.\s+/.test(t)) return true;
+
+    // blockquote
+    if (/^>\s?/.test(t)) return true;
+
+    // code fence / math fence
+    if (/^```/.test(t)) return true;
+    if (/^\$\$/.test(t)) return true;
+
+    // tables (very common markdown table starts)
+    if (/^\|/.test(t)) return true;
+
+    return false;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const cur = lines[i] ?? "";
+    const next = i + 1 < lines.length ? lines[i + 1] : null;
+
+    out.push(cur);
+
+    if (next == null) continue;
+
+    // keep blank lines as paragraph breaks
+    if (!cur.trim() || !next.trim()) continue;
+
+    // if next line begins a markdown block, preserve newline
+    if (isBlockStart(next)) continue;
+
+    // if current line itself is a block marker line, preserve newline
+    if (isBlockStart(cur)) continue;
+
+    // otherwise, treat as soft wrap: replace newline with a space
+    out[out.length - 1] = out[out.length - 1] + " ";
+  }
+
+  return out.join("\n").replace(/[ \t]+\n/g, "\n");
 }
 
 function collapseBlankLines(s) {
