@@ -138,7 +138,7 @@ export function useLLMStream({
 
         if (!response.body || !response.body.getReader) {
           const text = await response.text();
-          if (text) onChunk?.(text);
+          if (text) onChunk?.(normalizeTextChunk(text));
           completeOnce();
           return;
         }
@@ -149,6 +149,18 @@ export function useLLMStream({
 
         let inKVBlock = false;
         let kvBuffer = "";
+
+        // Normalize non-JSON text chunks. (KV blocks must remain untouched.)
+        const normalizeTextChunk = (s) => {
+          if (!s) return "";
+          const str = String(s);
+
+          const hadLeading = /^\s+/.test(str);
+          const core = str.replace(/\s+/g, " ").trim();
+
+          if (!core) return "";
+          return hadLeading ? " " + core : core;
+        };
 
         const flushKVResults = () => {
           let raw = kvBuffer.trim();
@@ -235,17 +247,22 @@ export function useLLMStream({
 
             if (trimmed.startsWith("data:")) {
               const idx = rawLine.indexOf("data:") + "data:".length;
-              let data = rawLine.slice(idx);
-              if (data.startsWith(" ")) data = data.slice(1);
+              let data = rawLine.slice(idx); // keep boundary cue as one space, normalizeTextChunk handles it
 
               const payload = data;
               if (!payload || payload === "[DONE]") continue;
 
-              onChunk?.(payload);
+              // If SSE ever sends JSON events, don't normalize them.
+              const looksJson =
+                (payload.startsWith("{") && payload.endsWith("}")) ||
+                (payload.startsWith("[") && payload.endsWith("]"));
+              onChunk?.(looksJson ? payload : normalizeTextChunk(payload));
               continue;
             }
 
-            onChunk?.(rawLine);
+            // pass rawLine (not trimmed) so hadLeading can be detected,
+            // but without keeping the giant indentation
+            onChunk?.(normalizeTextChunk(rawLine));
           }
         }
 

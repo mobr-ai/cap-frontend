@@ -98,7 +98,7 @@
     "charCount": "{{count}} / {{max}}",
     "processing": "Processing",
     "send": "Send",
-    "statusPlanning": "Planning the query and preparing SPARQL...",
+    "statusPlanning": "Planning and processing your query...",
     "unexpectedError": "Unexpected error while processing your query.",
     "pinInvalidTable": "This table result is empty or invalid and cannot be pinned.",
     "pinSuccess": "Pinned to your dashboard (click to open).",

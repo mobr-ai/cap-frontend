@@ -98,7 +98,7 @@
     "charCount": "{{count}} / {{max}}",
     "processing": "Processando",
     "send": "Enviar",
-    "statusPlanning": "Planejando a consulta e preparando o SPARQL...",
+    "statusPlanning": "Planejando e processando consulta...",
     "unexpectedError": "Ocorreu um erro inesperado ao processar sua consulta.",
     "pinInvalidTable": "Este resultado de tabela está vazio ou inválido e não pode ser fixado.",
     "pinSuccess": "Fixado no seu dashboard (clique para abrir).",
