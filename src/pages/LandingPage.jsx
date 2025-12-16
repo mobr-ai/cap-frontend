@@ -236,6 +236,7 @@ export default function LandingPage() {
   const lastLoadedConversationIdRef = useRef(null);
 
   const [topQueries, setTopQueries] = useState([
+    { query: "Markdown formatting test" },
     { query: "Current trends" },
     { query: "List the latest 5 blocks" },
     { query: "Show the last 5 proposals" },
@@ -885,6 +886,7 @@ function Message({ type, content }) {
   }
 
   const isUser = type === "user";
+  console.log(content);
   return (
     <div className={`message ${isUser ? "user" : "assistant"}`}>
       <div className="message-avatar">{isUser ? "🧑" : "🤖"}</div>
@@ -895,13 +897,71 @@ function Message({ type, content }) {
               <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{content}</pre>
             </div>
           ) : (
-            <div className="fade-in">
+            <div className="fade-in rm-chat">
               <ReactMarkdown
                 remarkPlugins={[
-                  [remarkGfm],
+                  remarkGfm,
                   [remarkMath, { singleDollarTextMath: true, strict: false }],
                 ]}
-                rehypePlugins={[rehypeKatex, rehypeHighlight]}
+                rehypePlugins={[
+                  rehypeKatex,
+                  [rehypeHighlight, { ignoreMissing: true }],
+                ]}
+                components={{
+                  // Make markdown headings "chat-sized"
+                  h1: ({ node, ...props }) => <h3 {...props} />,
+                  h2: ({ node, ...props }) => <h4 {...props} />,
+                  h3: ({ node, ...props }) => <h5 {...props} />,
+                  h4: ({ node, ...props }) => <h6 {...props} />,
+
+                  p: ({ node, ...props }) => <p {...props} />,
+                  ul: ({ node, ...props }) => <ul {...props} />,
+                  ol: ({ node, ...props }) => <ol {...props} />,
+                  li: ({ node, ...props }) => <li {...props} />,
+
+                  a({ node, href, children, ...props }) {
+                    const isExternal =
+                      typeof href === "string" && /^https?:\/\//i.test(href);
+                    return (
+                      <a
+                        href={href}
+                        {...props}
+                        target={isExternal ? "_blank" : undefined}
+                        rel={isExternal ? "noreferrer" : undefined}
+                      >
+                        {children}
+                      </a>
+                    );
+                  },
+
+                  code({ node, inline, className, children, ...props }) {
+                    return (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
+
+                  pre({ node, children, ...props }) {
+                    return (
+                      <pre {...props} className="rm-pre">
+                        {children}
+                      </pre>
+                    );
+                  },
+
+                  blockquote({ node, ...props }) {
+                    return <blockquote className="rm-quote" {...props} />;
+                  },
+
+                  table({ node, ...props }) {
+                    return (
+                      <div className="rm-table-wrap">
+                        <table {...props} />
+                      </div>
+                    );
+                  },
+                }}
               >
                 {content || ""}
               </ReactMarkdown>

@@ -459,6 +459,106 @@
   padding: 0;
 }
 
+/* -------------------------------------------------------
+   Chat markdown sizing (avoid giant <h1>/<h2>/<h3> bubbles)
+   ------------------------------------------------------- */
+
+.message-bubble.markdown-body,
+.message-bubble .markdown-body {
+  line-height: 1.45;
+}
+
+/* Headings: render like strong titles, not page headings */
+.message-bubble.markdown-body h1,
+.message-bubble.markdown-body h2,
+.message-bubble.markdown-body h3,
+.message-bubble.markdown-body h4,
+.message-bubble.markdown-body h5,
+.message-bubble.markdown-body h6 {
+  font-size: 1em; /* normalize size */
+  line-height: 1.3;
+  font-weight: 700;
+  margin: 0 0 0.55rem 0; /* space below, not above */
+}
+
+.message-bubble.markdown-body h2,
+.message-bubble.markdown-body h3,
+.message-bubble.markdown-body h4,
+.message-bubble.markdown-body h5,
+.message-bubble.markdown-body h6 {
+  margin-top: 0.75rem; /* gentle separation between sections */
+}
+
+/* Paragraph spacing */
+.message-bubble.markdown-body p {
+  margin: 0 0 0.65rem 0;
+}
+.message-bubble.markdown-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Lists */
+.message-bubble.markdown-body ul,
+.message-bubble.markdown-body ol {
+  margin: 0.25rem 0 0.75rem 1.25rem;
+  padding: 0;
+}
+.message-bubble.markdown-body li {
+  margin: 0.2rem 0;
+}
+.message-bubble.markdown-body li > ul,
+.message-bubble.markdown-body li > ol {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Blockquotes */
+.message-bubble.markdown-body blockquote {
+  margin: 0.6rem 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid rgba(148, 163, 184, 0.6);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+}
+.message-bubble.markdown-body blockquote > p {
+  margin: 0;
+}
+
+/* Inline code */
+.message-bubble.markdown-body code {
+  font-size: 0.95em;
+}
+
+/* Code blocks */
+.message-bubble.markdown-body pre {
+  margin: 0.6rem 0;
+  padding: 0.75rem;
+  border-radius: 12px;
+  overflow-x: auto;
+  background: rgba(0, 0, 0, 0.25);
+}
+.message-bubble.markdown-body pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* Tables */
+.message-bubble.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.6rem 0;
+  font-size: 0.95em;
+}
+.message-bubble.markdown-body th,
+.message-bubble.markdown-body td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+}
+.message-bubble.markdown-body th {
+  text-align: left;
+  font-weight: 700;
+}
+
 /* Lists */
 .markdown-body ul,
 .markdown-body ol {
@@ -651,4 +751,236 @@
   .cap-root .message-content {
     max-width: 100%;
   }
+}
+
+/* LandingPage.css */
+
+.message-bubble.markdown-body {
+  line-height: 1.45;
+  font-size: 14px; /* match the rest of your chat UI */
+}
+
+.message-bubble.markdown-body p,
+.message-bubble.markdown-body ul,
+.message-bubble.markdown-body ol,
+.message-bubble.markdown-body pre,
+.message-bubble.markdown-body blockquote,
+.message-bubble.markdown-body table {
+  margin: 0.45rem 0;
+}
+
+.message-bubble.markdown-body h1,
+.message-bubble.markdown-body h2,
+.message-bubble.markdown-body h3,
+.message-bubble.markdown-body h4 {
+  margin: 0.6rem 0 0.35rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* “Chat-sized” headings */
+.message-bubble.markdown-body h1 {
+  font-size: 1.05rem;
+}
+.message-bubble.markdown-body h2 {
+  font-size: 0.98rem;
+}
+.message-bubble.markdown-body h3 {
+  font-size: 0.92rem;
+}
+.message-bubble.markdown-body h4 {
+  font-size: 0.88rem;
+}
+
+.message-bubble.markdown-body pre {
+  padding: 10px 12px;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+
+.message-bubble.markdown-body code {
+  font-size: 0.95em;
+}
+
+.message-bubble.markdown-body blockquote {
+  padding: 10px 12px;
+  border-left: 3px solid rgba(255, 255, 255, 0.18);
+  opacity: 0.9;
+}
+
+.message-bubble.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.message-bubble.markdown-body th,
+.message-bubble.markdown-body td {
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Chat markdown baseline */
+.rm-chat {
+  font-size: 14px;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Remove big first/last margins that make bubbles look huge */
+.rm-chat > :first-child {
+  margin-top: 0;
+}
+.rm-chat > :last-child {
+  margin-bottom: 0;
+}
+
+/* Tight vertical rhythm */
+.rm-chat p,
+.rm-chat ul,
+.rm-chat ol,
+.rm-chat pre,
+.rm-chat blockquote,
+.rm-chat table {
+  margin: 0.45rem 0;
+}
+
+/* Headings: small + tight */
+.rm-chat h1,
+.rm-chat h2,
+.rm-chat h3,
+.rm-chat h4,
+.rm-chat h5,
+.rm-chat h6 {
+  margin: 0.6rem 0 0.35rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.rm-chat h3 {
+  font-size: 1.02rem;
+}
+.rm-chat h4 {
+  font-size: 0.96rem;
+}
+.rm-chat h5 {
+  font-size: 0.92rem;
+}
+.rm-chat h6 {
+  font-size: 0.88rem;
+}
+
+/* Lists: tighter indent and spacing */
+.rm-chat ul,
+.rm-chat ol {
+  padding-left: 1.15rem;
+}
+
+.rm-chat li {
+  margin: 0.2rem 0;
+}
+
+/* Inline code */
+.rm-chat code {
+  font-size: 0.95em;
+}
+
+/* Fenced code blocks */
+.rm-pre {
+  margin: 0.5rem 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+
+/* Blockquote */
+.rm-quote {
+  padding: 10px 12px;
+  border-left: 3px solid rgba(255, 255, 255, 0.18);
+  opacity: 0.9;
+  border-radius: 10px;
+  margin: 0.5rem 0;
+}
+
+/* Tables */
+.rm-table-wrap {
+  overflow-x: auto;
+}
+
+.rm-chat table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.rm-chat th,
+.rm-chat td {
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rm-chat {
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.rm-chat > :first-child {
+  margin-top: 0;
+}
+.rm-chat > :last-child {
+  margin-bottom: 0;
+}
+
+.rm-chat p,
+.rm-chat ul,
+.rm-chat ol,
+.rm-chat pre,
+.rm-chat blockquote,
+.rm-chat table {
+  margin: 0.45rem 0;
+}
+
+.rm-chat h1,
+.rm-chat h2,
+.rm-chat h3,
+.rm-chat h4,
+.rm-chat h5,
+.rm-chat h6 {
+  margin: 0.6rem 0 0.35rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.rm-chat ul,
+.rm-chat ol {
+  padding-left: 1.15rem;
+}
+
+.rm-chat li {
+  margin: 0.2rem 0;
+}
+
+.rm-chat pre {
+  margin: 0.5rem 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+
+.rm-chat blockquote {
+  padding: 10px 12px;
+  border-left: 3px solid rgba(255, 255, 255, 0.18);
+  opacity: 0.9;
+  border-radius: 10px;
+  margin: 0.5rem 0;
+}
+
+.rm-chat table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.rm-chat th,
+.rm-chat td {
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }

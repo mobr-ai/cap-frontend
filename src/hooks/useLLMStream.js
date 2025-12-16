@@ -1,6 +1,8 @@
 // src/hooks/useLLMStream.js
 import { useCallback, useRef } from "react";
 
+const NL_TOKEN = "__NL__";
+
 export function useLLMStream({
   fetcher,
   onStatus,
@@ -10,6 +12,7 @@ export function useLLMStream({
   onError,
   onMetadata,
 } = {}) {
+  let lastWasText = false;
   const abortRef = useRef(null);
 
   const start = useCallback(
@@ -90,7 +93,7 @@ export function useLLMStream({
       };
 
       // SSE rule: payload for "data:" lines must preserve spacing.
-      // We only remove ONE optional leading space after "data:" (common SSE formatting).
+      // Only remove ONE optional leading space after "data:".
       const extractDataPayload = (rawLine) => {
         const idx = rawLine.indexOf("data:");
         if (idx < 0) return null;
@@ -169,8 +172,6 @@ export function useLLMStream({
           kvBuffer = "";
           if (!raw) return;
 
-          // Do not aggressively trim; only clean the wrapper markers.
-          // We tolerate "kv_results:" prefix and trailing whitespace/newlines.
           let s = String(raw);
           s = s.replace(/^\s+|\s+$/g, "");
 
@@ -208,7 +209,12 @@ export function useLLMStream({
 
             // keep-alive / blank line
             if (!trimmed) {
-              if (inKVBlock) kvBuffer += "\n";
+              if (inKVBlock) {
+                kvBuffer += "\n";
+              } else if (lastWasText) {
+                // IMPORTANT: do NOT emit "\n" (sanitizeChunk drops it)
+                onChunk?.(NL_TOKEN);
+              }
               continue;
             }
 
@@ -217,23 +223,23 @@ export function useLLMStream({
                 inKVBlock = false;
                 flushKVResults();
               }
+              lastWasText = false;
               queueMicrotask(() => completeOnce());
               return;
             }
 
-            // status: lines are control messages; trimming is fine here
             if (trimmed.startsWith("status:")) {
               const status = trimmed.slice("status:".length).trim();
               if (status) onStatus?.(status);
+              lastWasText = false;
               continue;
             }
 
-            // kv_results: start marker
             if (trimmed.startsWith("kv_results:")) {
               inKVBlock = true;
               kvBuffer = "";
+              lastWasText = false;
 
-              // Capture anything after kv_results: on the same line WITHOUT normalizing JSON spacing
               const idx = rawLine.indexOf("kv_results:") + "kv_results:".length;
               const rest = rawLine.slice(idx);
               const restTrimmed = rest.trim();
@@ -244,7 +250,6 @@ export function useLLMStream({
               continue;
             }
 
-            // Inside kv block
             if (inKVBlock) {
               if (trimmed.includes("_kv_results_end_")) {
                 inKVBlock = false;
@@ -252,24 +257,33 @@ export function useLLMStream({
               } else {
                 kvBuffer += rawLine + "\n";
               }
+              lastWasText = false;
               continue;
             }
 
-            // SSE data line: preserve payload EXACTLY
+            // SSE data line
             if (trimmed.startsWith("data:")) {
               const payload = extractDataPayload(rawLine);
 
               if (payload == null) continue;
-              if (!payload) continue; // empty data: ignore
+
+              // Empty data line => newline sentinel
+              if (payload === "") {
+                onChunk?.(NL_TOKEN);
+                lastWasText = true;
+                continue;
+              }
+
               if (payload === "[DONE]") continue;
 
               onChunk?.(payload);
+              lastWasText = true;
               continue;
             }
 
-            // If backend ever writes raw text lines (not prefixed with data:),
-            // pass them through unchanged (do NOT trim/collapse).
+            // Raw text lines fallback
             onChunk?.(rawLine);
+            lastWasText = true;
           }
         }
 
