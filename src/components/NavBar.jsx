@@ -302,7 +302,7 @@ function NavBar({
                 className="nav-text"
                 onClick={() => {
                   window.open(
-                    "https://mobr.ai",
+                    "https://www.youtube.com/watch?v=nRsa_qiGhN0",
                     "_blank",
                     "noopener,noreferrer"
                   );
