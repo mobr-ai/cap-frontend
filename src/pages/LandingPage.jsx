@@ -1038,7 +1038,7 @@ function Message({ type, content, streaming = false, replayTyping = false }) {
                 <StreamingTypingText
                   text={content || ""}
                   isTyping={true}
-                  speedMs={120}
+                  speedMs={3}
                 />
               ) : replayTyping && !replayDone ? (
                 <ReplayTyping
