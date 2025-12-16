@@ -52,8 +52,6 @@ export default function DashboardPage() {
     [dashboardsRaw]
   );
 
-  const hasDashboards = dashboards.length > 0;
-
   // These are always the items for the default dashboard (from the hook)
   // IMPORTANT: keep null/undefined while loading so the hooks/loader can behave correctly.
   const defaultItems = useMemo(
@@ -69,13 +67,10 @@ export default function DashboardPage() {
     authFetch,
   });
 
-  const isDashboardsLoading =
-    (!dashboardsRaw || !dashboardsRaw?.length) && !error;
-
-  // Widgets are "maybe loading" whenever:
-  // - we already have dashboards
-  // - BUT either we don't yet know the activeId
-  //   or items haven't been populated (null/undefined).
+  const hasDashboards = dashboards.length > 0;
+  const dashboardsLoaded =
+    dashboardsRaw !== null && typeof dashboardsRaw !== "undefined";
+  const isDashboardsLoading = !dashboardsLoaded && !error;
   const isWidgetsMaybeLoading =
     hasDashboards &&
     (!activeId || items === null || typeof items === "undefined") &&
