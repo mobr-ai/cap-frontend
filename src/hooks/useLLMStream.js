@@ -205,7 +205,7 @@ export function useLLMStream({
           for (let rawLine of lines) {
             if (rawLine.endsWith("\r")) rawLine = rawLine.slice(0, -1);
 
-            const trimmed = rawLine.trim();
+            const trimmed = rawLine.replace(/\r$/, "");
 
             // keep-alive / blank line
             if (!trimmed) {
