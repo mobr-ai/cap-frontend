@@ -254,6 +254,34 @@ export default function LandingPage() {
   const messagesEndRef = useRef(null);
   const statusMsgIdRef = useRef(null);
 
+  const scrollToBottom = (behavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior,
+      block: "end",
+    });
+  };
+
+  // Scroll to bottom when a conversation finishes loading
+  useEffect(() => {
+    if (!isLoadingConversation && messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "auto", // instant jump on convo switch
+        block: "end",
+      });
+    }
+  }, [routeConversationId, isLoadingConversation]);
+
+  const lastMsgCountRef = useRef(0);
+
+  useEffect(() => {
+    // Only scroll if a message was appended (not just updated)
+    if (messages.length > lastMsgCountRef.current) {
+      scrollToBottom("smooth");
+    }
+
+    lastMsgCountRef.current = messages.length;
+  }, [messages]);
+
   // Keep ref in sync with route
   useEffect(() => {
     const id = routeConversationId;
@@ -369,12 +397,12 @@ export default function LandingPage() {
   }, [routeConversationId]);
 
   // Auto scroll
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
-  }, [messages]);
+  // useEffect(() => {
+  //   messagesEndRef.current?.scrollIntoView({
+  //     behavior: "smooth",
+  //     block: "end",
+  //   });
+  // }, [messages]);
 
   const emitStreamEvent = useCallback((type, detail) => {
     try {
@@ -801,8 +829,6 @@ export default function LandingPage() {
                 />
               )
             )}
-
-            <div ref={messagesEndRef} />
           </div>
 
           <div className="input-container">
@@ -871,6 +897,7 @@ export default function LandingPage() {
                 </span>
               </button>
             </div>
+            <div ref={messagesEndRef} />
           </div>
         </div>
       </div>
