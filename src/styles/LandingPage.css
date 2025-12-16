@@ -984,3 +984,9 @@
   padding: 8px 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* Don't animate the whole bubble while typing */
+.cap-root .typing-mode {
+  animation: none !important;
+  white-space: pre-wrap;
+}
