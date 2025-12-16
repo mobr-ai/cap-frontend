@@ -391,15 +391,17 @@ export default function NavigationSidebar({
             <span>{t("nav.home")}</span>
           </Link>
 
-          <Link
-            to="/admin"
-            onClick={() => handleNav("/admin")}
-            className={`sidebar-item ${isActive("/admin") ? "active" : ""}`}
-            title={t("nav.admin")}
-          >
-            <FontAwesomeIcon icon={faShieldHalved} />
-            <span>{t("nav.admin")}</span>
-          </Link>
+          {user?.is_admin && (
+            <Link
+              to="/admin"
+              onClick={() => handleNav("/admin")}
+              className={`sidebar-item ${isActive("/admin") ? "active" : ""}`}
+              title={t("nav.admin")}
+            >
+              <FontAwesomeIcon icon={faShieldHalved} />
+              <span>{t("nav.admin")}</span>
+            </Link>
+          )}
 
           <Link
             to="/dashboard"
