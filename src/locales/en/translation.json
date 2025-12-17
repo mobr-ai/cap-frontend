@@ -189,6 +189,7 @@
     "systemStatsCpuThreads": "{{threads}} threads ({{cores}} physical cores)",
     "tabOverview": "Overview",
     "tabUsers": "Users",
+    "tabMetrics": "Metrics",
     "tabAlerts": "Alerts",
     "tabSystem": "System",
     "systemDetailsTitle": "Node metrics",
@@ -235,6 +236,54 @@
     "waitlistStatsWithRef": "With referral",
     "waitlistStatsWithRefCaption": "Entries that include a ref code",
     "waitlistStatsLanguages": "Languages",
-    "waitlistStatsLanguagesCaption": "Distinct language values"
+    "waitlistStatsLanguagesCaption": "Distinct language values",
+    "metrics": {
+      "title": "Platform Metrics",
+      "subtitle": "System-wide analytics and performance indicators",
+      "totalQueries": "Total queries",
+      "uniqueLangs": "Languages",
+      "validSparqlRate": "Valid SPARQL rate",
+      "semanticValidRate": "Semantic validity rate",
+      "target": "Target",
+      "totalTriplesLoaded": "Triples loaded",
+      "ontologyAlignmentRate": "Ontology alignment",
+      "uniqueDashboards": "Dashboards",
+      "uniqueUsers": "Users",
+      "avgTotalLatency": "Average latency",
+      "recentQueries": "Recent queries",
+      "recentQueriesSubtitle": "Latest natural language queries processed by the system",
+      "query": "Query",
+      "lang": "Lang",
+      "ok": "OK",
+      "complexity": "Complexity",
+      "totalLatency": "Total latency",
+      "createdAt": "Created at"
+    },
+    "userQueries": {
+      "title": "User Queries",
+      "subtitle": "Natural language queries executed by user #{{userId}}",
+      "back": "Back to admin",
+      "searchPlaceholder": "Search queries, language, result type…",
+      "empty": "No queries found for this user.",
+      "cardLine": "LLM {{llm}} • SPARQL {{sparql}} • Results {{resultCount}} ({{resultType}}) • SPARQL valid: {{sparqlValid}} • Semantic valid: {{semanticValid}} • Federated: {{federated}}",
+      "results": "Results",
+      "sparqlValid": "SPARQL valid",
+      "semanticValid": "Semantic valid",
+      "federated": "Federated",
+      "modalTitle": "Query details",
+      "query": "Query",
+      "language": "Language",
+      "totalLatency": "Total latency",
+      "resultType": "Result type",
+      "succeeded": "Succeeded"
+    },
+    "userActions": {
+      "viewQueries": "View queries"
+    }
+  },
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "close": "Close"
   }
 }

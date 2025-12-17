@@ -8,6 +8,7 @@ import { useAdminSystemMetrics } from "@/hooks/useAdminSystemMetrics";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { useAdminWaitlist } from "@/hooks/useAdminWaitlist";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
+import { useAdminMetrics } from "@/hooks/useAdminMetrics";
 import { useSwipeTabs } from "@/hooks/useSwipeTabs";
 
 import { AdminTabs } from "@/components/admin/AdminTabs";
@@ -19,6 +20,7 @@ import { UserDirectory } from "@/components/admin/UserDirectory";
 import { WaitlistDirectory } from "@/components/admin/WaitlistDirectory";
 import { NewUserAlertsPanel } from "@/components/admin/NewUserAlertsPanel";
 import { WaitlistAlertsPanel } from "@/components/admin/WaitlistAlertsPanel";
+import { MetricsOverview } from "@/components/admin/MetricsOverview";
 
 import "@/styles/AdminPage.css";
 
@@ -32,6 +34,7 @@ export default function AdminPage() {
   const tabs = [
     { key: "overview" },
     { key: "users" },
+    { key: "metrics" },
     { key: "system" },
     { key: "alerts" },
   ];
@@ -47,6 +50,7 @@ export default function AdminPage() {
   const users = useAdminUsers(authFetch, showToast, t);
   const waitlist = useAdminWaitlist(authFetch, showToast, t);
   const notifications = useAdminNotifications(authFetch, showToast, t);
+  const metrics = useAdminMetrics(authFetch, activeTab === "metrics");
 
   // Guard (backend still enforces admin)
   if (!session || !session.is_admin) {
@@ -86,6 +90,12 @@ export default function AdminPage() {
               <UserDirectory t={t} showToast={showToast} {...users} />
               <WaitlistDirectory t={t} showToast={showToast} {...waitlist} />
             </div>
+          </>
+        )}
+
+        {activeTab === "metrics" && (
+          <>
+            <MetricsOverview t={t} {...metrics} />
           </>
         )}
 

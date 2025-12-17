@@ -236,6 +236,55 @@
     "waitlistStatsWithRef": "Com referência",
     "waitlistStatsWithRefCaption": "Entradas que incluem um código de referência",
     "waitlistStatsLanguages": "Idiomas",
-    "waitlistStatsLanguagesCaption": "Valores distintos de idioma"
+    "waitlistStatsLanguagesCaption": "Valores distintos de idioma",
+    "tabMetrics": "Métricas",
+    "metrics": {
+      "title": "Métricas da Plataforma",
+      "subtitle": "Indicadores globais de uso, desempenho e qualidade",
+      "totalQueries": "Consultas totais",
+      "uniqueLangs": "Idiomas",
+      "validSparqlRate": "Taxa de SPARQL válido",
+      "semanticValidRate": "Validação semântica",
+      "target": "Meta",
+      "totalTriplesLoaded": "Triplas carregadas",
+      "ontologyAlignmentRate": "Alinhamento ontológico",
+      "uniqueDashboards": "Dashboards",
+      "uniqueUsers": "Usuários",
+      "avgTotalLatency": "Latência média",
+      "recentQueries": "Consultas recentes",
+      "recentQueriesSubtitle": "Últimas consultas em linguagem natural processadas pelo sistema",
+      "query": "Consulta",
+      "lang": "Idioma",
+      "ok": "OK",
+      "complexity": "Complexidade",
+      "totalLatency": "Latência total",
+      "createdAt": "Criado em"
+    },
+    "userQueries": {
+      "title": "Consultas do Usuário",
+      "subtitle": "Consultas em linguagem natural executadas pelo usuário #{{userId}}",
+      "back": "Voltar ao admin",
+      "searchPlaceholder": "Buscar por consulta, idioma, tipo de resultado…",
+      "empty": "Nenhuma consulta encontrada para este usuário.",
+      "cardLine": "LLM {{llm}} • SPARQL {{sparql}} • Resultados {{resultCount}} ({{resultType}}) • SPARQL válido: {{sparqlValid}} • Semântica válida: {{semanticValid}} • Federado: {{federated}}",
+      "results": "Resultados",
+      "sparqlValid": "SPARQL válido",
+      "semanticValid": "Semântica válida",
+      "federated": "Federado",
+      "modalTitle": "Detalhes da consulta",
+      "query": "Consulta",
+      "language": "Idioma",
+      "totalLatency": "Latência total",
+      "resultType": "Tipo de resultado",
+      "succeeded": "Executada com sucesso"
+    },
+    "userActions": {
+      "viewQueries": "Ver consultas"
+    }
+  },
+  "common": {
+    "yes": "Sim",
+    "no": "Não",
+    "close": "Fechar"
   }
 }
