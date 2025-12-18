@@ -110,7 +110,7 @@ export function AdminTabs({ activeTab, onChange, t }) {
         className="admin-tab-indicator"
         style={{
           width: `${indicator.width}px`,
-          transform: `translateX(${indicator.left}px)`,
+          transform: `translate3d(${indicator.left}px, 0, 0)`,
         }}
         aria-hidden="true"
       />
