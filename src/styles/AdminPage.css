@@ -29,7 +29,6 @@
 }
 
 /* Tabs */
-
 .admin-tabs {
   position: relative;
   display: inline-flex;
@@ -45,14 +44,43 @@
   border: 1px solid rgba(55, 65, 81, 0.8);
   margin-bottom: 1.25rem;
 
-  /* Needed for pill animation + mobile scroll */
+  /*
+    IMPORTANT:
+    With the new AdminTabs.jsx structure, the OUTER .admin-tabs is the "shell"
+    (non-scrolling) and the INNER .admin-tabs-scroller does the scrolling.
+  */
   overflow: hidden;
-  touch-action: pan-y; /* allow vertical scroll; we still track horizontal swipe in JS */
+  touch-action: pan-x pan-y;
 }
 
+/* Ensure buttons sit above the indicator pill */
 .admin-tabs--animated .admin-tab {
   position: relative;
   z-index: 2; /* above the indicator pill */
+}
+
+/* Inner scroll row (buttons) */
+.admin-tabs-scroller {
+  display: flex;
+  gap: 0.5rem;
+
+  /* Scrolling happens here (not on .admin-tabs shell) */
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+
+  /* Stabilize sizing so scroll math/indicator stays consistent */
+  max-width: 100%;
+  min-width: 0;
+
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-tabs-scroller::-webkit-scrollbar {
+  display: none;
 }
 
 /* Sliding indicator pill (rendered by AdminTabs.jsx) */
@@ -67,6 +95,9 @@
   z-index: 1;
   transition: transform 200ms ease, width 200ms ease;
   will-change: transform, width;
+
+  /* Avoid selection / accidental hit testing on mobile */
+  pointer-events: none;
 }
 
 .admin-tab {
@@ -467,17 +498,28 @@
 
   /*
     On mobile, keep tabs in one line and allow horizontal scroll.
-    This pairs well with swipe switching.
+    The shell stays fixed; the inner scroller scrolls.
   */
   .admin-tabs {
     display: flex;
+    width: 100%;
     max-width: 100%;
+    min-width: 0;
+  }
+
+  .admin-tabs-scroller {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     white-space: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    gap: 0.5rem;
-    border-radius: 9999px;
+
+    /* keep scrollbar hidden on mobile too */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .admin-tabs-scroller::-webkit-scrollbar {
+    display: none;
   }
 
   .admin-tab {

@@ -118,7 +118,7 @@ export default function UserQueryMetricsPage() {
           <button
             type="button"
             className="btn btn-outline-light btn-sm"
-            onClick={() => navigate("/admin")}
+            onClick={() => navigate(`/admin?tab=users&user=${userId}`)}
             title={t("admin.userQueries.back")}
           >
             {t("admin.userQueries.back")}

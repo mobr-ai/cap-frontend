@@ -19,40 +19,90 @@ export function AdminTabs({ activeTab, onChange, t }) {
     [t]
   );
 
-  const containerRef = useRef(null);
+  const shellRef = useRef(null); // non-scrolling outer pill
+  const scrollerRef = useRef(null); // scrolling row
   const btnRefs = useRef({});
+  const rafRef = useRef(0);
+
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
 
   const recalcIndicator = () => {
+    const scroller = scrollerRef.current;
+    const shell = shellRef.current;
     const el = btnRefs.current[activeTab];
-    const container = containerRef.current;
-    if (!el || !container) return;
+    if (!scroller || !shell || !el) return;
 
-    const cRect = container.getBoundingClientRect();
-    const bRect = el.getBoundingClientRect();
+    // button position in scroller content coords
+    const leftInScroller = el.offsetLeft;
+
+    // translate to shell coords (scroller might have padding/offset inside shell)
+    const leftInShell =
+      leftInScroller - scroller.scrollLeft + (scroller.offsetLeft || 0);
 
     setIndicator({
-      left: bRect.left - cRect.left,
-      width: bRect.width,
+      left: leftInShell,
+      width: el.offsetWidth,
     });
   };
 
-  // Position pill when active tab changes
+  const ensureActiveVisible = () => {
+    const scroller = scrollerRef.current;
+    const el = btnRefs.current[activeTab];
+    if (!scroller || !el) return;
+
+    const pad = 10;
+    const left = el.offsetLeft;
+    const right = left + el.offsetWidth;
+
+    const viewLeft = scroller.scrollLeft;
+    const viewRight = viewLeft + scroller.clientWidth;
+
+    let next = null;
+
+    if (right + pad > viewRight) next = right - scroller.clientWidth + pad;
+    else if (left - pad < viewLeft) next = Math.max(0, left - pad);
+
+    if (next !== null) {
+      scroller.scrollTo({ left: next, behavior: "smooth" });
+      requestAnimationFrame(() => recalcIndicator());
+    }
+  };
+
+  const onScroll = () => {
+    if (rafRef.current) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = 0;
+      recalcIndicator();
+    });
+  };
+
   useLayoutEffect(() => {
     recalcIndicator();
+    requestAnimationFrame(() => ensureActiveVisible());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, tabs]);
 
-  // Recalculate on resize / font load
   useEffect(() => {
-    window.addEventListener("resize", recalcIndicator);
-    return () => window.removeEventListener("resize", recalcIndicator);
+    const scroller = scrollerRef.current;
+
+    const onResize = () => recalcIndicator();
+
+    window.addEventListener("resize", onResize);
+    if (scroller)
+      scroller.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (scroller) scroller.removeEventListener("scroll", onScroll);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   return (
     <div
-      ref={containerRef}
+      ref={shellRef}
       className="admin-tabs admin-tabs--animated"
       data-swipe-tabs-disabled="true"
     >
@@ -65,27 +115,25 @@ export function AdminTabs({ activeTab, onChange, t }) {
         aria-hidden="true"
       />
 
-      {tabs.map((tab) => (
-        <button
-          key={tab.key}
-          type="button"
-          ref={(node) => {
-            if (node) btnRefs.current[tab.key] = node;
-          }}
-          className={
-            activeTab === tab.key ? "admin-tab admin-tab--active" : "admin-tab"
-          }
-          onClick={() => onChange(tab.key)}
-          onPointerDown={(e) => {
-            // Immediate visual feedback on mobile tap
-            if (e.pointerType !== "mouse") {
-              onChange(tab.key);
+      <div ref={scrollerRef} className="admin-tabs-scroller">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            ref={(node) => {
+              if (node) btnRefs.current[tab.key] = node;
+            }}
+            className={
+              activeTab === tab.key
+                ? "admin-tab admin-tab--active"
+                : "admin-tab"
             }
-          }}
-        >
-          {tab.label}
-        </button>
-      ))}
+            onClick={() => onChange(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

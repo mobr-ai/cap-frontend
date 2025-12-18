@@ -1,6 +1,6 @@
 // src/pages/AdminPage.jsx
 import React, { useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuthRequest } from "@/hooks/useAuthRequest";
 
@@ -29,7 +29,9 @@ export default function AdminPage() {
   const { t } = useTranslation();
   const { authFetch } = useAuthRequest({ session, showToast });
 
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "overview";
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const tabs = [
     { key: "overview" },
@@ -39,10 +41,16 @@ export default function AdminPage() {
     { key: "alerts" },
   ];
 
+  //Sync tab → URL
+  const changeTab = (tab) => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
+
   const swipeHandlers = useSwipeTabs({
     activeTab,
     tabs,
-    onChange: setActiveTab,
+    onChange: changeTab,
     swipeMinPx: 80, // feels better for full-page gestures
   });
 
@@ -72,7 +80,7 @@ export default function AdminPage() {
           <p className="admin-subtitle">{t("admin.subtitle")}</p>
         </header>
 
-        <AdminTabs activeTab={activeTab} onChange={setActiveTab} t={t} />
+        <AdminTabs activeTab={activeTab} onChange={changeTab} t={t} />
 
         {activeTab === "overview" && (
           <>
