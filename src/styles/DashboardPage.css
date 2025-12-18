@@ -126,6 +126,13 @@
   cursor: pointer;
 }
 
+.kv-table-link {
+  text-decoration: underline;
+}
+.kv-table-link:hover {
+  text-decoration: none;
+}
+
 /* JSON fallback */
 .dashboard-json-fallback {
   font-size: 0.75rem;
