@@ -1,6 +1,8 @@
 // src/hooks/useLLMStream.js
 import { useCallback, useRef } from "react";
 
+const NL_TOKEN = "__NL__";
+
 export function useLLMStream({
   fetcher,
   onStatus,
@@ -10,6 +12,7 @@ export function useLLMStream({
   onError,
   onMetadata,
 } = {}) {
+  let lastWasText = false;
   const abortRef = useRef(null);
 
   const start = useCallback(
@@ -90,6 +93,21 @@ export function useLLMStream({
         onDone?.({ ...streamMeta });
       };
 
+      // SSE rule: payload for "data:" lines must preserve spacing.
+      // Only remove ONE optional leading space after "data:".
+      const extractDataPayload = (rawLine) => {
+        const idx = rawLine.indexOf("data:");
+        if (idx < 0) return null;
+        let payload = rawLine.slice(idx + "data:".length);
+        if (payload.startsWith(" ")) payload = payload.slice(1);
+        return payload;
+      };
+
+      const isDoneLine = (trimmed) =>
+        trimmed === "[DONE]" ||
+        trimmed === "data:[DONE]" ||
+        trimmed === "data: [DONE]";
+
       try {
         const response = await fetcher(url, {
           method,
@@ -126,7 +144,6 @@ export function useLLMStream({
             onMetadata?.({ ...streamMeta });
           }
 
-          // IMPORTANT: emit "created" right away, so typing animation is visible
           emitCreatedIfNeeded();
         } catch (metaErr) {
           console.warn(
@@ -136,6 +153,7 @@ export function useLLMStream({
         }
         // -----------------------------------
 
+        // Non-streaming fallback
         if (!response.body || !response.body.getReader) {
           const text = await response.text();
           if (text) onChunk?.(text);
@@ -151,24 +169,27 @@ export function useLLMStream({
         let kvBuffer = "";
 
         const flushKVResults = () => {
-          let raw = kvBuffer.trim();
+          let raw = kvBuffer;
           kvBuffer = "";
           if (!raw) return;
 
+          let s = String(raw);
+          s = s.replace(/^\s+|\s+$/g, "");
+
           try {
-            if (raw.startsWith("kv_results:")) {
-              raw = raw.slice("kv_results:".length).trim();
+            if (s.startsWith("kv_results:")) {
+              s = s.slice("kv_results:".length).replace(/^\s+/, "");
             }
-            onKVResults?.(JSON.parse(raw));
+            onKVResults?.(JSON.parse(s));
           } catch (err) {
-            const match = raw.match(/\{[\s\S]*\}/);
+            const match = s.match(/\{[\s\S]*\}/);
             if (match) {
               try {
                 onKVResults?.(JSON.parse(match[0]));
                 return;
               } catch {}
             }
-            console.error("useLLMStream: failed to parse kv_results", err, raw);
+            console.error("useLLMStream: failed to parse kv_results", err, s);
             onError?.(err);
           }
         };
@@ -184,39 +205,47 @@ export function useLLMStream({
 
           for (let rawLine of lines) {
             if (rawLine.endsWith("\r")) rawLine = rawLine.slice(0, -1);
-            const trimmed = rawLine.trim();
 
+            const trimmed = rawLine.replace(/\r$/, "");
+
+            // keep-alive / blank line
             if (!trimmed) {
-              if (inKVBlock) kvBuffer += "\n";
+              if (inKVBlock) {
+                kvBuffer += "\n";
+              } else if (lastWasText) {
+                // IMPORTANT: do NOT emit "\n" (sanitizeChunk drops it)
+                onChunk?.(NL_TOKEN);
+              }
               continue;
             }
 
-            if (
-              trimmed === "[DONE]" ||
-              trimmed === "data:[DONE]" ||
-              trimmed === "data: [DONE]"
-            ) {
+            if (isDoneLine(trimmed)) {
               if (inKVBlock) {
                 inKVBlock = false;
                 flushKVResults();
               }
-              completeOnce();
+              lastWasText = false;
+              queueMicrotask(() => completeOnce());
               return;
             }
 
             if (trimmed.startsWith("status:")) {
               const status = trimmed.slice("status:".length).trim();
               if (status) onStatus?.(status);
+              lastWasText = false;
               continue;
             }
 
             if (trimmed.startsWith("kv_results:")) {
               inKVBlock = true;
               kvBuffer = "";
+              lastWasText = false;
 
               const idx = rawLine.indexOf("kv_results:") + "kv_results:".length;
-              const rest = rawLine.slice(idx).trim();
-              if (rest && !rest.startsWith("_kv_results_end_")) {
+              const rest = rawLine.slice(idx);
+              const restTrimmed = rest.trim();
+
+              if (restTrimmed && !restTrimmed.startsWith("_kv_results_end_")) {
                 kvBuffer += rest + "\n";
               }
               continue;
@@ -229,22 +258,33 @@ export function useLLMStream({
               } else {
                 kvBuffer += rawLine + "\n";
               }
+              lastWasText = false;
               continue;
             }
 
+            // SSE data line
             if (trimmed.startsWith("data:")) {
-              const idx = rawLine.indexOf("data:") + "data:".length;
-              let data = rawLine.slice(idx);
-              if (data.startsWith(" ")) data = data.slice(1);
+              const payload = extractDataPayload(rawLine);
 
-              const payload = data;
-              if (!payload || payload === "[DONE]") continue;
+              if (payload == null) continue;
+
+              // Empty data line => newline sentinel
+              if (payload === "") {
+                onChunk?.(NL_TOKEN);
+                lastWasText = true;
+                continue;
+              }
+
+              if (payload === "[DONE]") continue;
 
               onChunk?.(payload);
+              lastWasText = true;
               continue;
             }
 
+            // Raw text lines fallback
             onChunk?.(rawLine);
+            lastWasText = true;
           }
         }
 
@@ -253,7 +293,6 @@ export function useLLMStream({
           flushKVResults();
         }
 
-        // EOF without [DONE]
         completeOnce();
       } catch (err) {
         if (abortRef.current?.signal?.aborted) return;
