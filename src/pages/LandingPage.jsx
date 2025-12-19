@@ -209,6 +209,7 @@ export default function LandingPage() {
 
   const outlet = useOutletContext() || {};
   const { session, showToast } = outlet;
+
   const { authFetch } = useAuthRequest({ session, showToast });
   const authFetchRef = useRef(null);
 

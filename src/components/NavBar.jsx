@@ -140,13 +140,13 @@ function NavBar({
             to="/"
             className="Navbar-brand-container nav-text"
           >
-            <img
+            {/* <img
               alt="CAP"
               src="/icons/logo.png"
               width="32"
               height="32"
               className="d-inline-block align-top Navbar-brand-img"
-            />
+            /> */}
             <span className="Navbar-brand-slot">{brand || "CAP"}</span>
           </Navbar.Brand>
 
@@ -229,7 +229,7 @@ function NavBar({
                   setExpanded(false);
                 }}
               >
-                Learn more
+                {t("learnMore")}
               </Nav.Link>
 
               {/* Language dropdown */}
@@ -279,11 +279,22 @@ function NavBar({
                   <NavDropdown.Item
                     className="nav-text"
                     onClick={() => {
+                      navigate("/analyses");
+                      setExpanded(false);
+                    }}
+                  >
+                    {t("nav.analyses")}
+                  </NavDropdown.Item>
+
+                  <NavDropdown.Divider />
+                  <NavDropdown.Item
+                    className="nav-text"
+                    onClick={() => {
                       navigate("/settings");
                       setExpanded(false);
                     }}
                   >
-                    Settings
+                    {t("nav.settings")}
                   </NavDropdown.Item>
                   <NavDropdown.Divider />
                   <NavDropdown.Item
@@ -293,7 +304,7 @@ function NavBar({
                       setExpanded(false);
                     }}
                   >
-                    Log out
+                    {t("nav.logout")}
                   </NavDropdown.Item>
                 </NavDropdown>
               )}

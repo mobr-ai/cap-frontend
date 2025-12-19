@@ -638,6 +638,43 @@
   flex-direction: column;
 }
 
+/* KV table wrapper */
+.kv-table-wrapper {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  align-content: center;
+}
+
+/* Table look */
+.kv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.kv-table th,
+.kv-table td {
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid #243047;
+  white-space: nowrap;
+}
+
+.kv-table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #111827;
+  z-index: 1;
+  cursor: pointer;
+}
+
+.kv-table-link {
+  text-decoration: underline;
+}
+.kv-table-link:hover {
+  text-decoration: none;
+}
+
 /* Simple table styling for KV results (if rendered as HTML table) */
 .cap-root table {
   border-collapse: collapse;

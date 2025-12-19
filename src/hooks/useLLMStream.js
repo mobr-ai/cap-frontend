@@ -80,6 +80,7 @@ export function useLLMStream({
                 id: convId,
                 updated_at: new Date().toISOString(),
                 _localUpdatedAt: Date.now(),
+                // if we have a title candidate, include it to help sidebar display
                 title: makeTitleCandidate(),
               },
             },
