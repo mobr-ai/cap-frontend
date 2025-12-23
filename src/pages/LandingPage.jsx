@@ -736,6 +736,9 @@ export default function LandingPage() {
             title,
             source_query: sourceQuery,
             config,
+            conversation_id:
+              conversationMetaRef.current.conversationId ||
+              (routeConversationId ? Number(routeConversationId) : null),
           }),
         });
 
@@ -790,7 +793,9 @@ export default function LandingPage() {
                   <div className="message-avatar">🤖</div>
                   <div className="message-content">
                     <div className="message-bubble markdown-body">
-                      <VegaChart spec={m.vegaSpec} />
+                      <div className="chat-chart-slot">
+                        <VegaChart spec={m.vegaSpec} />
+                      </div>{" "}
                       <div className="artifact-actions">
                         <button
                           className="artifact-pin-button"

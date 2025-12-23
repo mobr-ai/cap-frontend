@@ -1,4 +1,22 @@
-/* src/styles/NavigationSidebar.css */
+/* src/styles/index.css */
+:root {
+  --dash-bg: #050c1a;
+  --dash-card: #151b26;
+  --dash-border: #243047;
+  --dash-text: #f5f5f5;
+
+  --dash-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+  --dash-radius: 16px;
+
+  --dash-muted: rgba(226, 232, 240, 0.65);
+  --dash-muted-2: rgba(226, 232, 240, 0.5);
+  --dash-link: rgba(169, 194, 255, 0.95);
+
+  --dash-btn-bg: rgba(2, 6, 23, 0.35);
+  --dash-btn-bg-hover: rgba(2, 6, 23, 0.55);
+  --dash-btn-border: rgba(148, 163, 184, 0.18);
+  --dash-btn-border-hover: rgba(148, 163, 184, 0.28);
+}
 
 :root {
   --cap-sidebar-expanded: 280px;
@@ -320,4 +338,16 @@ body,
 
 #page-wrap.has-static-sidebar.sidebar-collapsed {
   padding-left: var(--cap-sidebar-collapsed);
+}
+
+/* Prevent layout shift when bootstrap modal toggles body scrollbars */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Fallback for browsers without scrollbar-gutter */
+@supports not (scrollbar-gutter: stable) {
+  body {
+    overflow-y: scroll;
+  }
 }

@@ -1,3 +1,4 @@
+// src/hooks/useDashboardData.js
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { getPoller } from "@/utils/poller";
 import { shallowEqualArray, setIfChanged } from "@/utils/arrays";
@@ -39,7 +40,36 @@ export default function useDashboardData(authFetch) {
   );
   const itemsPollerRef = useRef(null);
 
+  // ---------------------------
+  // Apply item update locally (instant UI)
+  // ---------------------------
+  const applyDashboardItemUpdate = useCallback((updated) => {
+    if (!updated || updated.id == null) return;
+
+    setItems((prev) => {
+      if (!Array.isArray(prev) || prev.length === 0) return prev;
+
+      const idx = prev.findIndex((x) => String(x?.id) === String(updated.id));
+      if (idx === -1) return prev;
+
+      const next = [...prev];
+      next[idx] = { ...next[idx], ...updated };
+
+      // keep list stable and "manual order" consistent
+      next.sort((a, b) => {
+        const ap = Number(a?.position ?? 0);
+        const bp = Number(b?.position ?? 0);
+        if (ap !== bp) return ap - bp;
+        return Number(a?.id ?? 0) - Number(b?.id ?? 0);
+      });
+
+      return next;
+    });
+  }, []);
+
+  // ---------------------------
   // dashboards list
+  // ---------------------------
   useEffect(() => {
     if (!authFetchRef.current) return;
 
@@ -103,7 +133,9 @@ export default function useDashboardData(authFetch) {
     };
   }, [DISABLE_DASH, pollDash]);
 
+  // ---------------------------
   // default dashboard items
+  // ---------------------------
   useEffect(() => {
     if (!authFetchRef.current || !defaultId) return () => {};
 
@@ -222,5 +254,12 @@ export default function useDashboardData(authFetch) {
   }, [DISABLE_DASH, pollDash, defaultId, getItemsPoller]);
 
   // NOTE: items here are always "default dashboard items"
-  return { dashboard, defaultId, items, error, refresh };
+  return {
+    dashboard,
+    defaultId,
+    items,
+    error,
+    refresh,
+    applyDashboardItemUpdate,
+  };
 }

@@ -5,11 +5,70 @@ import { shallowEqualArray, setIfChanged } from "@/utils/arrays";
 const DISABLE_DASH =
   String(import.meta.env.VITE_CAP_DISABLE_DASHBOARD_POLL ?? "false") === "true";
 
+function asTimeMs(v) {
+  if (!v) return null;
+  const d = new Date(v);
+  const ms = d.getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function sortItems(items, sortOrder) {
+  const safe = Array.isArray(items) ? items.slice() : [];
+
+  const key = String(sortOrder || "position");
+
+  // Helpers for "recency" that still work if created_at isn't returned yet:
+  // prefer created_at, else fall back to id (monotonic-ish), else position.
+  const recencyValue = (it) => {
+    const ms = asTimeMs(it?.created_at);
+    if (ms != null) return ms;
+    const id = Number(it?.id);
+    if (Number.isFinite(id)) return id;
+    const pos = Number(it?.position);
+    if (Number.isFinite(pos)) return pos;
+    return 0;
+  };
+
+  if (key === "newest") {
+    safe.sort((a, b) => recencyValue(b) - recencyValue(a));
+    return safe;
+  }
+
+  if (key === "oldest") {
+    safe.sort((a, b) => recencyValue(a) - recencyValue(b));
+    return safe;
+  }
+
+  if (key === "title") {
+    safe.sort((a, b) => {
+      const ta = String(a?.title || "").toLowerCase();
+      const tb = String(b?.title || "").toLowerCase();
+      if (ta < tb) return -1;
+      if (ta > tb) return 1;
+      // stable-ish tie break
+      return (Number(a?.id) || 0) - (Number(b?.id) || 0);
+    });
+    return safe;
+  }
+
+  // default/manual: position then id
+  safe.sort((a, b) => {
+    const pa = Number(a?.position);
+    const pb = Number(b?.position);
+    const p1 = Number.isFinite(pa) ? pa : 0;
+    const p2 = Number.isFinite(pb) ? pb : 0;
+    if (p1 !== p2) return p1 - p2;
+    return (Number(a?.id) || 0) - (Number(b?.id) || 0);
+  });
+  return safe;
+}
+
 export function useDashboardItems({
   dashboards,
   defaultId,
   defaultItems,
   authFetch,
+  sortOrder,
 }) {
   const [activeId, setActiveId] = useState(null);
   const [items, setItems] = useState(null);
@@ -41,7 +100,11 @@ export function useDashboardItems({
       stopItemsPoller();
       if (!dashId) return;
 
-      const pollKey = `dashboard-items:${dashId}`;
+      // Include sort in poll key so switching sort doesn't reuse cached payload
+      const pollKey = `dashboard-items:${dashId}:${String(
+        sortOrder || "position"
+      )}`;
+
       const poller = getPoller(pollKey, {
         interval: 25_000,
         maxInterval: 180_000,
@@ -50,9 +113,20 @@ export function useDashboardItems({
       poller.setFetcher(async () => {
         if (itemsAbortRef.current) itemsAbortRef.current.abort();
         itemsAbortRef.current = new AbortController();
+
+        // Option A (client-side sort): keep URL unchanged
         const res = await authFetch(`/api/v1/dashboard/${dashId}/items`, {
           signal: itemsAbortRef.current.signal,
         });
+
+        // Option B (server-side order later): uncomment when backend supports it
+        // const res = await authFetch(
+        //   `/api/v1/dashboard/${dashId}/items?order=${encodeURIComponent(
+        //     String(sortOrder || "position")
+        //   )}`,
+        //   { signal: itemsAbortRef.current.signal }
+        // );
+
         if (!res.ok) throw new Error(`items ${res.status}`);
         return res.json();
       });
@@ -63,36 +137,33 @@ export function useDashboardItems({
           return;
         }
         const safe = Array.isArray(data) ? data : [];
-        setIfChanged(setItems, safe, shallowEqualArray);
+        const sorted = sortItems(safe, sortOrder);
+        setIfChanged(setItems, sorted, shallowEqualArray);
       });
 
       itemsPollerRef.current = { unsub };
     },
-    [authFetch, stopItemsPoller]
+    [authFetch, stopItemsPoller, sortOrder]
   );
 
   // React to activeId changes
   useEffect(() => {
     if (!activeId) {
-      // No active dashboard selected
       stopItemsPoller();
       setIfChanged(setItems, [], shallowEqualArray);
       return;
     }
 
-    // If active is default dashboard, we never fetch/poll here.
-    // We fully trust defaultItems from useDashboardData.
+    // Default dashboard: trust defaultItems, but apply client-side sort
     if (defaultId && activeId === defaultId) {
       stopItemsPoller();
 
       if (defaultItems == null) {
-        // default items still loading: keep items as "loading"
         setItems((prev) => (prev === null ? prev : null));
       } else {
-        // default items loaded (possibly []): propagate to items
-        setIfChanged(setItems, defaultItems, shallowEqualArray);
+        const sorted = sortItems(defaultItems, sortOrder);
+        setIfChanged(setItems, sorted, shallowEqualArray);
       }
-
       return;
     }
 
@@ -100,7 +171,6 @@ export function useDashboardItems({
     setItems(null);
 
     if (DISABLE_DASH) {
-      // oneshot fetch
       if (!authFetch) return;
 
       if (itemsAbortRef.current) itemsAbortRef.current.abort();
@@ -109,17 +179,27 @@ export function useDashboardItems({
 
       (async () => {
         try {
+          // Option A (client-side sort): keep URL unchanged
           const res = await authFetch(`/api/v1/dashboard/${activeId}/items`, {
             signal: ac.signal,
           });
+
+          // Option B (server-side order later): uncomment when backend supports it
+          // const res = await authFetch(
+          //   `/api/v1/dashboard/${activeId}/items?order=${encodeURIComponent(
+          //     String(sortOrder || "position")
+          //   )}`,
+          //   { signal: ac.signal }
+          // );
+
           if (!res.ok) throw new Error(`items ${res.status}`);
           const data = await res.json();
           const safe = Array.isArray(data) ? data : [];
-          setIfChanged(setItems, safe, shallowEqualArray);
+          const sorted = sortItems(safe, sortOrder);
+          setIfChanged(setItems, sorted, shallowEqualArray);
         } catch (err) {
           if (err?.name === "AbortError") return;
           console.warn("Oneshot items fetch error:", err?.message || err);
-          // Failed oneshot: treat as "loaded but empty" for now
           setIfChanged(setItems, [], shallowEqualArray);
         }
       })();
@@ -127,7 +207,6 @@ export function useDashboardItems({
       return;
     }
 
-    // polling mode for non-default dashboards
     startItemsPoller(activeId);
   }, [
     activeId,
@@ -136,21 +215,20 @@ export function useDashboardItems({
     authFetch,
     startItemsPoller,
     stopItemsPoller,
+    sortOrder,
   ]);
 
-  // If we are currently on the default dashboard, sync with any changes
-  // coming from useDashboardData (both oneshot + polling modes).
+  // Keep default dashboard in sync if defaultItems changes (and re-sort)
   useEffect(() => {
     if (defaultId && activeId === defaultId) {
       if (defaultItems == null) {
-        // still loading → keep items as null so the grid stays in "loading" mode
         setItems((prev) => (prev === null ? prev : null));
       } else {
-        // loaded (could be [] if truly no widgets)
-        setIfChanged(setItems, defaultItems, shallowEqualArray);
+        const sorted = sortItems(defaultItems, sortOrder);
+        setIfChanged(setItems, sorted, shallowEqualArray);
       }
     }
-  }, [defaultItems, activeId, defaultId]);
+  }, [defaultItems, activeId, defaultId, sortOrder]);
 
   // Cleanup
   useEffect(

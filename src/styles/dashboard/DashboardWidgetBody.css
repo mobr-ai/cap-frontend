@@ -1,0 +1,49 @@
+/* src/styles/dashboard/DashboardWidgetBody.css */
+
+.dashboard-widget .card-body {
+  padding: 0.8rem 0.85rem 0.9rem;
+  min-height: 0;
+  display: flex;
+}
+
+.dashboard-widget-inner {
+  width: 100%;
+  min-height: 0;
+  display: flex;
+}
+
+.dashboard-widget-capture {
+  width: 100%;
+  height: clamp(240px, 28vh, 320px);
+  overflow: hidden;
+
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.vega-chart-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+}
+
+/* Force Vega-Embed internals to fill the slot */
+.dashboard-widget-capture .vega-embed,
+.dashboard-widget-capture .vega-chart-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+/* Stabilize Vega canvas rendering during parent transforms */
+.dashboard-widget-capture,
+.vega-chart-container,
+.dashboard-widget-capture canvas,
+.vega-chart-container canvas {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+}

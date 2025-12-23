@@ -1,0 +1,92 @@
+/* src/styles/dashboard/DashboardWidgetModal.css */
+
+.dashboard-widget-modal {
+  z-index: 1060;
+}
+
+.dashboard-widget-modal-backdrop {
+  z-index: 1055;
+}
+
+/* CRITICAL FIX: STOP EVENT LEAKS */
+body.modal-open .cap-root {
+  pointer-events: none;
+}
+
+body.modal-open .dashboard-widget-modal,
+body.modal-open .dashboard-widget-modal * {
+  pointer-events: auto;
+}
+
+body.modal-open .dashboard-widget-modal-backdrop {
+  pointer-events: auto;
+}
+
+.dashboard-widget-modal .modal-content {
+  background: var(--dash-bg);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+
+  display: flex;
+  flex-direction: column;
+  /* height: min(86vh, 980px); */
+}
+
+.dashboard-widget-modal .modal-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  flex: 0 0 auto;
+}
+
+.dashboard-widget-modal .modal-body {
+  padding: 1rem 1.25rem 1.5rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+/* Inner container fills modal body */
+.dashboard-widget-modal-inner {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+}
+
+/* Expanded Vega/tables fill modal area */
+.dashboard-widget-modal-inner .vega-chart-container,
+.dashboard-widget-modal-inner .kv-table-wrapper,
+.dashboard-widget-modal-inner .dashboard-json-fallback {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Optional: avoid “cursor: default” on Vega canvas in modal */
+.dashboard-widget-modal-inner .vega-embed,
+.dashboard-widget-modal-inner canvas,
+.dashboard-widget-modal-inner svg {
+  cursor: default;
+}
+
+/* Vega tooltip above Bootstrap modal/backdrop */
+#vg-tooltip-element.vg-tooltip {
+  z-index: 20000 !important;
+  pointer-events: none;
+}
+
+.dashboard-widget-modal .btn-close {
+  filter: invert(1);
+  opacity: 0.9;
+}
+
+/* Avoid hover-lift transitions fighting with modal-open changes */
+body.modal-open .dashboard-widget {
+  transition: none !important;
+}
+
+body.modal-open .dashboard-widget:hover {
+  transform: none !important;
+}

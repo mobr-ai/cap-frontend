@@ -328,7 +328,7 @@ export default function SettingsPage() {
                     onClick={copyReferralMessage}
                   >
                     <FontAwesomeIcon icon={faCopy} className="Settings-icon" />
-                    {t("copy")}
+                    {t("copyLink")}
                   </Button>
                   <Button
                     size="sm"
