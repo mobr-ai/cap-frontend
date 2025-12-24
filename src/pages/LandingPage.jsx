@@ -457,7 +457,7 @@ export default function LandingPage() {
         if (last && last.type === "assistant" && last.streaming) {
           next[next.length - 1] = {
             ...last,
-            content: (last.content || "") + chunk, // <- no heuristics
+            content: appendChunkSmart(last.content || "", chunk),
           };
         } else {
           const id = `assistant_${Date.now()}_${Math.random()
