@@ -14,6 +14,7 @@ export function useLLMStream({
 } = {}) {
   let lastWasText = false;
   const abortRef = useRef(null);
+  const stripTrailingDataPrefix = (s) => s.replace(/data\s*:\s*$/i, "");
 
   const start = useCallback(
     async ({
@@ -102,10 +103,8 @@ export function useLLMStream({
         return payload;
       };
 
-      const isDoneLine = (trimmed) =>
-        trimmed === "[DONE]" ||
-        trimmed === "data:[DONE]" ||
-        trimmed === "data: [DONE]";
+      const isDoneLine = (line) =>
+        line === "[DONE]" || line === "data:[DONE]" || line === "data: [DONE]";
 
       try {
         const response = await fetcher(url, {
@@ -205,10 +204,50 @@ export function useLLMStream({
           for (let rawLine of lines) {
             if (rawLine.endsWith("\r")) rawLine = rawLine.slice(0, -1);
 
+            // "trimmed" keeps content spacing; "proto" tolerates leading whitespace for protocol parsing
             const trimmed = rawLine.replace(/\r$/, "");
+            const proto = trimmed.trimStart();
 
-            // keep-alive / blank line
-            if (!trimmed) {
+            // HARD STOP: DONE marker may be concatenated into a non-SSE line
+            // Example: "...activity.data: [DONE]"
+            const donePos = proto.indexOf("[DONE]");
+            if (donePos !== -1) {
+              // Preserve original content spacing; proto is only for detection.
+              let before = trimmed.slice(0, donePos);
+
+              before = stripTrailingDataPrefix(before);
+
+              if (before) {
+                // If the line was a data line (e.g. "data: ...data: [DONE]"),
+                // extract and emit the payload before completing.
+                if (before.trimStart().startsWith("data:")) {
+                  const payloadBeforeDone = extractDataPayload(
+                    before.trimStart()
+                  );
+                  if (payloadBeforeDone) onChunk?.(payloadBeforeDone);
+                } else {
+                  onChunk?.(before);
+                }
+              }
+
+              if (inKVBlock) {
+                inKVBlock = false;
+                flushKVResults();
+              }
+
+              lastWasText = false;
+              queueMicrotask(() => completeOnce());
+              return;
+            }
+
+            // Bare SSE prefix split from payload (e.g. "data:" alone), possibly indented
+            // Accept whitespace after "data:" because chunking may produce "data: " lines.
+            if (/^data\s*:\s*$/.test(proto) || /^data\s*$/.test(proto)) {
+              continue;
+            }
+
+            // keep-alive / blank line (possibly whitespace-only)
+            if (!proto) {
               if (inKVBlock) {
                 kvBuffer += "\n";
               } else if (lastWasText) {
@@ -218,7 +257,7 @@ export function useLLMStream({
               continue;
             }
 
-            if (isDoneLine(trimmed)) {
+            if (isDoneLine(proto)) {
               if (inKVBlock) {
                 inKVBlock = false;
                 flushKVResults();
@@ -228,20 +267,20 @@ export function useLLMStream({
               return;
             }
 
-            if (trimmed.startsWith("status:")) {
-              const status = trimmed.slice("status:".length).trim();
+            if (proto.startsWith("status:")) {
+              const status = proto.slice("status:".length).trim();
               if (status) onStatus?.(status);
               lastWasText = false;
               continue;
             }
 
-            if (trimmed.startsWith("kv_results:")) {
+            if (proto.startsWith("kv_results:")) {
               inKVBlock = true;
               kvBuffer = "";
               lastWasText = false;
 
-              const idx = rawLine.indexOf("kv_results:") + "kv_results:".length;
-              const rest = rawLine.slice(idx);
+              const idx = proto.indexOf("kv_results:") + "kv_results:".length;
+              const rest = proto.slice(idx);
               const restTrimmed = rest.trim();
 
               if (restTrimmed && !restTrimmed.startsWith("_kv_results_end_")) {
@@ -251,19 +290,19 @@ export function useLLMStream({
             }
 
             if (inKVBlock) {
-              if (trimmed.includes("_kv_results_end_")) {
+              if (proto.includes("_kv_results_end_")) {
                 inKVBlock = false;
                 flushKVResults();
               } else {
-                kvBuffer += rawLine + "\n";
+                kvBuffer += trimmed + "\n";
               }
               lastWasText = false;
               continue;
             }
 
-            // SSE data line
-            if (trimmed.startsWith("data:")) {
-              const payload = extractDataPayload(rawLine);
+            // SSE data line (possibly indented)
+            if (proto.startsWith("data:")) {
+              const payload = extractDataPayload(proto);
 
               if (payload == null) continue;
 
@@ -289,7 +328,10 @@ export function useLLMStream({
               // Defensive: if DONE is concatenated into the payload, strip and finish.
               const doneIdx = payload.indexOf("[DONE]");
               if (doneIdx !== -1) {
-                const before = payload.slice(0, doneIdx);
+                let before = payload.slice(0, doneIdx);
+
+                before = stripTrailingDataPrefix(before);
+
                 if (before) onChunk?.(before);
                 if (inKVBlock) {
                   inKVBlock = false;
@@ -306,7 +348,7 @@ export function useLLMStream({
             }
 
             // Raw text lines fallback
-            onChunk?.(rawLine);
+            onChunk?.(trimmed);
             lastWasText = true;
           }
         }
