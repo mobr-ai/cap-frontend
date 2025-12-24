@@ -274,7 +274,31 @@ export function useLLMStream({
                 continue;
               }
 
-              if (payload === "[DONE]") continue;
+              // If DONE arrives as a data payload (or is accidentally concatenated),
+              // never treat it as content.
+              if (payload === "[DONE]") {
+                if (inKVBlock) {
+                  inKVBlock = false;
+                  flushKVResults();
+                }
+                lastWasText = false;
+                queueMicrotask(() => completeOnce());
+                return;
+              }
+
+              // Defensive: if DONE is concatenated into the payload, strip and finish.
+              const doneIdx = payload.indexOf("[DONE]");
+              if (doneIdx !== -1) {
+                const before = payload.slice(0, doneIdx);
+                if (before) onChunk?.(before);
+                if (inKVBlock) {
+                  inKVBlock = false;
+                  flushKVResults();
+                }
+                lastWasText = false;
+                queueMicrotask(() => completeOnce());
+                return;
+              }
 
               onChunk?.(payload);
               lastWasText = true;
