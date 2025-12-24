@@ -106,6 +106,45 @@ export function useLLMStream({
       const isDoneLine = (line) =>
         line === "[DONE]" || line === "data:[DONE]" || line === "data: [DONE]";
 
+      // If "[DONE]" is split across stream chunks, prevent it from leaking to UI.
+      // We buffer a short tail and only emit it once we're sure it's not part of "[DONE]".
+      let doneCarry = "";
+
+      // Returns { textToEmit, shouldHoldTail } behavior via doneCarry updates.
+      const emitText = (text) => {
+        if (!text) return;
+
+        // Combine with any carry from previous payload
+        let combined = doneCarry + text;
+        doneCarry = "";
+
+        // If the combined contains DONE, strip and stop upstream caller should complete.
+        // (Caller still handles completion; this is just a final safety net.)
+        const idx = combined.indexOf("[DONE]");
+        if (idx !== -1) {
+          const before = stripTrailingDataPrefix(combined.slice(0, idx));
+          if (before) onChunk?.(before);
+          // Do not emit anything after DONE
+          return { hitDone: true };
+        }
+
+        // If combined ends with a prefix of "[DONE]" (split token), hold it.
+        // Keep at most 5 chars (length of "[DONE" is 5, plus "[" cases).
+        const holdCandidates = ["[", "[D", "[DO", "[DON", "[DONE"];
+        for (const c of holdCandidates) {
+          if (combined.endsWith(c)) {
+            doneCarry = c;
+            const safe = combined.slice(0, -c.length);
+            if (safe) onChunk?.(safe);
+            return { hitDone: false };
+          }
+        }
+
+        // Normal emit
+        onChunk?.(combined);
+        return { hitDone: false };
+      };
+
       try {
         const response = await fetcher(url, {
           method,
@@ -154,7 +193,12 @@ export function useLLMStream({
         // Non-streaming fallback
         if (!response.body || !response.body.getReader) {
           const text = await response.text();
-          if (text) onChunk?.(text);
+          if (text) emitText(text);
+          // Flush any pending carry (safe to emit if not part of DONE)
+          if (doneCarry) {
+            onChunk?.(doneCarry);
+            doneCarry = "";
+          }
           completeOnce();
           return;
         }
@@ -214,7 +258,6 @@ export function useLLMStream({
             if (donePos !== -1) {
               // Preserve original content spacing; proto is only for detection.
               let before = trimmed.slice(0, donePos);
-
               before = stripTrailingDataPrefix(before);
 
               if (before) {
@@ -224,9 +267,29 @@ export function useLLMStream({
                   const payloadBeforeDone = extractDataPayload(
                     before.trimStart()
                   );
-                  if (payloadBeforeDone) onChunk?.(payloadBeforeDone);
+                  if (payloadBeforeDone) {
+                    const r = emitText(payloadBeforeDone);
+                    if (r.hitDone) {
+                      if (inKVBlock) {
+                        inKVBlock = false;
+                        flushKVResults();
+                      }
+                      lastWasText = false;
+                      queueMicrotask(() => completeOnce());
+                      return;
+                    }
+                  }
                 } else {
-                  onChunk?.(before);
+                  const r = emitText(before);
+                  if (r.hitDone) {
+                    if (inKVBlock) {
+                      inKVBlock = false;
+                      flushKVResults();
+                    }
+                    lastWasText = false;
+                    queueMicrotask(() => completeOnce());
+                    return;
+                  }
                 }
               }
 
@@ -303,7 +366,6 @@ export function useLLMStream({
             // SSE data line (possibly indented)
             if (proto.startsWith("data:")) {
               const payload = extractDataPayload(proto);
-
               if (payload == null) continue;
 
               // Empty data line => newline sentinel
@@ -313,8 +375,7 @@ export function useLLMStream({
                 continue;
               }
 
-              // If DONE arrives as a data payload (or is accidentally concatenated),
-              // never treat it as content.
+              // If DONE arrives as a data payload, never treat it as content.
               if (payload === "[DONE]") {
                 if (inKVBlock) {
                   inKVBlock = false;
@@ -326,13 +387,14 @@ export function useLLMStream({
               }
 
               // Defensive: if DONE is concatenated into the payload, strip and finish.
+              // Also protected by emitText() against split tokens.
               const doneIdx = payload.indexOf("[DONE]");
               if (doneIdx !== -1) {
                 let before = payload.slice(0, doneIdx);
-
                 before = stripTrailingDataPrefix(before);
 
-                if (before) onChunk?.(before);
+                if (before) emitText(before);
+
                 if (inKVBlock) {
                   inKVBlock = false;
                   flushKVResults();
@@ -342,20 +404,47 @@ export function useLLMStream({
                 return;
               }
 
-              onChunk?.(payload);
+              const r = emitText(payload);
+              if (r.hitDone) {
+                if (inKVBlock) {
+                  inKVBlock = false;
+                  flushKVResults();
+                }
+                lastWasText = false;
+                queueMicrotask(() => completeOnce());
+                return;
+              }
+
               lastWasText = true;
               continue;
             }
 
             // Raw text lines fallback
-            onChunk?.(trimmed);
-            lastWasText = true;
+            {
+              const r = emitText(trimmed);
+              if (r.hitDone) {
+                if (inKVBlock) {
+                  inKVBlock = false;
+                  flushKVResults();
+                }
+                lastWasText = false;
+                queueMicrotask(() => completeOnce());
+                return;
+              }
+              lastWasText = true;
+            }
           }
         }
 
         if (inKVBlock) {
           inKVBlock = false;
           flushKVResults();
+        }
+
+        // Flush any pending carry that wasn't part of DONE
+        if (doneCarry) {
+          onChunk?.(doneCarry);
+          doneCarry = "";
         }
 
         completeOnce();
