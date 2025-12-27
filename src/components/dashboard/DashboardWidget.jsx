@@ -196,10 +196,48 @@ export default function DashboardWidget({
 
       const shareSubtitle = item.conversation_id ? item.conversation_title : "";
 
-      if (item.artifact_type === "chart") {
-        const view = vegaViewRef.current;
+      // Offscreen render for charts, deterministic export, avoids blank live-view images
+      const renderOffscreenChartView = async (spec) => {
+        const mod = await import("vega-embed");
+        const vegaEmbed = mod?.default || mod;
 
-        if (view) {
+        const host = document.createElement("div");
+        host.style.position = "fixed";
+        host.style.left = "-10000px";
+        host.style.top = "-10000px";
+        host.style.width = "1200px";
+        host.style.height = "700px";
+        host.style.pointerEvents = "none";
+        host.style.opacity = "0";
+        document.body.appendChild(host);
+
+        const res = await vegaEmbed(host, spec, {
+          actions: false,
+          renderer: "canvas",
+        });
+
+        const view = res?.view;
+        if (!view) {
+          try {
+            host.remove();
+          } catch {}
+          throw new Error("offscreen_view_missing");
+        }
+
+        await view.runAsync();
+        return { view, host };
+      };
+
+      if (item.artifact_type === "chart") {
+        // IMPORTANT: use the widget config spec, not the live view ref
+        const spec = item?.config?.vegaSpec;
+
+        if (!spec) {
+          throw new Error("missing_chart_spec");
+        }
+
+        const { view, host } = await renderOffscreenChartView(spec);
+        try {
           imageDataUrl = await exportChartAsPngDataUrl({
             vegaView: view,
             title: item.title,
@@ -208,24 +246,13 @@ export default function DashboardWidget({
             watermark: WATERMARK_PRESETS.logoCenterBig,
             targetWidth: 1600,
           });
-        } else {
-          // Fallback: export the rendered chart DOM like tables do.
-          const root = captureRef.current;
-
-          const vegaWrap =
-            root?.querySelector(".vega-embed") ||
-            root?.querySelector(".vega") ||
-            root?.querySelector("canvas")?.parentElement ||
-            root;
-
-          imageDataUrl = await exportElementAsPngDataUrl({
-            element: vegaWrap,
-            title: item.title,
-            subtitle: shareSubtitle,
-            titleBar: true,
-            watermark: WATERMARK_PRESETS.logoCenterBig,
-            pixelRatio: 2,
-          });
+        } finally {
+          try {
+            view.finalize?.();
+          } catch {}
+          try {
+            host.remove();
+          } catch {}
         }
       } else {
         const root = captureRef.current;

@@ -358,11 +358,21 @@ export async function exportChartAsPngDataUrl({
   let dataUrl = null;
 
   try {
-    const w = Number(vegaView.width?.() || 0);
-    const scale = w > 0 ? targetWidth / w : 2;
+    let w = Number(vegaView.width?.() || 0);
+
+    // Force a sane width if Vega reports 0 (VERY common offscreen)
+    if (!w || w < 10) {
+      w = 800;
+      try {
+        vegaView.width(w);
+        vegaView.resize();
+        await vegaView.runAsync();
+      } catch {}
+    }
+
+    const scale = targetWidth / w;
     const clampScale = clamp(scale, 1, 4);
 
-    // Vega's toImageURL supports "png" + scale
     dataUrl = await vegaView.toImageURL("png", clampScale);
   } catch {
     dataUrl = null;
