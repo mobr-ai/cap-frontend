@@ -36,7 +36,7 @@
 .cap-root .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  /* padding: 0.5rem !important; */
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -726,13 +726,63 @@
   background: #1f2937;
 }
 
+/* Artifact actions (pin/share icons) */
+.cap-root .artifact-actions {
+  margin-top: 0.45rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.cap-root .artifact-toolBtn {
+  appearance: none;
+  border: 1px solid #374151;
+  background: #111827;
+  color: rgba(226, 232, 240, 0.92);
+
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  user-select: none;
+
+  transition: transform 120ms ease, background 120ms ease,
+    border-color 120ms ease, color 120ms ease;
+}
+
+.cap-root .artifact-toolBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #1f2937;
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.cap-root .artifact-toolBtn:active:not(:disabled) {
+  transform: translateY(0px);
+}
+
+.cap-root .artifact-toolBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cap-root .artifact-toolBtn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
 /* ───────────────────────────────
    Responsive tweaks (mobile)
    ─────────────────────────────── */
 
 @media (max-width: 768px) {
   .cap-root .container {
-    padding: 1rem;
+    padding: 0rem;
   }
 
   .cap-root .chat-container {

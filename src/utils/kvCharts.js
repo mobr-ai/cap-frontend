@@ -88,6 +88,9 @@ export function kvToLineChartSpec(kv) {
     return `series_${c}`;
   };
 
+  const shortSeries = (s) =>
+    String(s).length > 12 ? String(s).slice(0, 10) + "…" : s;
+
   let prepared = [];
 
   if (looksLong) {
@@ -117,7 +120,7 @@ export function kvToLineChartSpec(kv) {
       return measureFields.map((mf) => ({
         x: xVal,
         y: row[mf],
-        series: mf,
+        series: shortSeries(mf),
       }));
     });
   }
@@ -142,6 +145,7 @@ export function kvToLineChartSpec(kv) {
         field: "series",
         type: "nominal",
         title: "Series",
+        legend: kv.data.values.length > 6 ? null : undefined,
       },
       tooltip: [
         { field: "x", type: "temporal" },

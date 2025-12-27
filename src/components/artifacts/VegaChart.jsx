@@ -1,523 +1,360 @@
-// src/components/artifacts/VegaChart.jsx
-import React from "react";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-function deepClone(obj) {
-  if (!obj) return obj;
-  if (typeof structuredClone === "function") return structuredClone(obj);
-  return JSON.parse(JSON.stringify(obj));
+import vegaEmbed from "vega-embed";
+
+/*
+  VegaChart goals:
+  - Render Vega/Vega-Lite specs reliably inside:
+    - LandingPage message bubbles
+    - Dashboard widgets
+    - Dashboard modal (expanded)
+  - Avoid CSS stretching/distortion. Prefer re-rendering to container.
+  - Respond to:
+    - container resize (ResizeObserver)
+    - window resize
+    - orientation/viewport changes (visualViewport)
+  - Keep rendering stable (avoid flicker + render storms).
+*/
+
+function clamp(n, min, max) {
+  if (typeof n !== "number" || Number.isNaN(n)) return min;
+  return Math.max(min, Math.min(max, n));
 }
 
-function normalizeSpec(spec, { inModal, isNarrow }) {
-  const copy = deepClone(spec);
+function safeNumber(n, fallback) {
+  if (typeof n !== "number" || Number.isNaN(n)) return fallback;
+  return n;
+}
 
-  if (typeof copy?.$schema === "string") {
-    copy.$schema = copy.$schema
-      .replace("vega-lite/v4.json", "vega-lite/v6.json")
-      .replace("vega-lite/v5.json", "vega-lite/v6.json");
+function normalizeSpec(
+  spec,
+  { preferContainerSizing = true, targetW, targetH, slotW, slotH } = {}
+) {
+  if (!spec || typeof spec !== "object") return spec;
+
+  const copy = Array.isArray(spec) ? [...spec] : { ...spec };
+
+  if (copy.$schema && String(copy.$schema).includes("vega-lite")) {
+    if (preferContainerSizing) {
+      const autosize =
+        copy.autosize && typeof copy.autosize === "object" ? copy.autosize : {};
+
+      // If the container is not measurable yet (common in modals),
+      // do NOT use "container" sizing because it can resolve to 0.
+      const slotIsMeasurable = (slotW || 0) >= 40 && (slotH || 0) >= 40;
+
+      delete copy.width;
+      delete copy.height;
+
+      if (slotIsMeasurable) {
+        copy.width = "container";
+        copy.height = "container";
+        copy.autosize = {
+          type: "fit",
+          contains: "padding",
+          resize: true,
+          ...autosize,
+        };
+      } else {
+        // Force numeric sizing as a fallback so Vega-Lite can render immediately.
+        copy.width = targetW;
+        copy.height = targetH;
+        copy.autosize = {
+          type: "fit",
+          contains: "padding",
+          resize: true,
+          ...autosize,
+        };
+      }
+    }
   }
-
-  delete copy.width;
-  delete copy.height;
-
-  copy.autosize = {
-    type: "fit",
-    contains: "padding",
-    resize: true,
-    ...(copy.autosize || {}),
-  };
-
-  const basePad = isNarrow
-    ? { top: 18, bottom: 28, left: 38, right: 10 }
-    : { top: 24, bottom: 36, left: 48, right: 16 };
-
-  const modalPad = isNarrow
-    ? { top: 20, bottom: 32, left: 42, right: 12 }
-    : { top: 28, bottom: 44, left: 56, right: 22 };
-
-  copy.padding = {
-    ...(inModal ? modalPad : basePad),
-    ...(copy.padding || {}),
-  };
-
-  copy.config = {
-    ...(copy.config || {}),
-    mark: {
-      ...(copy.config?.mark || {}),
-      tooltip: true,
-    },
-    point: {
-      ...(copy.config?.point || {}),
-      size: 60,
-      filled: true,
-    },
-  };
 
   return copy;
 }
 
-function getNumericHeightFromSpec(spec) {
-  if (!spec) return 0;
-  if (typeof spec.height === "number" && isFinite(spec.height))
-    return spec.height;
+function getSlotEl(containerEl) {
+  if (!containerEl) return null;
 
-  const h = spec?.view?.height ?? spec?.config?.view?.continuousHeight;
-  if (typeof h === "number" && isFinite(h)) return h;
+  // Priority order:
+  // 1) explicit slot
+  // 2) dashboard modal inner (expanded)
+  // 3) widget capture (collapsed)
+  // 4) parent element
+  const explicit =
+    containerEl.closest?.(".vega-chart-slot") ||
+    containerEl.querySelector?.(".vega-chart-slot");
+  if (explicit) return explicit;
 
-  return 0;
+  const modalInner = containerEl.closest?.(".dashboard-widget-modal-inner");
+  if (modalInner) return modalInner;
+
+  const widgetCapture = containerEl.closest?.(".dashboard-widget-capture");
+  if (widgetCapture) return widgetCapture;
+
+  return containerEl.parentElement || containerEl;
 }
 
-function clamp(n, min, max) {
-  return Math.max(min, Math.min(max, n));
+function getSlotSize(containerEl) {
+  const slotEl = getSlotEl(containerEl);
+  if (!slotEl) return { w: 0, h: 0 };
+
+  // clientWidth/clientHeight are more stable for flex containers than offset*
+  const w = slotEl.clientWidth || 0;
+  const h = slotEl.clientHeight || 0;
+  return { w, h };
 }
 
-function findScrollParent(el) {
-  let cur = el;
-  while (cur && cur !== document.body) {
-    const cs = window.getComputedStyle(cur);
-    const oy = cs.overflowY;
-    if (oy === "auto" || oy === "scroll") return cur;
-    cur = cur.parentElement;
-  }
-  return window;
-}
+export default function VegaChart({
+  spec,
+  className = "",
+  style = {},
+  onError,
+  onRendered,
+  embedOptions = {},
+}) {
+  const containerRef = useRef(null);
+  const embedRef = useRef(null); // holds { view, ... }
+  const resizeRafRef = useRef(null);
+  const lastSizeRef = useRef({ w: 0, h: 0 });
+  const lastSpecKeyRef = useRef("");
+  const [renderError, setRenderError] = useState(null);
 
-function hasTransformTransition(cs) {
-  const prop = (cs.transitionProperty || "").toLowerCase();
-  const dur = (cs.transitionDuration || "").toLowerCase();
-  const hasDuration = dur
-    .split(",")
-    .some((d) => d.trim() !== "0s" && d.trim() !== "0ms");
-  if (!hasDuration) return false;
-
-  if (prop.includes("transform") || prop.includes("all")) return true;
-  return false;
-}
-
-function findTransitionHost(startEl) {
-  // Walk up and pick the first ancestor that transitions transform.
-  let cur = startEl;
-  let steps = 0;
-  while (cur && cur !== document.body && steps < 12) {
-    const cs = window.getComputedStyle(cur);
-    if (hasTransformTransition(cs)) return cur;
-    cur = cur.parentElement;
-    steps += 1;
-  }
-  return null;
-}
-
-export default function VegaChart({ spec, onViewReady }) {
-  const containerRef = React.useRef(null);
-  const viewRef = React.useRef(null);
-  const cleanupRef = React.useRef({ removeMouseMove: null });
-
-  const roRef = React.useRef(null);
-  const resizeTimerRef = React.useRef(0);
-  const rafResizeRef = React.useRef(0);
-  const isEmbeddingRef = React.useRef(false);
-
-  const appliedSizeRef = React.useRef({ w: 0, h: 0 });
-
-  // Gates
-  const isTransitioningRef = React.useRef(false);
-  const isScrollingRef = React.useRef(false);
-  const scrollEndTimerRef = React.useRef(0);
-  const transitionEndTimerRef = React.useRef(0);
-
-  const [error, setError] = React.useState(null);
-
-  const computeContext = React.useCallback(() => {
-    const el = containerRef.current;
-    const inModal = !!el?.closest?.(".modal");
-    const inDashboard =
-      !!el?.closest?.(".dashboard-widget") ||
-      !!el?.closest?.(".dashboard-widget-modal");
-    const inConvo = !inDashboard;
-    return { inModal, inDashboard, inConvo };
-  }, []);
-
-  const getSlot = React.useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return null;
-
-    const explicit =
-      el.closest?.(".vega-chart-slot") ||
-      el.closest?.(".vega-chart-container-slot");
-    if (explicit) return explicit;
-
-    const dashCapture = el.closest?.(".dashboard-widget-capture");
-    if (dashCapture) return dashCapture;
-
-    return el.parentElement || el;
-  }, []);
-
-  const getSlotSize = React.useCallback(() => {
-    const slot = getSlot();
-    if (!slot) return { w: 0, h: 0 };
-    return {
-      w: Math.floor(slot.clientWidth || 0),
-      h: Math.floor(slot.clientHeight || 0),
-    };
-  }, [getSlot]);
-
-  const finalizeView = React.useCallback(() => {
+  const specKey = useMemo(() => {
+    // A cheap "key" to detect changes without deep hashing every render.
+    // If you already provide deterministic IDs in spec/metadata, adapt this.
     try {
-      if (cleanupRef.current.removeMouseMove)
-        cleanupRef.current.removeMouseMove();
+      return JSON.stringify({
+        t: spec?.title || "",
+        d: spec?.description || "",
+        m: spec?.mark || "",
+        e: spec?.encoding ? Object.keys(spec.encoding) : [],
+        s: spec?.$schema || "",
+      });
+    } catch {
+      return String(Date.now());
+    }
+  }, [spec]);
+
+  const inModal = useMemo(() => {
+    const el = containerRef.current;
+    return Boolean(el?.closest?.(".dashboard-widget-modal"));
+  }, [specKey]);
+
+  const computeTargetDims = (slotW, slotH) => {
+    // Fallbacks: ensure we always provide non-zero targets so Vega can render.
+    // Use safer modal defaults and better widget defaults.
+    const isNarrow = slotW > 0 && slotW < 520;
+
+    const fallbackW = isNarrow ? 340 : 520;
+    const fallbackH = inModal ? 420 : isNarrow ? 220 : 320;
+
+    const w = safeNumber(slotW, fallbackW);
+    const h = safeNumber(slotH, fallbackH);
+
+    // Hard clamps to avoid massive render sizes.
+    // Modal can be taller; widgets should not exceed their card body.
+    const maxW = inModal ? 1400 : 1100;
+    const maxH = inModal ? 900 : 520;
+
+    const safeW = clamp(w, 240, maxW);
+    const safeH = clamp(h, 320, maxH);
+
+    return { safeW, safeH };
+  };
+
+  const destroyEmbed = async () => {
+    try {
+      if (embedRef.current?.view) {
+        embedRef.current.view.finalize();
+      }
     } catch {
       // ignore
     }
-    cleanupRef.current.removeMouseMove = null;
+    embedRef.current = null;
+  };
 
-    if (viewRef.current) {
+  const runEmbed = async ({ force = false } = {}) => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    if (!spec || typeof spec !== "object") {
+      setRenderError(new Error("Invalid Vega spec"));
+      return;
+    }
+
+    const { w: slotW, h: slotH } = getSlotSize(el);
+    const { safeW, safeH } = computeTargetDims(slotW, slotH);
+
+    const sameSpecKey = lastSpecKeyRef.current === specKey;
+
+    // Use a slightly larger threshold to avoid resize oscillation loops in chat bubbles
+    const sizeEps = inModal ? 2 : 8;
+
+    const sameSize =
+      Math.abs(lastSizeRef.current.w - safeW) < sizeEps &&
+      Math.abs(lastSizeRef.current.h - safeH) < sizeEps;
+
+    // If nothing meaningful changed, bail
+    if (!force && sameSize && sameSpecKey && embedRef.current?.view) return;
+
+    // Update "last"
+    lastSizeRef.current = { w: safeW, h: safeH };
+    lastSpecKeyRef.current = specKey;
+
+    setRenderError(null);
+
+    // If we already have a view and spec didn't change, resize the view instead of re-embedding.
+    if (embedRef.current?.view && sameSpecKey) {
       try {
-        viewRef.current.finalize();
+        const v = embedRef.current.view;
+
+        // These exist on Vega View; safe to guard.
+        v.width?.(safeW);
+        v.height?.(safeH);
+
+        v.resize?.();
+        await v.runAsync?.();
+
+        onRendered?.(embedRef.current);
+        return;
+      } catch {
+        // If resize fails for any reason, fall back to a full re-embed below.
+      }
+    }
+
+    // Full embed only when needed (first render or spec change)
+    const normalizedSpec = normalizeSpec(spec, {
+      preferContainerSizing: true,
+      targetW: safeW,
+      targetH: safeH,
+      slotW,
+      slotH,
+    });
+
+    // Clear container before embedding (avoid stacking)
+    if (embedRef.current?.view) {
+      try {
+        embedRef.current.view.finalize();
+      } catch {}
+      embedRef.current = null;
+    }
+    el.innerHTML = "";
+
+    try {
+      const opts = {
+        actions: false,
+        renderer: "canvas",
+        ...embedOptions,
+      };
+
+      const result = await vegaEmbed(el, normalizedSpec, opts);
+      embedRef.current = result;
+
+      try {
+        result.view.resize?.();
+        await result.view.runAsync?.();
+      } catch {}
+
+      onRendered?.(result);
+    } catch (err) {
+      setRenderError(err);
+      onError?.(err);
+    }
+  };
+
+  const scheduleResize = ({ force = false } = {}) => {
+    if (resizeRafRef.current) {
+      cancelAnimationFrame(resizeRafRef.current);
+    }
+    resizeRafRef.current = requestAnimationFrame(() => {
+      resizeRafRef.current = null;
+      runEmbed({ force }).catch(() => {});
+    });
+  };
+
+  // Initial render + when spec changes
+  useLayoutEffect(() => {
+    scheduleResize({ force: true });
+    return () => {
+      if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
+      resizeRafRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specKey]);
+
+  // ResizeObserver to follow container size changes (widgets, modal, rotation)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const slotEl = getSlotEl(el);
+    if (!slotEl) return;
+
+    const ro = new ResizeObserver(() => {
+      scheduleResize({ force: false });
+    });
+
+    ro.observe(slotEl);
+
+    // Also observe the container itself (sometimes slotEl doesn't change,
+    // but the container gets reflowed)
+    if (slotEl !== el) ro.observe(el);
+
+    return () => {
+      try {
+        ro.disconnect();
       } catch {
         // ignore
       }
-      viewRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specKey]);
+
+  // Window resize / visualViewport resize (mobile rotate + address bar)
+  useEffect(() => {
+    const onWinResize = () => scheduleResize({ force: false });
+
+    window.addEventListener("resize", onWinResize, { passive: true });
+
+    const vv = window.visualViewport;
+    if (vv) {
+      vv.addEventListener("resize", onWinResize, { passive: true });
+      vv.addEventListener("scroll", onWinResize, { passive: true });
     }
 
-    appliedSizeRef.current = { w: 0, h: 0 };
+    return () => {
+      window.removeEventListener("resize", onWinResize);
+      if (vv) {
+        vv.removeEventListener("resize", onWinResize);
+        vv.removeEventListener("scroll", onWinResize);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specKey]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      destroyEmbed().catch(() => {});
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const applyMinHeightForConvo = React.useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const { inConvo, inModal } = computeContext();
-
-    // Only stabilize convo bubbles
-    if (inConvo && !inModal) el.style.minHeight = "340px";
-    else el.style.minHeight = "";
-  }, [computeContext]);
-
-  const resizeExistingView = React.useCallback(async (w, h) => {
-    if (!viewRef.current) return;
-
-    try {
-      if (typeof viewRef.current.width === "function") viewRef.current.width(w);
-      if (typeof viewRef.current.height === "function")
-        viewRef.current.height(h);
-
-      if (typeof viewRef.current.resize === "function")
-        viewRef.current.resize();
-
-      // Use run (sync) if available to reduce perceived jank; otherwise runAsync.
-      if (typeof viewRef.current.run === "function") viewRef.current.run();
-      else if (typeof viewRef.current.runAsync === "function")
-        await viewRef.current.runAsync();
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const shouldBlockResize = React.useCallback(() => {
-    const { inDashboard } = computeContext();
-    if (!inDashboard) return false;
-    if (isTransitioningRef.current) return true;
-    if (isScrollingRef.current) return true;
-    return false;
-  }, [computeContext]);
-
-  const scheduleResize = React.useCallback(
-    (reason = "ro") => {
-      const { inModal, inConvo, inDashboard } = computeContext();
-
-      if (shouldBlockResize()) return;
-
-      const debounceMs = inDashboard ? 320 : 160;
-
-      if (resizeTimerRef.current) window.clearTimeout(resizeTimerRef.current);
-
-      resizeTimerRef.current = window.setTimeout(() => {
-        if (shouldBlockResize()) return;
-
-        if (rafResizeRef.current) cancelAnimationFrame(rafResizeRef.current);
-
-        rafResizeRef.current = requestAnimationFrame(async () => {
-          if (shouldBlockResize()) return;
-
-          const { w, h } = getSlotSize();
-          if (w <= 10) return;
-
-          const specH = getNumericHeightFromSpec(spec);
-          const fallbackH = inModal ? 520 : inConvo ? 340 : 260;
-          const resolvedH = h > 10 ? h : Math.max(180, specH || 0, fallbackH);
-
-          const safeW = clamp(w, 120, 2400);
-          const safeH = clamp(resolvedH, 180, 2400);
-
-          const prev = appliedSizeRef.current;
-          const dw = Math.abs(safeW - prev.w);
-          const dh = Math.abs(safeH - prev.h);
-
-          // VERY strong hysteresis in dashboard to kill flicker.
-          const THRESH_W = inDashboard ? 48 : 12;
-          const THRESH_H = inDashboard ? 48 : 12;
-
-          if (viewRef.current && prev.w > 0 && dw < THRESH_W && dh < THRESH_H)
-            return;
-
-          appliedSizeRef.current = { w: safeW, h: safeH };
-
-          if (viewRef.current) {
-            await resizeExistingView(safeW, safeH);
-          }
-        });
-      }, debounceMs);
-    },
-    [computeContext, getSlotSize, resizeExistingView, spec, shouldBlockResize]
+  return (
+    <div className={`vega-chart-container ${className}`.trim()} style={style}>
+      {renderError ? (
+        <div className="vega-chart-error">
+          Unable to render chart visualization. Please refer to the textual
+          explanation.
+        </div>
+      ) : null}
+      <div ref={containerRef} className="vega-chart-embed" />
+    </div>
   );
-
-  // Embed once per spec change
-  React.useEffect(() => {
-    if (!spec || !containerRef.current) return;
-
-    let cancelled = false;
-    setError(null);
-    applyMinHeightForConvo();
-
-    const runEmbed = async () => {
-      if (isEmbeddingRef.current) return;
-      isEmbeddingRef.current = true;
-
-      try {
-        const el = containerRef.current;
-        if (!el) return;
-
-        const { inModal, inConvo } = computeContext();
-        const { w, h } = getSlotSize();
-        if (w <= 10) return;
-
-        const specH = getNumericHeightFromSpec(spec);
-        const fallbackH = inModal ? 520 : inConvo ? 340 : 260;
-        const resolvedH = h > 10 ? h : Math.max(180, specH || 0, fallbackH);
-
-        const safeW = clamp(w, 120, 2400);
-        const safeH = clamp(resolvedH, 180, 2400);
-
-        appliedSizeRef.current = { w: safeW, h: safeH };
-
-        finalizeView();
-        el.innerHTML = "";
-
-        const mod = await import("vega-embed");
-        const embed = mod.default || mod;
-
-        const tipMod = await import("vega-tooltip");
-        const Handler = tipMod.Handler || tipMod.default?.Handler;
-        if (!Handler) throw new Error("Missing vega-tooltip Handler");
-
-        const isNarrow = safeW < 520;
-
-        const tooltipHandler = new Handler({
-          anchor: inModal ? "mark" : "cursor",
-          offsetX: 12,
-          offsetY: 12,
-          theme: "dark",
-          id: "vg-tooltip-element",
-          styleId: "vega-tooltip-style",
-        });
-
-        const normalized = normalizeSpec(spec, { inModal, isNarrow });
-        normalized.width = safeW;
-        normalized.height = safeH;
-
-        const result = await embed(el, normalized, {
-          actions: false,
-          renderer: "canvas",
-          tooltip: tooltipHandler.call,
-        });
-
-        if (cancelled) return;
-
-        viewRef.current = result.view;
-
-        // settle once after embed
-        await resizeExistingView(safeW, safeH);
-
-        // Cursor handling
-        const setCursor = (cursor) => {
-          const canvas = el.querySelector("canvas");
-          if (canvas) canvas.style.cursor = cursor;
-        };
-        setCursor("default");
-
-        const onMove = (_event, item) =>
-          setCursor(item ? "pointer" : "default");
-
-        if (typeof result.view.addEventListener === "function") {
-          result.view.addEventListener("mousemove", onMove);
-          cleanupRef.current.removeMouseMove = () => {
-            try {
-              result.view.removeEventListener("mousemove", onMove);
-            } catch {
-              // ignore
-            }
-          };
-        }
-
-        if (typeof onViewReady === "function") onViewReady(result.view);
-      } catch {
-        if (!cancelled) {
-          setError(
-            "Unable to render chart visualization. Please refer to the textual explanation."
-          );
-        }
-      } finally {
-        isEmbeddingRef.current = false;
-      }
-    };
-
-    runEmbed();
-
-    return () => {
-      cancelled = true;
-      isEmbeddingRef.current = false;
-      finalizeView();
-    };
-  }, [
-    spec,
-    onViewReady,
-    computeContext,
-    getSlotSize,
-    finalizeView,
-    resizeExistingView,
-    applyMinHeightForConvo,
-  ]);
-
-  // ResizeObserver (no re-embed)
-  React.useEffect(() => {
-    if (!spec || !containerRef.current) return;
-
-    try {
-      roRef.current = new ResizeObserver(() => {
-        if (shouldBlockResize()) return;
-        applyMinHeightForConvo();
-        scheduleResize("ro");
-      });
-
-      const observeEl = getSlot() || containerRef.current;
-      roRef.current.observe(observeEl);
-    } catch {
-      // ignore
-    }
-
-    scheduleResize("init");
-
-    return () => {
-      if (resizeTimerRef.current) window.clearTimeout(resizeTimerRef.current);
-      resizeTimerRef.current = 0;
-
-      if (rafResizeRef.current) cancelAnimationFrame(rafResizeRef.current);
-      rafResizeRef.current = 0;
-
-      if (roRef.current) {
-        try {
-          roRef.current.disconnect();
-        } catch {
-          // ignore
-        }
-        roRef.current = null;
-      }
-    };
-  }, [
-    spec,
-    getSlot,
-    scheduleResize,
-    applyMinHeightForConvo,
-    shouldBlockResize,
-  ]);
-
-  // Dashboard: Pause resizing while scrolling
-  React.useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const { inDashboard } = computeContext();
-    if (!inDashboard) return;
-
-    const scrollHost = findScrollParent(el);
-
-    const onScroll = () => {
-      isScrollingRef.current = true;
-
-      if (scrollEndTimerRef.current)
-        window.clearTimeout(scrollEndTimerRef.current);
-      scrollEndTimerRef.current = window.setTimeout(() => {
-        isScrollingRef.current = false;
-        scheduleResize("scroll-end");
-      }, 180);
-    };
-
-    if (scrollHost === window)
-      window.addEventListener("scroll", onScroll, { passive: true });
-    else scrollHost.addEventListener("scroll", onScroll, { passive: true });
-
-    return () => {
-      if (scrollEndTimerRef.current)
-        window.clearTimeout(scrollEndTimerRef.current);
-      scrollEndTimerRef.current = 0;
-
-      if (scrollHost === window) window.removeEventListener("scroll", onScroll);
-      else scrollHost.removeEventListener("scroll", onScroll);
-    };
-  }, [computeContext, scheduleResize]);
-
-  // Dashboard: Pause resizing during the *real* swap transition host (auto-detected)
-  React.useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const { inDashboard } = computeContext();
-    if (!inDashboard) return;
-
-    const startFrom =
-      el.closest?.(".dashboard-widget") ||
-      el.closest?.(".dashboard-widget-modal") ||
-      el;
-
-    const host = findTransitionHost(startFrom);
-    if (!host) return;
-
-    const markStart = (e) => {
-      if (e?.propertyName && e.propertyName !== "transform") return;
-      isTransitioningRef.current = true;
-
-      if (transitionEndTimerRef.current)
-        window.clearTimeout(transitionEndTimerRef.current);
-      transitionEndTimerRef.current = 0;
-    };
-
-    const markEnd = (e) => {
-      if (e?.propertyName && e.propertyName !== "transform") return;
-
-      if (transitionEndTimerRef.current)
-        window.clearTimeout(transitionEndTimerRef.current);
-      transitionEndTimerRef.current = window.setTimeout(() => {
-        isTransitioningRef.current = false;
-        scheduleResize("transition-end");
-      }, 160);
-    };
-
-    host.addEventListener("transitionrun", markStart);
-    host.addEventListener("transitionstart", markStart);
-    host.addEventListener("transitionend", markEnd);
-    host.addEventListener("transitioncancel", markEnd);
-
-    return () => {
-      if (transitionEndTimerRef.current)
-        window.clearTimeout(transitionEndTimerRef.current);
-      transitionEndTimerRef.current = 0;
-
-      host.removeEventListener("transitionrun", markStart);
-      host.removeEventListener("transitionstart", markStart);
-      host.removeEventListener("transitionend", markEnd);
-      host.removeEventListener("transitioncancel", markEnd);
-    };
-  }, [computeContext, scheduleResize]);
-
-  if (error) return <div className="vega-chart-error">{error}</div>;
-
-  return <div className="vega-chart-container" ref={containerRef} />;
 }

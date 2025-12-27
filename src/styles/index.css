@@ -321,12 +321,14 @@ body,
 /* Layout shifting for fixed sidebar */
 #outer-container {
   min-height: 100vh;
+  /* max-width: min-content; */
 }
 
 #page-wrap {
   position: relative;
   min-height: 100vh;
   width: 100%;
+  /* max-width: fit-content; */
   transition: padding-left 0.18s ease;
   /* key: prevent “white page” bleed */
   background: radial-gradient(circle at top left, #111827 0%, #020617 55%);

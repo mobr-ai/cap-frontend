@@ -10,12 +10,26 @@ import rehypeHighlight from "rehype-highlight";
 import "katex/dist/katex.min.css";
 import "highlight.js/styles/github-dark.css";
 
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
+
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faThumbTack, faShareAlt } from "@fortawesome/free-solid-svg-icons";
+
 import { useAuthRequest } from "@/hooks/useAuthRequest";
 import { useLLMStream } from "@/hooks/useLLMStream";
 import { sanitizeChunk, finalizeForRender } from "@/utils/streamSanitizers";
 import { kvToChartSpec } from "@/utils/kvCharts";
 import VegaChart from "@/components/artifacts/VegaChart";
 import KVTable, { isValidKVTable } from "@/components/artifacts/KVTable";
+
+import ShareModal from "@/components/ShareModal";
+
+import {
+  exportChartAsPngDataUrl,
+  exportElementAsPngDataUrl,
+  WATERMARK_PRESETS,
+} from "@/utils/shareWidgetImage";
 
 import "@/styles/LandingPage.css";
 
@@ -204,6 +218,41 @@ function normalizeKvResultType(rt) {
   return s.replace(/_chart$/, "");
 }
 
+const isTouchLike = () => {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia?.("(hover: none) and (pointer: coarse)")?.matches ||
+    "ontouchstart" in window
+  );
+};
+
+function ArtifactToolBtn({ id, label, onClick, children, disabled = false }) {
+  const btn = (
+    <button
+      type="button"
+      className="artifact-toolBtn"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={isTouchLike() ? label : undefined}
+    >
+      {children}
+    </button>
+  );
+
+  if (isTouchLike()) return btn;
+
+  return (
+    <OverlayTrigger
+      placement="top"
+      container={document.body}
+      overlay={<Tooltip id={id}>{label}</Tooltip>}
+    >
+      {btn}
+    </OverlayTrigger>
+  );
+}
+
 export default function LandingPage() {
   const NL_ENDPOINT = import.meta.env.VITE_NL_ENDPOINT || "/api/v1/nl/query";
 
@@ -226,6 +275,28 @@ export default function LandingPage() {
   const [charCount, setCharCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const streamingAssistantIdRef = useRef(null);
+
+  // Share modal (same behavior as DashboardPage)
+  const [shareOpen, setShareOpen] = useState(false);
+  const [sharePayload, setSharePayload] = useState(null);
+  const [conversationTitle, setConversationTitle] = useState("");
+
+  // Per-artifact refs for exporting images
+  const chartViewByMsgIdRef = useRef(new Map()); // Map<msgId, vegaView>
+  const tableElByMsgIdRef = useRef(new Map()); // Map<msgId, HTMLElement>
+  const chartElByMsgIdRef = useRef(new Map()); // Map<msgId, HTMLElement>
+
+  const handleSharePayload = useCallback(
+    (payload) => {
+      if (payload?.error === "share_failed") {
+        showToast?.(t("dashboard.widgetShareFailed"), "danger");
+        return;
+      }
+      setSharePayload(payload);
+      setShareOpen(true);
+    },
+    [showToast, t]
+  );
 
   const conversationMetaRef = useRef({
     conversationId: routeConversationId ? Number(routeConversationId) : null,
@@ -288,7 +359,7 @@ export default function LandingPage() {
     conversationMetaRef.current.conversationId = id ? Number(id) : null;
   }, [routeConversationId]);
 
-  // Load conversation (IMPORTANT: do NOT depend on authFetch directly)
+  // Load conversation
   useEffect(() => {
     const id = routeConversationId ? Number(routeConversationId) : null;
     const fetchFn = authFetchRef.current;
@@ -314,6 +385,9 @@ export default function LandingPage() {
 
         const data = await res.json();
         if (cancelled) return;
+        setConversationTitle(
+          String(data?.title || data?.conversation?.title || "")
+        );
 
         const restoredMsgsRaw = (data?.messages || []).map((m) => ({
           id: `conv_${m.id}`,
@@ -346,7 +420,7 @@ export default function LandingPage() {
         const isNewConversationRoute = prevLoadedId !== id;
 
         if (isNewConversationRoute) {
-          // KEY: replace to avoid duplicates of live-streamed ephemeral messages
+          // replace to avoid duplicates of live-streamed ephemeral messages
           setMessages(restoredWithArtifacts);
           lastLoadedConversationIdRef.current = id;
         } else {
@@ -755,7 +829,117 @@ export default function LandingPage() {
         showToast?.(t("landing.pinError"), "danger");
       }
     },
-    [messages, showToast, navigate, t]
+    [messages, showToast, navigate, t, routeConversationId]
+  );
+
+  async function renderVegaOffscreenToView(vegaOrVegaLiteSpec) {
+    const mod = await import("vega-embed");
+    const vegaEmbed = mod?.default || mod;
+
+    const host = document.createElement("div");
+    host.style.position = "fixed";
+    host.style.left = "-10000px";
+    host.style.top = "-10000px";
+    host.style.width = "1200px";
+    host.style.height = "700px";
+    host.style.pointerEvents = "none";
+    host.style.opacity = "0";
+    document.body.appendChild(host);
+
+    const res = await vegaEmbed(host, vegaOrVegaLiteSpec, {
+      actions: false,
+      renderer: "canvas",
+    });
+
+    const view = res?.view;
+    if (!view) {
+      host.remove();
+      throw new Error("offscreen_view_missing");
+    }
+
+    await view.runAsync();
+    return { view, host };
+  }
+
+  const shareArtifact = useCallback(
+    async (message) => {
+      try {
+        let sourceQuery = "";
+        const idx = messages.findIndex((m) => m.id === message.id);
+        if (idx > 0) {
+          for (let i = idx - 1; i >= 0; i--) {
+            if (messages[i].type === "user") {
+              sourceQuery = messages[i].content || "";
+              break;
+            }
+          }
+        }
+
+        const titleBase = message.type === "table" ? "Table" : "Chart";
+        const title =
+          message.title ||
+          (sourceQuery
+            ? `${titleBase}: ${sourceQuery.slice(0, 80)}`
+            : `${titleBase} ${new Date().toLocaleTimeString()}`);
+
+        const shareSubtitle = conversationTitle ? conversationTitle : "";
+
+        let imageDataUrl = null;
+
+        if (message.type === "chart" && message.vegaSpec) {
+          // Always create a stable view for exporting (same UX guarantee as tables)
+          const { view, host } = await renderVegaOffscreenToView(
+            message.vegaSpec
+          );
+
+          try {
+            imageDataUrl = await exportChartAsPngDataUrl({
+              vegaView: view,
+              title,
+              subtitle: shareSubtitle,
+              titleBar: true,
+              watermark: WATERMARK_PRESETS.logoCenterBig,
+              targetWidth: 1600,
+            });
+          } finally {
+            try {
+              view.finalize?.();
+            } catch {}
+            try {
+              host.remove();
+            } catch {}
+          }
+        } else if (message.type === "table" && message.kv) {
+          const el = tableElByMsgIdRef.current.get(message.id) || null;
+          if (!el) throw new Error("table_ref_missing");
+
+          imageDataUrl = await exportElementAsPngDataUrl({
+            element: el,
+            title,
+            subtitle: shareSubtitle,
+            titleBar: true,
+            watermark: WATERMARK_PRESETS.logoCenterBig,
+            pixelRatio: 2,
+          });
+        }
+
+        handleSharePayload({
+          title,
+          imageDataUrl,
+          hashtags: ["CAP", "Cardano", "Analytics"],
+          message: sourceQuery || "",
+        });
+      } catch (e) {
+        handleSharePayload({
+          title: "CAP",
+          imageDataUrl: null,
+          hashtags: ["CAP", "Cardano", "Analytics"],
+          message: "",
+          error: "share_failed",
+        });
+      }
+    },
+    [messages, handleSharePayload]
   );
 
   return (
@@ -763,46 +947,47 @@ export default function LandingPage() {
       <div className="container">
         <div className="chat-container">
           <div className="messages">
-            {isLoadingConversation && (
-              <div className="message status">
-                <div className="message-avatar">…</div>
-                <div className="message-content">
-                  <div className="message-bubble">
-                    <span>{t("landing.loadingConversation")}</span>
-                    <span className="thinking-animation">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {!isLoadingConversation && messages.length === 0 && (
-              <div className="empty-state">
-                <div className="empty-state-icon">🤖</div>
-                <h2>{t("landing.emptyTitle")}</h2>
-                <p>{t("landing.emptySubtitle")}</p>
-              </div>
-            )}
-
             {messages.map((m) =>
               m.type === "chart" && m.vegaSpec ? (
                 <div key={m.id} className="message assistant">
                   <div className="message-avatar">🤖</div>
                   <div className="message-content">
                     <div className="message-bubble markdown-body">
-                      <div className="chat-chart-slot">
-                        <VegaChart spec={m.vegaSpec} />
-                      </div>{" "}
+                      <div
+                        className="chat-chart-slot vega-chart-slot"
+                        ref={(node) => {
+                          if (!node) {
+                            chartElByMsgIdRef.current.delete(m.id);
+                            return;
+                          }
+                          chartElByMsgIdRef.current.set(m.id, node);
+                        }}
+                      >
+                        <VegaChart
+                          spec={m.vegaSpec}
+                          onViewReady={(view) => {
+                            if (view)
+                              chartViewByMsgIdRef.current.set(m.id, view);
+                          }}
+                        />
+                      </div>
+
                       <div className="artifact-actions">
-                        <button
-                          className="artifact-pin-button"
+                        <ArtifactToolBtn
+                          id={`artifact-pin-${m.id}`}
+                          label={t("landing.pinToDashboard")}
                           onClick={() => pinArtifact(m)}
                         >
-                          {t("landing.pinButton", "Pin to dashboard")}
-                        </button>
+                          <FontAwesomeIcon icon={faThumbTack} />
+                        </ArtifactToolBtn>
+
+                        <ArtifactToolBtn
+                          id={`artifact-share-${m.id}`}
+                          label={t("landing.shareArtifact")}
+                          onClick={() => shareArtifact(m)}
+                        >
+                          <FontAwesomeIcon icon={faShareAlt} />
+                        </ArtifactToolBtn>
                       </div>
                     </div>
                   </div>
@@ -812,14 +997,34 @@ export default function LandingPage() {
                   <div className="message-avatar">🤖</div>
                   <div className="message-content">
                     <div className="message-bubble markdown-body kv-bubble">
-                      <KVTable kv={m.kv} />
+                      <div
+                        ref={(node) => {
+                          if (!node) {
+                            tableElByMsgIdRef.current.delete(m.id);
+                            return;
+                          }
+                          tableElByMsgIdRef.current.set(m.id, node);
+                        }}
+                      >
+                        <KVTable kv={m.kv} />
+                      </div>
+
                       <div className="artifact-actions">
-                        <button
-                          className="artifact-pin-button"
+                        <ArtifactToolBtn
+                          id={`artifact-pin-${m.id}`}
+                          label={t("landing.pinToDashboard")}
                           onClick={() => pinArtifact(m)}
                         >
-                          {t("landing.pinButton", "Pin to dashboard")}
-                        </button>
+                          <FontAwesomeIcon icon={faThumbTack} />
+                        </ArtifactToolBtn>
+
+                        <ArtifactToolBtn
+                          id={`artifact-share-${m.id}`}
+                          label={t("landing.shareArtifact")}
+                          onClick={() => shareArtifact(m)}
+                        >
+                          <FontAwesomeIcon icon={faShareAlt} />
+                        </ArtifactToolBtn>
                       </div>
                     </div>
                   </div>
@@ -905,6 +1110,15 @@ export default function LandingPage() {
             <div ref={messagesEndRef} />
           </div>
         </div>
+        <ShareModal
+          show={shareOpen}
+          onHide={() => setShareOpen(false)}
+          title={sharePayload?.title || "CAP"}
+          hashtags={sharePayload?.hashtags || ["CAP"]}
+          link={null}
+          message={sharePayload?.message || ""}
+          imageDataUrl={sharePayload?.imageDataUrl || null}
+        />
       </div>
     </div>
   );

@@ -105,7 +105,9 @@
     "pinError": "Não foi possível fixar o artefato.",
     "defaultStatus": "Processando sua solicitação…",
     "loadingConversation": "Carregando conversa…",
-    "loadConversationError": "Não foi possível carregar esta conversa."
+    "loadConversationError": "Não foi possível carregar esta conversa.",
+    "pinToDashboard": "Fixar no dashboard",
+    "shareArtifact": "Compartilhar"
   },
   "loading": {
     "default": "",
@@ -133,6 +135,7 @@
     "copyImage": "Copiar imagem",
     "downloadImage": "Baixar imagem",
     "share": "Compartilhar",
+    "chartNotReady": "O gráfico ainda está sendo renderizado. Tente novamente em instantes.",
     "goToConversation": "Ver análise",
     "widgetImageCopied": "Imagem copiada para a área de transferência",
     "widgetImageCopyFailed": "Não foi possível copiar a imagem",

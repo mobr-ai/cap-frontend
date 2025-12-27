@@ -198,14 +198,35 @@ export default function DashboardWidget({
 
       if (item.artifact_type === "chart") {
         const view = vegaViewRef.current;
-        imageDataUrl = await exportChartAsPngDataUrl({
-          vegaView: view,
-          title: item.title,
-          subtitle: shareSubtitle,
-          titleBar: true,
-          watermark: WATERMARK_PRESETS.logoCenterBig,
-          targetWidth: 1600,
-        });
+
+        if (view) {
+          imageDataUrl = await exportChartAsPngDataUrl({
+            vegaView: view,
+            title: item.title,
+            subtitle: shareSubtitle,
+            titleBar: true,
+            watermark: WATERMARK_PRESETS.logoCenterBig,
+            targetWidth: 1600,
+          });
+        } else {
+          // Fallback: export the rendered chart DOM like tables do.
+          const root = captureRef.current;
+
+          const vegaWrap =
+            root?.querySelector(".vega-embed") ||
+            root?.querySelector(".vega") ||
+            root?.querySelector("canvas")?.parentElement ||
+            root;
+
+          imageDataUrl = await exportElementAsPngDataUrl({
+            element: vegaWrap,
+            title: item.title,
+            subtitle: shareSubtitle,
+            titleBar: true,
+            watermark: WATERMARK_PRESETS.logoCenterBig,
+            pixelRatio: 2,
+          });
+        }
       } else {
         const root = captureRef.current;
 

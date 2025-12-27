@@ -62,10 +62,10 @@
    keep them identical for consistent rendering */
 .ShareModal-imagePreview img,
 .ShareModal-imageWrap img {
-  display: block;
+  display: flex;
 
   /* Key: never exceed wrapper bounds */
-  max-width: 100%;
+  max-width: 90%;
   max-height: 100%;
 
   /* Key: keep proportions even if someone sets a height somewhere */
@@ -75,6 +75,9 @@
 
   /* Optional: looks nicer against the dark modal bg */
   background: transparent;
+  align-self: flex-start;
+  padding: 1rem;
+  border-radius: 30px;
 }
 
 /* Actions row */
@@ -89,7 +92,7 @@
 }
 
 .ShareModal-root .modal-content {
-  background: rgba(10, 20, 40, 0.92);
+  background: rgba(10, 20, 40, 0.8);
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 18px;
   box-shadow: 0 18px 70px rgba(0, 0, 0, 0.55);

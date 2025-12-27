@@ -105,7 +105,9 @@
     "pinError": "Could not pin artifact.",
     "defaultStatus": "Processing your request…",
     "loadingConversation": "Loading conversation…",
-    "loadConversationError": "Could not load this conversation."
+    "loadConversationError": "Could not load this conversation.",
+    "pinToDashboard": "Pin to dashboard",
+    "shareArtifact": "Share"
   },
   "loading": {
     "default": "",
@@ -133,6 +135,7 @@
     "copyImage": "Copy image",
     "downloadImage": "Download image",
     "share": "Share",
+    "chartNotReady": "Chart is still rendering. Please try again in a moment.",
     "goToConversation": "Go to analysis",
     "widgetImageCopied": "Image copied to clipboard",
     "widgetImageCopyFailed": "Could not copy image",
