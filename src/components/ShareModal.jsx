@@ -371,7 +371,7 @@ export default function ShareModal(props) {
                         variant="outline-light"
                         onClick={nativeShareImage}
                       >
-                        {t("dashboard.share")}
+                        {t("dashboard.shareImage")}
                       </Button>
                     ) : null}
 
