@@ -119,3 +119,260 @@
     padding: 1rem;
   }
 }
+
+/* Empty state */
+
+.cap-root .landing-empty-rotator {
+  flex: 1;
+  min-height: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 2.25rem 1.5rem;
+}
+
+.cap-root .landing-empty-line {
+  max-width: 900px;
+  width: 100%;
+
+  text-align: center;
+
+  font-size: 1.6rem;
+  font-weight: 650;
+  line-height: 1.25;
+
+  color: var(--text-primary);
+
+  opacity: 0.96;
+  transition: opacity 0.2s ease;
+}
+
+.cap-root .landing-empty-line.is-fading {
+  opacity: 0;
+}
+
+.cap-root .landing-empty-typed {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.cap-root .landing-empty-caret {
+  display: inline-block;
+  width: 10px;
+  height: 1.15em;
+  margin-left: 6px;
+  transform: translateY(2px);
+
+  background: rgba(241, 245, 249, 0.7);
+  border-radius: 2px;
+
+  animation: landingCaretBlink 0.9s steps(1) infinite;
+}
+
+@keyframes landingCaretBlink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .cap-root .landing-empty-line {
+    font-size: 1.25rem;
+  }
+}
+
+.cap-root .landing-empty {
+  flex: 1;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 1.25rem;
+  padding: 2.25rem 1.5rem;
+}
+
+/* Static robot section */
+.cap-root .landing-empty-robotWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cap-root .landing-empty-robotBadge {
+  width: 88px;
+  height: 88px;
+  border-radius: 999px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: radial-gradient(
+      circle at 30% 25%,
+      rgba(255, 255, 255, 0.16),
+      rgba(255, 255, 255, 0) 60%
+    ),
+    linear-gradient(180deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.42), 0 0 0 6px rgba(37, 99, 235, 0.08),
+    0 0 38px rgba(37, 99, 235, 0.16);
+
+  position: relative;
+  overflow: hidden;
+}
+
+/* subtle “sheen” */
+.cap-root .landing-empty-robotBadge::after {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0) 60%
+  );
+  transform: translateX(-35%) rotate(12deg);
+  animation: landingRobotSheen 5.5s ease-in-out infinite;
+}
+
+@keyframes landingRobotSheen {
+  0% {
+    transform: translateX(-45%) rotate(12deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateX(45%) rotate(12deg);
+    opacity: 0.15;
+  }
+  100% {
+    transform: translateX(45%) rotate(12deg);
+    opacity: 0;
+  }
+}
+
+.cap-root .landing-empty-robot {
+  font-size: 34px;
+  line-height: 1;
+  z-index: 1;
+}
+
+/* Typed line */
+.cap-root .landing-empty-line {
+  max-width: 900px;
+  width: 100%;
+  text-align: center;
+
+  font-size: 1.6rem;
+  font-weight: 650;
+  line-height: 1.25;
+
+  color: var(--text-primary);
+
+  opacity: 0.96;
+  transition: opacity 0.22s ease;
+}
+
+.cap-root .landing-empty-line.is-fading {
+  opacity: 0;
+}
+
+.cap-root .landing-empty-typed {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.cap-root .landing-empty-caret {
+  display: inline-block;
+  width: 10px;
+  height: 1.15em;
+  margin-left: 6px;
+  transform: translateY(2px);
+
+  background: rgba(241, 245, 249, 0.7);
+  border-radius: 2px;
+
+  animation: landingCaretBlink 0.9s steps(1) infinite;
+}
+
+@keyframes landingCaretBlink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .cap-root .landing-empty-robotBadge {
+    width: 78px;
+    height: 78px;
+  }
+
+  .cap-root .landing-empty-robot {
+    font-size: 30px;
+  }
+
+  .cap-root .landing-empty-line {
+    font-size: 1.25rem;
+  }
+}
+
+.cap-root .landing-empty {
+  flex: 1;
+  min-height: 0;
+
+  display: grid;
+  grid-template-rows: 120px auto;
+  align-items: center;
+  justify-items: center;
+
+  row-gap: 0.75rem;
+  padding: 2.25rem 1.5rem;
+}
+
+.cap-root .landing-empty-robotWrap {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cap-root .landing-empty-robotBadge {
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: radial-gradient(
+      circle at 30% 25%,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0) 60%
+    ),
+    linear-gradient(180deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.75));
+
+  border: 1px solid rgba(255, 255, 255, 0.06);
+
+  /* subtler: less glow, less spread */
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35), 0 0 0 5px rgba(37, 99, 235, 0.05),
+    0 0 18px rgba(37, 99, 235, 0.08);
+}
+
+/* optional: either remove sheen OR make it barely noticeable */
+.cap-root .landing-empty-robotBadge::after {
+  opacity: 0.22; /* was visually strong */
+  animation-duration: 7.5s; /* slower */
+}

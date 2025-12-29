@@ -76,8 +76,9 @@
   padding: 0.875rem 1.125rem;
   border-radius: 12px;
 
-  display: inline-block;
-
+  display: flex; /* was inline-block */
+  flex-direction: column;
+  align-self: flex-start; /* keeps bubble tight like before */
   word-wrap: break-word;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -180,6 +181,7 @@
   overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 
 /* Remove big first/last margins that make bubbles look huge */
@@ -351,6 +353,7 @@
   flex: 1 1 auto;
   max-width: 65%;
   min-width: 0; /* CRITICAL for tables & charts */
+  align-self: stretch;
 }
 
 .cap-root .message.assistant .message-content {
@@ -398,4 +401,54 @@
   .cap-root .message-content {
     max-width: 95%; /* <-- key change */
   }
+}
+
+/* Ensure typing-mode container does NOT center its children */
+.rm-chat.typing-mode {
+  justify-content: flex-start;
+  align-items: stretch;
+  text-align: left;
+}
+
+/* Status line inside assistant bubble */
+.message.assistant .thinking-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  font-size: 0.7rem;
+  font-style: italic;
+
+  /* match llm.html-ish */
+  opacity: 0.85;
+
+  /* optional: add the subtle left accent like llm.html status bubble */
+  padding: 0.5rem 0.75rem;
+  border-left: 2px solid var(--primary);
+}
+
+/* Dots should be inline and not expand */
+.message.assistant .thinking-animation {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-left: 0.25rem;
+}
+
+/* === Markdown sizing fix (CRITICAL) === */
+
+/* Bubble must NOT be inline-block */
+.cap-root .message-bubble {
+  display: flex !important;
+  flex-direction: column;
+  align-self: flex-start;
+}
+
+/* Allow message column to grow vertically */
+.cap-root .message-content {
+  align-self: stretch;
+}
+
+/* Markdown container must define its own height */
+.cap-root .rm-chat {
+  min-height: max-content;
 }

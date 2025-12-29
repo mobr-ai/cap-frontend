@@ -7,7 +7,34 @@ export function useLandingMessages() {
   const [messages, setMessages] = useState([]);
 
   const streamingAssistantIdRef = useRef(null);
-  const statusMsgIdRef = useRef(null);
+
+  const ensureStreamingAssistant = useCallback((initial = {}) => {
+    setMessages((prev) => {
+      const next = [...prev];
+      const last = next[next.length - 1];
+
+      if (last && last.type === "assistant" && last.streaming) {
+        return next;
+      }
+
+      const id = `assistant_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 6)}`;
+
+      streamingAssistantIdRef.current = id;
+
+      next.push({
+        id,
+        type: "assistant",
+        content: "",
+        streaming: true,
+        statusText: "",
+        ...initial,
+      });
+
+      return next;
+    });
+  }, []);
 
   const addMessage = useCallback((type, content, extra = {}) => {
     const id =
@@ -27,73 +54,124 @@ export function useLandingMessages() {
     setMessages((prev) => prev.filter((m) => m.id !== id));
   }, []);
 
-  const upsertStatus = useCallback(
-    (text) => {
-      if (!text) return;
+  const upsertStatus = useCallback((text) => {
+    if (!text) return;
 
-      if (!statusMsgIdRef.current) {
-        statusMsgIdRef.current = addMessage("status", text);
-      } else {
-        updateMessage(statusMsgIdRef.current, { content: text });
+    setMessages((prev) => {
+      const next = [...prev];
+      const idx = next.findIndex(
+        (m) => m.id === streamingAssistantIdRef.current
+      );
+
+      if (idx >= 0 && next[idx]?.type === "assistant" && next[idx]?.streaming) {
+        next[idx] = { ...next[idx], statusText: text };
+        return next;
       }
-    },
-    [addMessage, updateMessage]
-  );
+
+      // If no streaming assistant exists yet, create one and set status
+      const id = `assistant_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 6)}`;
+
+      streamingAssistantIdRef.current = id;
+
+      next.push({
+        id,
+        type: "assistant",
+        content: "",
+        streaming: true,
+        statusText: text,
+      });
+
+      return next;
+    });
+  }, []);
 
   const appendAssistantChunk = useCallback((chunk) => {
     if (!chunk) return;
 
     setMessages((prev) => {
       const next = [...prev];
-      const last = next[next.length - 1];
 
-      if (last && last.type === "assistant" && last.streaming) {
-        next[next.length - 1] = {
-          ...last,
-          content: appendChunkSmart(last.content || "", chunk),
+      const currentId = streamingAssistantIdRef.current;
+      const idx =
+        currentId != null ? next.findIndex((m) => m.id === currentId) : -1;
+
+      // If we already have an active streaming assistant (anywhere in the list),
+      // always append into THAT message (even if kv/table messages were inserted after it).
+      if (idx >= 0 && next[idx]?.type === "assistant" && next[idx]?.streaming) {
+        next[idx] = {
+          ...next[idx],
+          content: appendChunkSmart(next[idx].content || "", chunk),
         };
-      } else {
-        const id = `assistant_${Date.now()}_${Math.random()
-          .toString(36)
-          .slice(2, 6)}`;
-        streamingAssistantIdRef.current = id;
-
-        next.push({
-          id,
-          type: "assistant",
-          content: chunk,
-          streaming: true,
-        });
+        return next;
       }
+
+      // Otherwise create a new streaming assistant
+      const id = `assistant_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 6)}`;
+      streamingAssistantIdRef.current = id;
+
+      next.push({
+        id,
+        type: "assistant",
+        content: chunk,
+        streaming: true,
+        statusText: "",
+      });
+
       return next;
     });
   }, []);
 
   const finalizeStreamingAssistant = useCallback(() => {
+    const targetId = streamingAssistantIdRef.current;
+
     setMessages((prev) =>
       prev.map((m) =>
-        m.id === streamingAssistantIdRef.current && m.streaming
+        m.id === targetId
           ? {
               ...m,
               streaming: false,
+              statusText: "",
               content: finalizeForRender(m.content || ""),
             }
           : m
       )
     );
+
     streamingAssistantIdRef.current = null;
   }, []);
 
+  const dropAllStreamingAssistants = useCallback(() => {
+    setMessages((prev) =>
+      prev.filter((m) => !(m?.type === "assistant" && m?.streaming))
+    );
+  }, []);
+
   const clearStatus = useCallback(() => {
-    if (statusMsgIdRef.current) {
-      removeMessage(statusMsgIdRef.current);
-      statusMsgIdRef.current = null;
-    }
-  }, [removeMessage]);
+    const targetId = streamingAssistantIdRef.current;
+
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.type !== "assistant") return m;
+
+        const hasStatus = !!String(m.statusText || "").trim();
+        if (!hasStatus) return m;
+
+        // Clear if it's the active streaming assistant OR if it's stale (not streaming anymore)
+        if (m.id === targetId || !m.streaming) {
+          return { ...m, statusText: "" };
+        }
+
+        return m;
+      })
+    );
+  }, []);
 
   const resetStreamRefs = useCallback(() => {
     streamingAssistantIdRef.current = null;
-    statusMsgIdRef.current = null;
   }, []);
 
   return {
@@ -102,7 +180,6 @@ export function useLandingMessages() {
 
     // refs (LandingPage still may need them)
     streamingAssistantIdRef,
-    statusMsgIdRef,
 
     // ops
     addMessage,
@@ -114,6 +191,8 @@ export function useLandingMessages() {
     appendAssistantChunk,
     finalizeStreamingAssistant,
     clearStatus,
+    dropAllStreamingAssistants,
     resetStreamRefs,
+    ensureStreamingAssistant,
   };
 }

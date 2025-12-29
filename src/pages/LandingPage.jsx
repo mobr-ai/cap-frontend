@@ -30,6 +30,7 @@ import ChatMessage from "@/components/landing/ChatMessage";
 import ArtifactMessage from "@/components/landing/ArtifactMessage";
 import TopQueries from "@/components/landing/TopQueries";
 import ChatInput from "@/components/landing/ChatInput";
+import LandingEmptyState from "@/components/landing/LandingEmptyState";
 
 import ShareModal from "@/components/ShareModal";
 import { createSharePayloadForArtifact } from "@/utils/landingShareOps";
@@ -59,14 +60,14 @@ export default function LandingPage() {
   const {
     messages,
     setMessages,
-    streamingAssistantIdRef,
-    statusMsgIdRef,
     addMessage,
     upsertStatus,
     appendAssistantChunk,
     finalizeStreamingAssistant,
     clearStatus,
+    dropAllStreamingAssistants,
     resetStreamRefs,
+    ensureStreamingAssistant,
   } = useLandingMessages();
 
   // Share modal (same behavior as DashboardPage)
@@ -107,6 +108,7 @@ export default function LandingPage() {
   });
 
   const messagesEndRef = useRef(null);
+  const hasBackendStatusRef = useRef(false);
 
   // Auto scroll behavior
   useLandingAutoScroll({
@@ -160,6 +162,8 @@ export default function LandingPage() {
     (text) => {
       if (!text) return;
       if (!isViewingStreamConversation()) return;
+
+      hasBackendStatusRef.current = true;
       upsertStatus(text);
     },
     [isViewingStreamConversation, upsertStatus]
@@ -176,14 +180,18 @@ export default function LandingPage() {
   );
 
   const handleDone = useCallback(() => {
+    hasBackendStatusRef.current = false;
+
     const shouldMutate = isViewingStreamConversation();
 
     if (shouldMutate) {
       finalizeStreamingAssistant();
       clearStatus();
     } else {
-      // avoid leaks
-      statusMsgIdRef.current = null;
+      // We are no longer viewing the conversation that owns this stream.
+      // Remove any local streaming placeholders so it doesnt get stuck.
+      dropAllStreamingAssistants();
+      resetStreamRefs();
     }
 
     setIsProcessing(false);
@@ -198,20 +206,27 @@ export default function LandingPage() {
     isViewingStreamConversation,
     finalizeStreamingAssistant,
     clearStatus,
+    dropAllStreamingAssistants,
+    resetStreamRefs,
     emitStreamEvent,
-    statusMsgIdRef,
-    streamingAssistantIdRef,
   ]);
 
   const handleError = useCallback(
     (err) => {
-      // Always unblock processing
+      hasBackendStatusRef.current = false;
+
+      const shouldMutate = isViewingStreamConversation();
+
+      if (shouldMutate) {
+        clearStatus();
+        const msg = err?.message || t("landing.unexpectedError");
+        addMessage("error", msg);
+      } else {
+        dropAllStreamingAssistants();
+        resetStreamRefs();
+      }
+
       setIsProcessing(false);
-
-      if (!isViewingStreamConversation()) return;
-
-      const msg = err?.message || t("landing.unexpectedError");
-      addMessage("error", msg);
 
       const cid =
         activeStreamRef.current.resolvedConversationId ||
@@ -220,7 +235,15 @@ export default function LandingPage() {
 
       if (cid) emitStreamEvent("cap:stream-end", { conversationId: cid });
     },
-    [isViewingStreamConversation, addMessage, t]
+    [
+      isViewingStreamConversation,
+      clearStatus,
+      addMessage,
+      t,
+      dropAllStreamingAssistants,
+      resetStreamRefs,
+      emitStreamEvent,
+    ]
   );
 
   const handleKVResults = useCallback(
@@ -318,6 +341,7 @@ export default function LandingPage() {
     if (!trimmed || isProcessing || !fetchFn) return;
 
     resetStreamRefs();
+    hasBackendStatusRef.current = false;
 
     conversationMetaRef.current.emittedCreatedEvent = false;
 
@@ -326,11 +350,29 @@ export default function LandingPage() {
     setCharCount(0);
     setIsProcessing(true);
 
-    upsertStatus(t("landing.statusPlanning"));
+    ensureStreamingAssistant();
+
+    // Fallback only; backend status will replace it as soon as the first status arrives
+    if (!hasBackendStatusRef.current) {
+      upsertStatus(t("landing.statusPlanning"));
+    }
+
+    const isDev = import.meta.env.DEV === true;
+    const isDemoEndpoint = String(NL_ENDPOINT || "").includes(
+      "/api/v1/demo/nl/query"
+    );
+
+    const demoDelayMs = Number(import.meta.env.VITE_DEMO_STREAM_DELAY_MS || 0);
+    const shouldDelay =
+      isDev &&
+      isDemoEndpoint &&
+      Number.isFinite(demoDelayMs) &&
+      demoDelayMs > 0;
 
     const body = {
       query: trimmed,
       conversation_id: routeConversationId ? Number(routeConversationId) : null,
+      ...(shouldDelay ? { delay_ms: demoDelayMs } : {}),
     };
 
     const requestId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -420,27 +462,39 @@ export default function LandingPage() {
       <div className="container">
         <div className="chat-container">
           <div className="messages">
-            {messages.map((m) =>
-              (m.type === "chart" && m.vegaSpec) ||
-              (m.type === "table" && m.kv) ? (
-                <ArtifactMessage
-                  key={m.id}
-                  message={m}
-                  pinArtifact={pinArtifact}
-                  shareArtifact={shareArtifact}
-                  chartElByMsgIdRef={chartElByMsgIdRef}
-                  chartViewByMsgIdRef={chartViewByMsgIdRef}
-                  tableElByMsgIdRef={tableElByMsgIdRef}
-                  ArtifactToolBtn={ArtifactToolButton}
-                />
-              ) : (
-                <ChatMessage
-                  key={m.id}
-                  type={m.type}
-                  content={m.content}
-                  streaming={!!m.streaming}
-                  replayTyping={!!m.replayTyping}
-                />
+            {messages.length === 0 && !isLoadingConversation ? (
+              <LandingEmptyState
+                t={t}
+                topQueries={topQueries}
+                isProcessing={isProcessing}
+                typingMsPerChar={18}
+                pauseAfterTypedMs={2800}
+                fadeMs={200}
+              />
+            ) : (
+              messages.map((m) =>
+                (m.type === "chart" && m.vegaSpec) ||
+                (m.type === "table" && m.kv) ? (
+                  <ArtifactMessage
+                    key={m.id}
+                    message={m}
+                    pinArtifact={pinArtifact}
+                    shareArtifact={shareArtifact}
+                    chartElByMsgIdRef={chartElByMsgIdRef}
+                    chartViewByMsgIdRef={chartViewByMsgIdRef}
+                    tableElByMsgIdRef={tableElByMsgIdRef}
+                    ArtifactToolBtn={ArtifactToolButton}
+                  />
+                ) : (
+                  <ChatMessage
+                    key={m.id}
+                    type={m.type}
+                    content={m.content}
+                    statusText={m.statusText}
+                    streaming={!!m.streaming}
+                    replayTyping={!!m.replayTyping}
+                  />
+                )
               )
             )}
           </div>

@@ -8,9 +8,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
 
-import { finalizeForRender } from "@/utils/streamSanitizers";
-
-function ReplayTyping({ text, speedMs = 12, onDone }) {
+function ReplayTyping({ text, speedMs = 12, onDone, renderMarkdown }) {
   const FULL = String(text || "");
   const [shown, setShown] = useState("");
   const timerRef = useRef(null);
@@ -47,7 +45,8 @@ function ReplayTyping({ text, speedMs = 12, onDone }) {
     };
   }, [FULL, speedMs, onDone]);
 
-  return <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{shown}</pre>;
+  // Critical: use the same markdown renderer so layout & sizing match streaming/final.
+  return renderMarkdown ? renderMarkdown(shown, { streamingMode: true }) : null;
 }
 
 function StreamingTypingText({ text, isTyping, speedMs = 25, className = "" }) {
@@ -58,11 +57,9 @@ function StreamingTypingText({ text, isTyping, speedMs = 25, className = "" }) {
   const iRef = useRef(0);
   const targetRef = useRef(String(text || ""));
 
-  // Always keep the target up to date (it grows as chunks arrive)
   useEffect(() => {
     targetRef.current = String(text || "");
 
-    // If we're NOT typing, keep shown fully in sync
     if (!isTyping) {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -75,13 +72,11 @@ function StreamingTypingText({ text, isTyping, speedMs = 25, className = "" }) {
   }, [text, isTyping]);
 
   useEffect(() => {
-    // start/continue typing loop only while isTyping
     if (!isTyping) return;
 
-    if (typingRef.current) return; // already running
+    if (typingRef.current) return;
     typingRef.current = true;
 
-    // if we already had some content, continue from there
     const currentShownLen = (shown || "").length;
     if (iRef.current < currentShownLen) iRef.current = currentShownLen;
 
@@ -95,8 +90,6 @@ function StreamingTypingText({ text, isTyping, speedMs = 25, className = "" }) {
         return;
       }
 
-      // If target grows later, we'll keep the loop alive by checking again
-      // but we don't want a hot loop; just poll lightly while streaming.
       timerRef.current = window.setTimeout(tick, Math.max(40, speedMs));
     };
 
@@ -109,7 +102,6 @@ function StreamingTypingText({ text, isTyping, speedMs = 25, className = "" }) {
         timerRef.current = null;
       }
     };
-    // Intentionally do NOT depend on `text` here; we read it via targetRef.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTyping, speedMs]);
 
@@ -121,16 +113,28 @@ export default function ChatMessage({
   content,
   streaming = false,
   replayTyping = false,
+  statusText = "",
 }) {
   const [replayDone, setReplayDone] = useState(false);
 
   useEffect(() => {
-    // reset when message changes
     setReplayDone(false);
   }, [replayTyping, content]);
 
   const { t } = useTranslation();
-  if (type === "status" && !String(content || "").trim()) return null;
+
+  if (type === "error") {
+    return <div className="error-message">{content}</div>;
+  }
+
+  const isUser = type === "user";
+  const assistantHasText = String(content || "").trim().length > 0;
+
+  // Hide empty non-streaming assistant placeholders (common in convo history).
+  // Keep streaming empty assistant visible (it shows the thinking UI).
+  if (!isUser && type !== "error" && !streaming && !assistantHasText) {
+    return null;
+  }
 
   const renderMarkdown = (md, { streamingMode = false } = {}) => {
     const text =
@@ -212,29 +216,9 @@ export default function ChatMessage({
     );
   };
 
-  if (type === "status") {
-    return (
-      <div className="message status">
-        <div className="message-avatar">…</div>
-        <div className="message-content">
-          <div className="message-bubble">
-            <span>{content || t("landing.defaultStatus")}</span>
-            <span className="thinking-animation">
-              <span></span>
-              <span></span>
-              <span></span>
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const effectiveStatus =
+    String(statusText || "").trim() || t("landing.defaultStatus");
 
-  if (type === "error") {
-    return <div className="error-message">{content}</div>;
-  }
-
-  const isUser = type === "user";
   return (
     <div className={`message ${isUser ? "user" : "assistant"}`}>
       <div className="message-avatar">{isUser ? "🧑" : "🤖"}</div>
@@ -250,7 +234,18 @@ export default function ChatMessage({
                 streaming || replayTyping ? "typing-mode" : "fade-in"
               }`}
             >
-              {streaming ? (
+              {streaming && !assistantHasText ? (
+                <div className="fade-in">
+                  <span className="thinking-inline">
+                    <span className="thinking-text">{effectiveStatus}</span>
+                    <span className="thinking-animation">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </span>
+                  </span>
+                </div>
+              ) : streaming ? (
                 <div className="fade-in">
                   {renderMarkdown(content || "", { streamingMode: true })}
                 </div>
@@ -259,9 +254,10 @@ export default function ChatMessage({
                   text={content || ""}
                   speedMs={3}
                   onDone={() => setReplayDone(true)}
+                  renderMarkdown={renderMarkdown}
                 />
               ) : (
-                renderMarkdown(finalizeForRender(content || ""), {
+                renderMarkdown(content || "", {
                   streamingMode: false,
                 })
               )}
