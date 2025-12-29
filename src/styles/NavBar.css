@@ -73,7 +73,7 @@
 
 .Navbar-brand-slot {
   display: inline-block;
-  width: clamp(180px, 26vw, 340px);
+  /* width: clamp(180px, 26vw, 340px); */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -242,9 +242,9 @@
     font-size: 0.8rem;
   }
 
-  .Navbar-brand-slot {
-    width: clamp(140px, 40vw, 240px);
-  }
+  /* .Navbar-brand-slot {
+    width: clamp(140px, 40vw, 240px); 
+  } */
 }
 
 /* Large screens: hide Bootstrap's burger, only sidebar burger is used */
