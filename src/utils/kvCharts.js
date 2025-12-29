@@ -1,10 +1,28 @@
 // src/utils/kvCharts.js
+
+const safeColumns = (kv) =>
+  Array.isArray(kv?.metadata?.columns)
+    ? kv.metadata.columns.filter(Boolean)
+    : [];
+
+const uniqueCount = (arr) => {
+  const s = new Set();
+  for (const v of arr || []) s.add(String(v));
+  return s.size;
+};
+
+const shortSeries = (s) =>
+  String(s).length > 18 ? String(s).slice(0, 16) + "…" : String(s);
+
 export function kvToBarChartSpec(kv) {
   const values = kv?.data?.values || [];
   if (!values.length) return null;
 
-  const sample = values[0];
+  const cols = safeColumns(kv);
+
+  const sample = values[0] || {};
   const keys = Object.keys(sample);
+
   const xField =
     keys.find((k) => k.toLowerCase().includes("category")) || keys[0];
   const yFieldCandidate =
@@ -12,17 +30,20 @@ export function kvToBarChartSpec(kv) {
     keys.find((k) => k.toLowerCase().includes("value"));
   const yField = yFieldCandidate || keys[1] || keys[0];
 
+  const xTitle = cols[0] || xField;
+  const yTitle = cols[1] || yField;
+
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     description: "Bar chart from kv_results",
     data: { values },
     mark: "bar",
     encoding: {
-      x: { field: xField, type: "ordinal", title: xField },
-      y: { field: yField, type: "quantitative", title: yField },
+      x: { field: xField, type: "ordinal", title: xTitle },
+      y: { field: yField, type: "quantitative", title: yTitle },
       tooltip: [
-        { field: xField, type: "ordinal" },
-        { field: yField, type: "quantitative" },
+        { field: xField, type: "ordinal", title: xTitle },
+        { field: yField, type: "quantitative", title: yTitle },
       ],
     },
   };
@@ -32,8 +53,11 @@ export function kvToPieChartSpec(kv) {
   const values = kv?.data?.values || [];
   if (!values.length) return null;
 
-  const sample = values[0];
+  const cols = safeColumns(kv);
+
+  const sample = values[0] || {};
   const keys = Object.keys(sample);
+
   const catField =
     keys.find((k) => k.toLowerCase().includes("category")) || keys[0];
   const valFieldCandidate =
@@ -41,21 +65,33 @@ export function kvToPieChartSpec(kv) {
     keys.find((k) => k.toLowerCase().includes("amount"));
   const valField = valFieldCandidate || keys[1] || keys[0];
 
+  // If metadata.columns matches the number of slices, prefer it for labels.
+  // This fixes: "topHolders" -> "Top Holders"
+  const hasRowLabels = cols.length === values.length;
+  const prepared = hasRowLabels
+    ? values.map((row, i) => ({
+        ...row,
+        __label: cols[i] || row?.[catField] || `slice_${i}`,
+      }))
+    : values;
+
+  const labelField = hasRowLabels ? "__label" : catField;
+
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     description: "Pie chart from kv_results",
-    data: { values },
+    data: { values: prepared },
     mark: "arc",
     encoding: {
       theta: { field: valField, type: "quantitative" },
       color: {
-        field: catField,
+        field: labelField,
         type: "nominal",
         legend: { title: null },
       },
       tooltip: [
-        { field: catField, type: "nominal" },
-        { field: valField, type: "quantitative" },
+        { field: labelField, type: "nominal", title: cols?.[0] || "Category" },
+        { field: valField, type: "quantitative", title: cols?.[1] || "Value" },
       ],
     },
     view: { stroke: null },
@@ -66,7 +102,7 @@ export function kvToLineChartSpec(kv) {
   const values = kv?.data?.values || [];
   if (!values.length) return null;
 
-  const colNames = kv?.metadata?.columns || [];
+  const cols = safeColumns(kv);
   const sample = values[0] || {};
   const keys = Object.keys(sample);
 
@@ -75,44 +111,45 @@ export function kvToLineChartSpec(kv) {
     return v;
   };
 
-  // Existing "long" format: {x, y, series?} or {x, y, c}
   const looksLong = keys.includes("x") && keys.includes("y");
 
-  const seriesNameFor = (c) => {
-    if (colNames.length >= 3) {
-      const idx = Number(c);
-      if (!Number.isNaN(idx) && idx + 1 < colNames.length) {
-        return colNames[idx + 1];
-      }
-    }
-    return `series_${c}`;
-  };
+  const seriesNameForIndex = (idx) => {
+    const n = Number(idx);
+    if (Number.isNaN(n)) return null;
 
-  const shortSeries = (s) =>
-    String(s).length > 12 ? String(s).slice(0, 10) + "…" : s;
+    // Two common layouts:
+    // A) columns = [x, s1, s2, ...]  -> series index maps to columns[n + 1]
+    // B) columns = [s1, s2, ...]     -> series index maps to columns[n]
+    if (cols.length >= 2) {
+      const a = cols[n + 1];
+      const b = cols[n];
+      return a || b || null;
+    }
+    return null;
+  };
 
   let prepared = [];
 
   if (looksLong) {
-    prepared = values.map((row) => {
+    prepared = values.map((row, i) => {
+      const direct = row.series != null ? row.series : null;
+      const fromC = row.c != null ? seriesNameForIndex(row.c) : null;
+
       const series =
-        row.series != null
-          ? row.series
-          : row.c != null
-          ? seriesNameFor(row.c)
-          : "series";
+        (direct != null && String(direct)) ||
+        (fromC != null && String(fromC)) ||
+        `series_${i}`;
 
       return {
         x: toTemporalMonth(row.x),
         y: row.y,
-        series,
+        series: shortSeries(series),
       };
     });
   } else {
-    // Wide format: first column is x, remaining numeric columns are series
-    const xField = colNames[0] || keys[0];
+    const xField = cols[0] || keys[0];
     const measureFields = (
-      colNames.length >= 2 ? colNames.slice(1) : keys.slice(1)
+      cols.length >= 2 ? cols.slice(1) : keys.slice(1)
     ).filter((f) => f !== xField);
 
     prepared = values.flatMap((row) => {
@@ -125,28 +162,25 @@ export function kvToLineChartSpec(kv) {
     });
   }
 
+  const seriesCount = uniqueCount(prepared.map((r) => r.series));
+  const showLegend = seriesCount > 1;
+
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     description: "Line chart from kv_results",
     data: { values: prepared },
     mark: "line",
     encoding: {
-      x: {
-        field: "x",
-        type: "temporal",
-        title: colNames[0] || "x",
-      },
-      y: {
-        field: "y",
-        type: "quantitative",
-        title: "value",
-      },
-      color: {
-        field: "series",
-        type: "nominal",
-        title: "Series",
-        legend: kv.data.values.length > 6 ? null : undefined,
-      },
+      x: { field: "x", type: "temporal", title: cols[0] || "Time" },
+      y: { field: "y", type: "quantitative", title: "Value" },
+      color: showLegend
+        ? {
+            field: "series",
+            type: "nominal",
+            title: null,
+            legend: { title: null },
+          }
+        : undefined,
       tooltip: [
         { field: "x", type: "temporal" },
         { field: "series", type: "nominal" },

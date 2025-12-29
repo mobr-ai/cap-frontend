@@ -147,23 +147,27 @@ export default function VegaChart({
   }, [specKey]);
 
   const computeTargetDims = (slotW, slotH) => {
-    // Fallbacks: ensure we always provide non-zero targets so Vega can render.
-    // Use safer modal defaults and better widget defaults.
-    const isNarrow = slotW > 0 && slotW < 520;
+    const measurableW = typeof slotW === "number" && slotW >= 40;
+    const measurableH = typeof slotH === "number" && slotH >= 40;
+
+    const isNarrow = measurableW && slotW < 520;
 
     const fallbackW = isNarrow ? 340 : 520;
-    const fallbackH = inModal ? 420 : isNarrow ? 220 : 320;
+    const fallbackH = inModal ? 420 : isNarrow ? 220 : 300;
 
-    const w = safeNumber(slotW, fallbackW);
-    const h = safeNumber(slotH, fallbackH);
+    const w = measurableW ? slotW : fallbackW;
+    const h = measurableH ? slotH : fallbackH;
 
-    // Hard clamps to avoid massive render sizes.
-    // Modal can be taller; widgets should not exceed their card body.
     const maxW = inModal ? 1400 : 1100;
-    const maxH = inModal ? 900 : 520;
+    const maxH = inModal ? 900 : 700;
 
-    const safeW = clamp(w, 240, maxW);
-    const safeH = clamp(h, 320, maxH);
+    // Key: do NOT force 320px min for non-modal charts.
+    // This prevents rendering a canvas bigger than its widget slot.
+    const minW = 240;
+    const minH = inModal ? 320 : 180;
+
+    const safeW = clamp(w, minW, maxW);
+    const safeH = clamp(h, minH, maxH);
 
     return { safeW, safeH };
   };
