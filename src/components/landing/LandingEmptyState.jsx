@@ -3,21 +3,22 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 const ROBOT = "\uD83E\uDD16"; // unicode escape
 
 function buildRotationLines({ topQueries, t }) {
-  const dynamic = (topQueries || [])
-    .map((q) => (typeof q === "string" ? q : q?.query))
-    .filter((s) => typeof s === "string" && s.trim().length > 0);
-
   const extras = [
     t?.("landing.emptySubtitle") || "",
     "Show the latest 5 blocks on Cardano",
     "What trends are visible in Cardano transactions this month?",
-    "Plot a chart of monthly NFT minting activity in 2021",
+    "Plot a chart of monthly NFT minting activity in December 2025",
     "How much of the ADA supply is held by the top 1%?",
     "Show the latest governance proposals and their IPFS links",
   ].filter((s) => typeof s === "string" && s.trim().length > 0);
 
+  const dynamic = (topQueries || [])
+    .map((q) => (typeof q === "string" ? q : q?.query))
+    .filter((s) => typeof s === "string" && s.trim().length > 0);
+
+  // extras first, then dynamic; de-dupe while preserving order
   const seen = new Set();
-  return [...dynamic, ...extras].filter((s) => {
+  return [...extras, ...dynamic].filter((s) => {
     const k = s.trim();
     if (seen.has(k)) return false;
     seen.add(k);

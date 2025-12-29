@@ -376,3 +376,36 @@
   opacity: 0.22; /* was visually strong */
   animation-duration: 7.5s; /* slower */
 }
+
+@media (max-width: 768px) {
+  .cap-root .chat-container.is-empty {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    min-height: 0;
+  }
+
+  .cap-root .chat-container.is-empty .messages {
+    overflow-y: auto;
+    min-height: 0;
+    padding-bottom: 0; /* prevent extra push */
+  }
+
+  .cap-root .chat-container.is-empty .input-container {
+    position: fixed;
+    bottom: 0;
+    z-index: 5;
+  }
+}
+
+@media (max-width: 768px) {
+  .cap-root .landing-empty-line {
+    max-width: 100%;
+  }
+
+  .cap-root .landing-empty-typed {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

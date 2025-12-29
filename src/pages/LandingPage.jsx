@@ -457,12 +457,14 @@ export default function LandingPage() {
     [messages, conversationTitle, tableElByMsgIdRef, handleSharePayload]
   );
 
+  const isEmptyState = messages.length === 0 && !isLoadingConversation;
+
   return (
     <div className="cap-root">
       <div className="container">
-        <div className="chat-container">
+        <div className={`chat-container ${isEmptyState ? "is-empty" : ""}`}>
           <div className="messages">
-            {messages.length === 0 && !isLoadingConversation ? (
+            {isEmptyState ? (
               <LandingEmptyState
                 t={t}
                 topQueries={topQueries}

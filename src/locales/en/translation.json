@@ -93,8 +93,8 @@
   "landing": {
     "emptyTitle": "Ask about Cardano",
     "emptySubtitle": "Query the Cardano blockchain using natural language. Ask about transactions, blocks, stake pools, governance, or any on-chain data.",
-    "topQueriesTitle": "Ask anything",
-    "inputPlaceholder": "Ask a question about Cardano...",
+    "topQueriesTitle": "Ask anything about Cardano",
+    "inputPlaceholder": "Question here...",
     "charCount": "{{count}} / {{max}}",
     "processing": "Processing",
     "send": "Send",
