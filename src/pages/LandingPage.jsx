@@ -70,6 +70,11 @@ export default function LandingPage() {
     ensureStreamingAssistant,
   } = useLandingMessages();
 
+  const messagesRef = useRef(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   // Share modal (same behavior as DashboardPage)
   const [shareOpen, setShareOpen] = useState(false);
   const [sharePayload, setSharePayload] = useState(null);
@@ -137,17 +142,18 @@ export default function LandingPage() {
     const routeId = routeConversationId ? Number(routeConversationId) : null;
     const s = activeStreamRef.current;
 
-    // If stream hasn’t resolved conv id yet, bind to the route where it started.
+    // NEW CHAT ROUTE ("/")
+    // Always accept status/chunks for the active stream
+    if (!routeId) return true;
+
+    // CONVERSATION ROUTE
     const targetId =
       typeof s.resolvedConversationId === "number" &&
       !Number.isNaN(s.resolvedConversationId)
         ? s.resolvedConversationId
         : s.startedRouteConversationId;
 
-    // “New conversation” route: allow updates only while user is still on "/"
-    if (!routeId && !targetId) return true;
-
-    return !!routeId && !!targetId && routeId === targetId;
+    return !!targetId && routeId === targetId;
   }, [routeConversationId]);
 
   const emitStreamEvent = useCallback((type, detail) => {
@@ -160,13 +166,19 @@ export default function LandingPage() {
 
   const handleStatus = useCallback(
     (text) => {
-      if (!text) return;
-      if (!isViewingStreamConversation()) return;
+      console.log("[SSE status]", text);
 
+      if (!text) return;
+
+      // Backend status is always relevant to the active stream UI
       hasBackendStatusRef.current = true;
       upsertStatus(text);
+
+      setTimeout(() => {
+        console.log("[messages tail]", messagesRef.current.slice(-3));
+      }, 0);
     },
-    [isViewingStreamConversation, upsertStatus]
+    [upsertStatus]
   );
 
   const handleChunk = useCallback(
@@ -182,14 +194,12 @@ export default function LandingPage() {
   const handleDone = useCallback(() => {
     hasBackendStatusRef.current = false;
 
-    const shouldMutate = isViewingStreamConversation();
+    // ALWAYS stop animations / typing-mode for the current UI state
+    clearStatus();
+    finalizeStreamingAssistant();
 
-    if (shouldMutate) {
-      finalizeStreamingAssistant();
-      clearStatus();
-    } else {
-      // We are no longer viewing the conversation that owns this stream.
-      // Remove any local streaming placeholders so it doesnt get stuck.
+    // If we are no longer viewing the stream’s conversation, also cleanup leftovers
+    if (!isViewingStreamConversation()) {
       dropAllStreamingAssistants();
       resetStreamRefs();
     }
@@ -253,7 +263,7 @@ export default function LandingPage() {
 
       if (kv.result_type === "table") {
         if (!isValidKVTable(kv)) return;
-        addMessage("table", "", { kv });
+        addMessage("table", "", { kv, insertBeforeStreamingAssistant: true });
         return;
       }
 
@@ -272,9 +282,61 @@ export default function LandingPage() {
         vegaSpec: spec,
         kvType: normalizeKvResultType(kv.result_type),
         isKV: true,
+        insertBeforeStreamingAssistant: true,
       });
     },
     [addMessage, isViewingStreamConversation]
+  );
+
+  const handleOnMetadata = useCallback(
+    (meta) => {
+      if (!meta) return;
+
+      const rawCid = meta.conversationId;
+      const rawUserMsgId = meta.userMessageId;
+
+      const cid =
+        typeof rawCid === "number" && Number.isFinite(rawCid) ? rawCid : null;
+
+      const userMessageId =
+        typeof rawUserMsgId === "number" && Number.isFinite(rawUserMsgId)
+          ? rawUserMsgId
+          : null;
+
+      // Nothing useful
+      if (!cid && !userMessageId) return;
+
+      // Bind stream refs so status/chunks keep flowing correctly even on "/"
+      // (Important: resolvedConversationId can appear BEFORE we navigate to /conversations/:id)
+      activeStreamRef.current = {
+        ...activeStreamRef.current,
+        resolvedConversationId:
+          cid || activeStreamRef.current.resolvedConversationId,
+        // Keep startedRouteConversationId intact if already set elsewhere
+        startedRouteConversationId:
+          activeStreamRef.current.startedRouteConversationId ?? null,
+      };
+
+      // Bind conversationMetaRef too (used by done/navigation / other logic)
+      conversationMetaRef.current = {
+        ...conversationMetaRef.current,
+        conversationId: cid || conversationMetaRef.current.conversationId,
+        userMessageId:
+          userMessageId || conversationMetaRef.current.userMessageId,
+      };
+
+      // Emit stream-start only once per stream
+      if (cid && !activeStreamRef.current._streamStartEmitted) {
+        activeStreamRef.current._streamStartEmitted = true;
+        emitStreamEvent("cap:stream-start", { conversationId: cid });
+      }
+    },
+    [emitStreamEvent]
+  );
+
+  const isDev = import.meta.env.DEV === true;
+  const isDemoEndpoint = String(NL_ENDPOINT || "").includes(
+    "/api/v1/demo/nl/query"
   );
 
   const { start, stop } = useLLMStream({
@@ -283,23 +345,8 @@ export default function LandingPage() {
     onChunk: handleChunk,
     onKVResults: handleKVResults,
     onError: handleError,
-    onMetadata: (meta) => {
-      conversationMetaRef.current = { ...conversationMetaRef.current, ...meta };
-
-      const cidRaw = meta?.conversationId;
-      const cid = cidRaw ? Number(cidRaw) : null;
-
-      if (cid && !Number.isNaN(cid)) {
-        // bind stream to real conversation id (needed for correct routing + UI)
-        activeStreamRef.current = {
-          ...activeStreamRef.current,
-          resolvedConversationId: cid,
-        };
-
-        // notify sidebar which convo is generating
-        emitStreamEvent("cap:stream-start", { conversationId: cid });
-      }
-    },
+    onMetadata: handleOnMetadata,
+    acceptBareStatusLines: isDev && isDemoEndpoint,
 
     onDone: () => {
       handleDone();
@@ -353,14 +400,18 @@ export default function LandingPage() {
     ensureStreamingAssistant();
 
     // Fallback only; backend status will replace it as soon as the first status arrives
-    if (!hasBackendStatusRef.current) {
+    if (
+      !hasBackendStatusRef.current &&
+      !activeStreamRef.current._fallbackStatusWritten
+    ) {
+      activeStreamRef.current._fallbackStatusWritten = true;
       upsertStatus(t("landing.statusPlanning"));
     }
 
-    const isDev = import.meta.env.DEV === true;
-    const isDemoEndpoint = String(NL_ENDPOINT || "").includes(
-      "/api/v1/demo/nl/query"
-    );
+    // const isDev = import.meta.env.DEV === true;
+    // const isDemoEndpoint = String(NL_ENDPOINT || "").includes(
+    //   "/api/v1/demo/nl/query"
+    // );
 
     const demoDelayMs = Number(import.meta.env.VITE_DEMO_STREAM_DELAY_MS || 0);
     const shouldDelay =

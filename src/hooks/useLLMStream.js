@@ -11,6 +11,9 @@ export function useLLMStream({
   onDone,
   onError,
   onMetadata,
+  // NEW: demo-only support for lines like: "status: Planning..."
+  // Keep false by default to avoid interpreting real model text as protocol.
+  acceptBareStatusLines = false,
 } = {}) {
   let lastWasText = false;
   const abortRef = useRef(null);
@@ -106,30 +109,21 @@ export function useLLMStream({
       const isDoneLine = (line) =>
         line === "[DONE]" || line === "data:[DONE]" || line === "data: [DONE]";
 
-      // If "[DONE]" is split across stream chunks, prevent it from leaking to UI.
-      // We buffer a short tail and only emit it once we're sure it's not part of "[DONE]".
       let doneCarry = "";
 
-      // Returns { textToEmit, shouldHoldTail } behavior via doneCarry updates.
       const emitText = (text) => {
         if (!text) return;
 
-        // Combine with any carry from previous payload
         let combined = doneCarry + text;
         doneCarry = "";
 
-        // If the combined contains DONE, strip and stop upstream caller should complete.
-        // (Caller still handles completion; this is just a final safety net.)
         const idx = combined.indexOf("[DONE]");
         if (idx !== -1) {
           const before = stripTrailingDataPrefix(combined.slice(0, idx));
           if (before) onChunk?.(before);
-          // Do not emit anything after DONE
           return { hitDone: true };
         }
 
-        // If combined ends with a prefix of "[DONE]" (split token), hold it.
-        // Keep at most 5 chars (length of "[DONE" is 5, plus "[" cases).
         const holdCandidates = ["[", "[D", "[DO", "[DON", "[DONE"];
         for (const c of holdCandidates) {
           if (combined.endsWith(c)) {
@@ -140,7 +134,6 @@ export function useLLMStream({
           }
         }
 
-        // Normal emit
         onChunk?.(combined);
         return { hitDone: false };
       };
@@ -190,11 +183,9 @@ export function useLLMStream({
         }
         // -----------------------------------
 
-        // Non-streaming fallback
         if (!response.body || !response.body.getReader) {
           const text = await response.text();
           if (text) emitText(text);
-          // Flush any pending carry (safe to emit if not part of DONE)
           if (doneCarry) {
             onChunk?.(doneCarry);
             doneCarry = "";
@@ -248,21 +239,16 @@ export function useLLMStream({
           for (let rawLine of lines) {
             if (rawLine.endsWith("\r")) rawLine = rawLine.slice(0, -1);
 
-            // "trimmed" keeps content spacing; "proto" tolerates leading whitespace for protocol parsing
             const trimmed = rawLine.replace(/\r$/, "");
             const proto = trimmed.trimStart();
 
-            // HARD STOP: DONE marker may be concatenated into a non-SSE line
-            // Example: "...activity.data: [DONE]"
+            // HARD STOP: DONE marker may be concatenated
             const donePos = proto.indexOf("[DONE]");
             if (donePos !== -1) {
-              // Preserve original content spacing; proto is only for detection.
               let before = trimmed.slice(0, donePos);
               before = stripTrailingDataPrefix(before);
 
               if (before) {
-                // If the line was a data line (e.g. "data: ...data: [DONE]"),
-                // extract and emit the payload before completing.
                 if (before.trimStart().startsWith("data:")) {
                   const payloadBeforeDone = extractDataPayload(
                     before.trimStart()
@@ -303,18 +289,16 @@ export function useLLMStream({
               return;
             }
 
-            // Bare SSE prefix split from payload (e.g. "data:" alone), possibly indented
-            // Accept whitespace after "data:" because chunking may produce "data: " lines.
+            // Bare SSE prefix split from payload
             if (/^data\s*:\s*$/.test(proto) || /^data\s*$/.test(proto)) {
               continue;
             }
 
-            // keep-alive / blank line (possibly whitespace-only)
+            // keep-alive / blank line
             if (!proto) {
               if (inKVBlock) {
                 kvBuffer += "\n";
               } else if (lastWasText) {
-                // IMPORTANT: do NOT emit "\n" (sanitizeChunk drops it)
                 onChunk?.(NL_TOKEN);
               }
               continue;
@@ -330,7 +314,13 @@ export function useLLMStream({
               return;
             }
 
-            if (proto.startsWith("status:")) {
+            // NEW (demo-only): bare status protocol line
+            // e.g. "status: Planning..."
+            if (
+              acceptBareStatusLines &&
+              !inKVBlock &&
+              proto.startsWith("status:")
+            ) {
               const status = proto.slice("status:".length).trim();
               if (status) onStatus?.(status);
               lastWasText = false;
@@ -363,19 +353,25 @@ export function useLLMStream({
               continue;
             }
 
-            // SSE data line (possibly indented)
+            // SSE data line
             if (proto.startsWith("data:")) {
               const payload = extractDataPayload(proto);
               if (payload == null) continue;
 
-              // Empty data line => newline sentinel
+              const p0 = payload.trimStart();
+              if (p0.startsWith("status:")) {
+                const status = p0.slice("status:".length).trim();
+                if (status) onStatus?.(status);
+                lastWasText = false;
+                continue;
+              }
+
               if (payload === "") {
                 onChunk?.(NL_TOKEN);
                 lastWasText = true;
                 continue;
               }
 
-              // If DONE arrives as a data payload, never treat it as content.
               if (payload === "[DONE]") {
                 if (inKVBlock) {
                   inKVBlock = false;
@@ -386,8 +382,6 @@ export function useLLMStream({
                 return;
               }
 
-              // Defensive: if DONE is concatenated into the payload, strip and finish.
-              // Also protected by emitText() against split tokens.
               const doneIdx = payload.indexOf("[DONE]");
               if (doneIdx !== -1) {
                 let before = payload.slice(0, doneIdx);
@@ -419,7 +413,7 @@ export function useLLMStream({
               continue;
             }
 
-            // Raw text lines fallback
+            // Raw text fallback
             {
               const r = emitText(trimmed);
               if (r.hitDone) {
@@ -441,7 +435,6 @@ export function useLLMStream({
           flushKVResults();
         }
 
-        // Flush any pending carry that wasn't part of DONE
         if (doneCarry) {
           onChunk?.(doneCarry);
           doneCarry = "";
@@ -453,7 +446,16 @@ export function useLLMStream({
         onError?.(err);
       }
     },
-    [fetcher, onStatus, onChunk, onKVResults, onDone, onError, onMetadata]
+    [
+      fetcher,
+      onStatus,
+      onChunk,
+      onKVResults,
+      onDone,
+      onError,
+      onMetadata,
+      acceptBareStatusLines,
+    ]
   );
 
   const stop = useCallback(() => {

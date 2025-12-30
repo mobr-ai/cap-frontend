@@ -20,10 +20,19 @@ export function useLandingConversationLoader({
     const id = routeConversationId ? Number(routeConversationId) : null;
     const fetchFn = authFetchRef?.current;
 
-    if (!id || !fetchFn) {
-      setMessages([]);
+    if (!fetchFn) {
+      // no fetcher yet, do nothing (don't wipe UI)
       setIsLoadingConversation(false);
-      lastLoadedConversationIdRef.current = null;
+      return;
+    }
+
+    if (!id) {
+      // We're on "/" (new chat). Only clear if we *came from* a conversation route.
+      if (lastLoadedConversationIdRef.current != null) {
+        setMessages([]);
+        lastLoadedConversationIdRef.current = null;
+      }
+      setIsLoadingConversation(false);
       return;
     }
 
@@ -83,12 +92,17 @@ export function useLandingConversationLoader({
         const isNewConversationRoute = prevLoadedId !== id;
 
         if (isNewConversationRoute) {
-          // replace to avoid duplicates of live-streamed ephemeral messages
+          // Replace, but also ensure no client-side streaming placeholders leak across route swaps
           setMessages(restoredWithArtifacts);
           lastLoadedConversationIdRef.current = id;
         } else {
-          // if same route refresh, merge is fine
-          setMessages((prev) => mergeById(prev, restoredWithArtifacts));
+          // Merge, but first drop any live streaming assistant placeholders
+          setMessages((prev) => {
+            const cleanedPrev = prev.filter(
+              (m) => !(m?.type === "assistant" && m?.streaming)
+            );
+            return mergeById(cleanedPrev, restoredWithArtifacts);
+          });
         }
       } catch (err) {
         if (cancelled) return;

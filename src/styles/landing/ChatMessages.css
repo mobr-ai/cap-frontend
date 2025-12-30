@@ -452,3 +452,27 @@
 .cap-root .rm-chat {
   min-height: max-content;
 }
+
+/* Status row inside assistant bubble (while streaming, even with text already present) */
+.cap-root .rm-assistant-statusRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  font-size: 0.7rem;
+  font-style: italic;
+  color: var(--text-secondary);
+  opacity: 0.9;
+
+  padding: 0.5rem 0.75rem;
+  border-left: 2px solid var(--primary);
+
+  /* keeps it tight and consistent with bubble rhythm */
+  width: fit-content;
+  max-width: 100%;
+}
+
+.cap-root .rm-assistant-statusText {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}

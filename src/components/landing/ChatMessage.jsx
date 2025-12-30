@@ -45,67 +45,8 @@ function ReplayTyping({ text, speedMs = 12, onDone, renderMarkdown }) {
     };
   }, [FULL, speedMs, onDone]);
 
-  // Critical: use the same markdown renderer so layout & sizing match streaming/final.
+  // use the same markdown renderer so layout & sizing match streaming/final.
   return renderMarkdown ? renderMarkdown(shown, { streamingMode: true }) : null;
-}
-
-function StreamingTypingText({ text, isTyping, speedMs = 25, className = "" }) {
-  const [shown, setShown] = useState(isTyping ? "" : String(text || ""));
-
-  const typingRef = useRef(false);
-  const timerRef = useRef(null);
-  const iRef = useRef(0);
-  const targetRef = useRef(String(text || ""));
-
-  useEffect(() => {
-    targetRef.current = String(text || "");
-
-    if (!isTyping) {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      typingRef.current = false;
-      iRef.current = targetRef.current.length;
-      setShown(targetRef.current);
-    }
-  }, [text, isTyping]);
-
-  useEffect(() => {
-    if (!isTyping) return;
-
-    if (typingRef.current) return;
-    typingRef.current = true;
-
-    const currentShownLen = (shown || "").length;
-    if (iRef.current < currentShownLen) iRef.current = currentShownLen;
-
-    const tick = () => {
-      const target = targetRef.current;
-
-      if (iRef.current < target.length) {
-        iRef.current += 1;
-        setShown(target.slice(0, iRef.current));
-        timerRef.current = window.setTimeout(tick, speedMs);
-        return;
-      }
-
-      timerRef.current = window.setTimeout(tick, Math.max(40, speedMs));
-    };
-
-    timerRef.current = window.setTimeout(tick, speedMs);
-
-    return () => {
-      typingRef.current = false;
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isTyping, speedMs]);
-
-  return <div className={className}>{shown}</div>;
 }
 
 export default function ChatMessage({
@@ -216,8 +157,13 @@ export default function ChatMessage({
     );
   };
 
-  const effectiveStatus =
-    String(statusText || "").trim() || t("landing.defaultStatus");
+  // keep this near effectiveStatus
+  const trimmedStatus = String(statusText || "").trim();
+  const hasStatus = trimmedStatus.length > 0;
+
+  // Prefer backend status if present; otherwise use default fallback label
+  const statusToShow = hasStatus ? trimmedStatus : t("landing.defaultStatus");
+  const showStatusRow = !isUser && (hasStatus || !assistantHasText);
 
   return (
     <div className={`message ${isUser ? "user" : "assistant"}`}>
@@ -234,20 +180,30 @@ export default function ChatMessage({
                 streaming || replayTyping ? "typing-mode" : "fade-in"
               }`}
             >
-              {streaming && !assistantHasText ? (
+              {streaming ? (
                 <div className="fade-in">
-                  <span className="thinking-inline">
-                    <span className="thinking-text">{effectiveStatus}</span>
-                    <span className="thinking-animation">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </span>
-                  </span>
-                </div>
-              ) : streaming ? (
-                <div className="fade-in">
-                  {renderMarkdown(content || "", { streamingMode: true })}
+                  {/* 
+                  always show if we have a backend status
+                  also show when assistant has no text yet (initial "thinking" UI) */}
+                  {showStatusRow ? (
+                    <div className="rm-assistant-statusRow">
+                      <span className="rm-assistant-statusText">
+                        {statusToShow}
+                      </span>
+                      {streaming ? (
+                        <span className="thinking-animation">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {/* Content: only render markdown when we have text */}
+                  {assistantHasText
+                    ? renderMarkdown(content || "", { streamingMode: true })
+                    : null}
                 </div>
               ) : replayTyping && !replayDone ? (
                 <ReplayTyping
@@ -257,9 +213,7 @@ export default function ChatMessage({
                   renderMarkdown={renderMarkdown}
                 />
               ) : (
-                renderMarkdown(content || "", {
-                  streamingMode: false,
-                })
+                renderMarkdown(content || "", { streamingMode: false })
               )}
             </div>
           )}
