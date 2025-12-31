@@ -96,6 +96,16 @@ export function useLLMStream({
         onDone?.({ ...streamMeta });
       };
 
+      const tryHandleStatusLine = (line) => {
+        if (!line) return false;
+        const s = String(line).trimStart();
+        if (!s.toLowerCase().startsWith("status:")) return false;
+        const status = s.slice("status:".length).trim();
+        if (status) onStatus?.(status);
+        lastWasText = false;
+        return true;
+      };
+
       // SSE rule: payload for "data:" lines must preserve spacing.
       // Only remove ONE optional leading space after "data:".
       const extractDataPayload = (rawLine) => {
@@ -314,17 +324,9 @@ export function useLLMStream({
               return;
             }
 
-            // NEW (demo-only): bare status protocol line
-            // e.g. "status: Planning..."
-            if (
-              acceptBareStatusLines &&
-              !inKVBlock &&
-              proto.startsWith("status:")
-            ) {
-              const status = proto.slice("status:".length).trim();
-              if (status) onStatus?.(status);
-              lastWasText = false;
-              continue;
+            // demo-only: bare status protocol line
+            if (acceptBareStatusLines && !inKVBlock) {
+              if (tryHandleStatusLine(proto)) continue;
             }
 
             if (proto.startsWith("kv_results:")) {
@@ -358,13 +360,7 @@ export function useLLMStream({
               const payload = extractDataPayload(proto);
               if (payload == null) continue;
 
-              const p0 = payload.trimStart();
-              if (p0.startsWith("status:")) {
-                const status = p0.slice("status:".length).trim();
-                if (status) onStatus?.(status);
-                lastWasText = false;
-                continue;
-              }
+              if (tryHandleStatusLine(payload)) continue;
 
               if (payload === "") {
                 onChunk?.(NL_TOKEN);
@@ -415,6 +411,11 @@ export function useLLMStream({
 
             // Raw text fallback
             {
+              // Deterministic: never treat protocol status lines as content
+              if (!inKVBlock && tryHandleStatusLine(trimmed)) {
+                continue;
+              }
+
               const r = emitText(trimmed);
               if (r.hitDone) {
                 if (inKVBlock) {
