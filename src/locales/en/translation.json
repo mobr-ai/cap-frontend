@@ -107,7 +107,14 @@
     "loadingConversation": "Loading conversation…",
     "loadConversationError": "Could not load this conversation.",
     "pinToDashboard": "Pin to dashboard",
-    "shareArtifact": "Share"
+    "shareArtifact": "Share",
+    "emptyRotating": {
+      "0": "Show the latest 5 blocks on Cardano",
+      "1": "What trends are visible in Cardano transactions this month?",
+      "2": "Plot a chart of monthly NFT minting activity in December 2025",
+      "3": "How much of the ADA supply is held by the top 1%?",
+      "4": "Show the latest governance proposals and their IPFS links"
+    }
   },
   "loading": {
     "default": "",

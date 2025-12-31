@@ -2,14 +2,20 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 const ROBOT = "\uD83E\uDD16"; // unicode escape
 
+function capitalizeFirstLetter(s) {
+  const str = String(s || "").trim();
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 function buildRotationLines({ topQueries, t }) {
   const extras = [
     t?.("landing.emptySubtitle") || "",
-    "Show the latest 5 blocks on Cardano",
-    "What trends are visible in Cardano transactions this month?",
-    "Plot a chart of monthly NFT minting activity in December 2025",
-    "How much of the ADA supply is held by the top 1%?",
-    "Show the latest governance proposals and their IPFS links",
+    t?.("landing.emptyRotating.0") || "",
+    t?.("landing.emptyRotating.1") || "",
+    t?.("landing.emptyRotating.2") || "",
+    t?.("landing.emptyRotating.3") || "",
+    t?.("landing.emptyRotating.4") || "",
   ].filter((s) => typeof s === "string" && s.trim().length > 0);
 
   const dynamic = (topQueries || [])
@@ -18,12 +24,14 @@ function buildRotationLines({ topQueries, t }) {
 
   // extras first, then dynamic; de-dupe while preserving order
   const seen = new Set();
-  return [...extras, ...dynamic].filter((s) => {
-    const k = s.trim();
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
+  return [...extras, ...dynamic]
+    .map((s) => capitalizeFirstLetter(s))
+    .filter((s) => {
+      const k = s.trim();
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
 }
 
 export default function LandingEmptyState({

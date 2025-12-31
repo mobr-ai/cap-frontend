@@ -107,7 +107,14 @@
     "loadingConversation": "Carregando conversa…",
     "loadConversationError": "Não foi possível carregar esta conversa.",
     "pinToDashboard": "Fixar no dashboard",
-    "shareArtifact": "Compartilhar"
+    "shareArtifact": "Compartilhar",
+    "emptyRotating": {
+      "0": "Mostre os 5 blocos mais recentes na Cardano",
+      "1": "Quais são as tendências nas transações da Cardano neste mês?",
+      "2": "Plote um gráfico da atividade mensal de mint de NFTs em dezembro de 2025",
+      "3": "Quanto do supply de ADA está nas mãos do top 1%?",
+      "4": "Mostre as propostas de governança mais recentes e seus links de IPFS"
+    }
   },
   "loading": {
     "default": "",
