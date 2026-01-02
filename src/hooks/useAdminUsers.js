@@ -1,5 +1,5 @@
 // src/hooks/useAdminUsers.js
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export function useAdminUsers(authFetch, showToast, t) {
   const [users, setUsers] = useState([]);
@@ -9,76 +9,105 @@ export function useAdminUsers(authFetch, showToast, t) {
   const [search, setSearch] = useState("");
 
   const [sortField, setSortField] = useState("user_id");
-  const [sortDirection, setSortDirection] = useState("asc"); // 'asc' | 'desc'
+  const [sortDirection, setSortDirection] = useState("asc");
 
   const authReady = !!authFetch;
 
+  // Avoid unstable callback deps causing fetch loops
+  const authFetchRef = useRef(authFetch);
+  const showToastRef = useRef(showToast);
+  const tRef = useRef(t);
+
+  useEffect(() => {
+    authFetchRef.current = authFetch;
+  }, [authFetch]);
+
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
+
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
+
   const isUserAnonymized = (user) => {
+    const uname = typeof user?.username === "string" ? user.username : "";
     const hasDeletedPrefix =
-      typeof user.username === "string" && user.username.startsWith("deleted_");
-    return !user.email && hasDeletedPrefix;
+      uname.startsWith("deleted_") || uname.startsWith("deleted_user_");
+    return !user?.email && hasDeletedPrefix;
   };
 
-  // ---------- load users (only when auth ready + search changes) ----------
+  // ---- Core fetch function (stable; does NOT depend on t/showToast/search) ----
+  const fetchUsers = useCallback(async ({ searchText = "", signal } = {}) => {
+    const af = authFetchRef.current;
+    if (!af) return;
 
+    setUsersLoading(true);
+    setUsersError(null);
+
+    try {
+      const params = new URLSearchParams();
+      const s = (searchText || "").trim();
+      if (s) params.set("search", s);
+      params.set("limit", "50");
+      params.set("offset", "0");
+
+      const res = await af(`/api/v1/admin/users/?${params.toString()}`, {
+        method: "GET",
+        signal,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.detail || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      setUsers(Array.isArray(data?.items) ? data.items : []);
+      setUserStats(data?.stats || null);
+    } catch (err) {
+      // Ignore aborts (expected during rapid changes/unmount)
+      if (err?.name === "AbortError") return;
+
+      console.error(err);
+      const msg = err?.message || "Failed to load users";
+      setUsersError(msg);
+
+      const toast = showToastRef.current;
+      const tr = tRef.current;
+      if (toast && tr) toast(`${tr("admin.toastLoadError")}: ${msg}`, "danger");
+    } finally {
+      setUsersLoading(false);
+    }
+  }, []);
+
+  // ---- Debounced search -> fetch ----
   useEffect(() => {
     if (!authReady) return;
 
-    let cancelled = false;
-
-    async function loadUsers() {
-      setUsersLoading(true);
-      setUsersError(null);
-      try {
-        const params = new URLSearchParams();
-        if (search.trim()) params.set("search", search.trim());
-        params.set("limit", "50");
-        params.set("offset", "0");
-
-        const res = await authFetch(
-          `/api/v1/admin/users/?${params.toString()}`,
-          { method: "GET" }
-        );
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.detail || `HTTP ${res.status}`);
-        }
-
-        const data = await res.json();
-        if (cancelled) return;
-
-        setUsers(Array.isArray(data.items) ? data.items : []);
-        setUserStats(data.stats || null);
-      } catch (err) {
-        if (!cancelled) {
-          console.error(err);
-          setUsersError(err.message || "Failed to load users");
-          if (showToast) {
-            showToast(`${t("admin.toastLoadError")}: ${err.message}`, "danger");
-          }
-        }
-      } finally {
-        if (!cancelled) setUsersLoading(false);
-      }
-    }
-
-    loadUsers();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      fetchUsers({ searchText: search, signal: controller.signal });
+    }, 200);
 
     return () => {
-      cancelled = true;
+      clearTimeout(timeout);
+      controller.abort();
     };
-    // only react to auth becoming ready and search term changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authReady, search]);
+  }, [authReady, search, fetchUsers]);
 
-  // ---------- sorting ----------
+  // Exposed reload for buttons/actions (no storms)
+  const reloadUsers = useCallback(async () => {
+    const controller = new AbortController();
+    await fetchUsers({ searchText: search, signal: controller.signal });
+  }, [fetchUsers, search]);
 
+  // ---- Sorting ----
   const handleSort = (field) => {
-    setSortField((prevField) => {
-      if (prevField === field) {
-        setSortDirection((prevDir) => (prevDir === "asc" ? "desc" : "asc"));
-        return prevField;
+    setSortField((prev) => {
+      if (prev === field) {
+        setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+        return prev;
       }
       setSortDirection("asc");
       return field;
@@ -88,13 +117,11 @@ export function useAdminUsers(authFetch, showToast, t) {
   const sortedUsers = useMemo(() => {
     const arr = [...users];
     arr.sort((a, b) => {
-      if (!sortField) return 0;
+      let aVal = a?.[sortField];
+      let bVal = b?.[sortField];
 
-      let aVal = a[sortField];
-      let bVal = b[sortField];
-
-      if (aVal === undefined || aVal === null) aVal = "";
-      if (bVal === undefined || bVal === null) bVal = "";
+      if (aVal == null) aVal = "";
+      if (bVal == null) bVal = "";
 
       if (typeof aVal === "boolean") aVal = aVal ? 1 : 0;
       if (typeof bVal === "boolean") bVal = bVal ? 1 : 0;
@@ -113,14 +140,17 @@ export function useAdminUsers(authFetch, showToast, t) {
     return arr;
   }, [users, sortField, sortDirection]);
 
-  // ---------- actions: toggle admin ----------
-
+  // ---- Actions ----
   const toggleAdmin = async (user) => {
-    if (!authFetch) return;
+    const af = authFetchRef.current;
+    const toast = showToastRef.current;
+    const tr = tRef.current;
+    if (!af) return;
+
     const targetFlag = !user.is_admin;
 
     try {
-      const res = await authFetch(`/api/v1/admin/users/${user.user_id}/admin`, {
+      const res = await af(`/api/v1/admin/users/${user.user_id}/admin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_admin: targetFlag }),
@@ -129,213 +159,124 @@ export function useAdminUsers(authFetch, showToast, t) {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        const backendDetail = data?.detail ?? "";
-        const msg = backendDetail || t("admin.toastActionError");
-        showToast && showToast(msg, "danger");
+        toast && toast(data?.detail || tr("admin.toastActionError"), "danger");
         return;
       }
 
-      const updated = data;
-
       setUsers((prev) =>
-        prev.map((u) => (u.user_id === user.user_id ? updated : u))
+        prev.map((u) => (u.user_id === user.user_id ? data : u))
       );
-
-      setUserStats((prev) => {
-        if (!prev) return prev;
-        const delta = targetFlag ? 1 : -1;
-        return {
-          ...prev,
-          total_admins: Math.max(0, (prev.total_admins || 0) + delta),
-        };
-      });
-
-      showToast &&
-        showToast(
+      toast &&
+        toast(
           targetFlag
-            ? t("admin.toastPromotedAdmin")
-            : t("admin.toastDemotedAdmin"),
+            ? tr("admin.toastPromotedAdmin")
+            : tr("admin.toastDemotedAdmin"),
           "success"
         );
+      await reloadUsers(); // keep stats consistent (safe, single call)
     } catch (err) {
       console.error(err);
-      showToast &&
-        showToast(`${t("admin.toastActionError")}: ${err.message}`, "danger");
+      toast &&
+        toast(`${tr("admin.toastActionError")}: ${err.message}`, "danger");
     }
   };
 
-  // ---------- actions: toggle confirmed ----------
-
   const toggleConfirmed = async (user) => {
-    if (!authFetch) return;
+    const af = authFetchRef.current;
+    const toast = showToastRef.current;
+    const tr = tRef.current;
+    if (!af) return;
+
     const targetFlag = !user.is_confirmed;
 
     try {
-      const res = await authFetch(
-        `/api/v1/admin/users/${user.user_id}/confirmed`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ is_confirmed: targetFlag }),
-        }
-      );
+      const res = await af(`/api/v1/admin/users/${user.user_id}/confirmed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_confirmed: targetFlag }),
+      });
 
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        const backendDetail = data?.detail ?? "";
-        const msg = backendDetail || t("admin.toastActionError");
-        showToast && showToast(msg, "danger");
+        toast && toast(data?.detail || tr("admin.toastActionError"), "danger");
         return;
       }
 
-      const updated = data;
-
       setUsers((prev) =>
-        prev.map((u) => (u.user_id === user.user_id ? updated : u))
+        prev.map((u) => (u.user_id === user.user_id ? data : u))
       );
-
-      setUserStats((prev) => {
-        if (!prev) return prev;
-        const delta = targetFlag ? 1 : -1;
-        return {
-          ...prev,
-          total_confirmed: Math.max(0, (prev.total_confirmed || 0) + delta),
-        };
-      });
-
-      showToast &&
-        showToast(
+      toast &&
+        toast(
           targetFlag
-            ? t("admin.toastMarkedConfirmed")
-            : t("admin.toastMarkedUnconfirmed"),
+            ? tr("admin.toastMarkedConfirmed")
+            : tr("admin.toastMarkedUnconfirmed"),
           "success"
         );
+      await reloadUsers();
     } catch (err) {
       console.error(err);
-      showToast &&
-        showToast(`${t("admin.toastActionError")}: ${err.message}`, "danger");
+      toast &&
+        toast(`${tr("admin.toastActionError")}: ${err.message}`, "danger");
     }
   };
 
-  // ---------- actions: delete / anonymize ----------
-
   const deleteUser = async (user) => {
-    if (!authFetch) return;
+    const af = authFetchRef.current;
+    const toast = showToastRef.current;
+    const tr = tRef.current;
+    if (!af) return;
 
     const anonymized = isUserAnonymized(user);
 
     const confirmed = window.confirm(
       anonymized
-        ? t("admin.confirmDeleteUserAnonymized", {
+        ? tr("admin.confirmDeleteUserAnonymized", {
             email: user.username || user.user_id,
           })
-        : t("admin.confirmDeleteUserOnce", {
+        : tr("admin.confirmDeleteUserOnce", {
             email: user.email || user.username || user.user_id,
           })
     );
     if (!confirmed) return;
 
     try {
-      const res = await authFetch(`/api/v1/admin/users/${user.user_id}`, {
+      const res = await af(`/api/v1/admin/users/${user.user_id}`, {
         method: "DELETE",
       });
-
-      let data = null;
-      try {
-        data = await res.json();
-      } catch {
-        // ignore
-      }
+      const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        const backendDetail = data?.detail || "";
-        const lowered = backendDetail.toLowerCase();
-
-        if (lowered.includes("last remaining admin")) {
-          showToast && showToast(t("admin.errorLastAdmin"), "danger");
-          return;
-        }
-
-        if (lowered.includes("your own account deletion flow")) {
-          showToast &&
-            showToast(t("admin.errorCannotSelfDeleteHere"), "danger");
-          return;
-        }
-
-        showToast &&
-          showToast(backendDetail || t("admin.toastActionError"), "danger");
+        const detail = data?.detail || tr("admin.toastActionError");
+        toast && toast(detail, "danger");
         return;
       }
 
-      if (data && data.status === "anonymized" && data.user) {
-        const newUser = data.user;
-
-        setUserStats((prev) => {
-          if (!prev) return prev;
-          const adminDelta =
-            (newUser.is_admin ? 1 : 0) - (user.is_admin ? 1 : 0);
-          const confirmedDelta =
-            (newUser.is_confirmed ? 1 : 0) - (user.is_confirmed ? 1 : 0);
-          return {
-            ...prev,
-            total_admins: Math.max(0, (prev.total_admins || 0) + adminDelta),
-            total_confirmed: Math.max(
-              0,
-              (prev.total_confirmed || 0) + confirmedDelta
-            ),
-          };
-        });
-
-        setUsers((prev) =>
-          prev.map((u) => (u.user_id === user.user_id ? newUser : u))
-        );
-
-        showToast && showToast(t("admin.toastUserAnonymized"), "success");
+      if (data?.status === "anonymized") {
+        toast && toast(tr("admin.toastUserAnonymized"), "success");
+        // backend returns only status + user_id, so we must reload list/stats
+        await reloadUsers();
         return;
       }
 
-      if (data && data.status === "deleted") {
+      if (data?.status === "deleted") {
+        toast && toast(tr("admin.toastDeletedUser"), "success");
+        // Optimistic remove + reload for stats
         setUsers((prev) => prev.filter((u) => u.user_id !== user.user_id));
-
-        setUserStats((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            total_users: Math.max(0, (prev.total_users || 0) - 1),
-            filtered_total: Math.max(0, (prev.filtered_total || 0) - 1),
-            total_admins: (prev.total_admins || 0) - (user.is_admin ? 1 : 0),
-            total_confirmed:
-              (prev.total_confirmed || 0) - (user.is_confirmed ? 1 : 0),
-          };
-        });
-
-        showToast && showToast(t("admin.toastDeletedUser"), "success");
+        await reloadUsers();
         return;
       }
 
-      // Fallback: assume deleted
+      // Fallback
+      toast && toast(tr("admin.toastDeletedUser"), "success");
       setUsers((prev) => prev.filter((u) => u.user_id !== user.user_id));
-      setUserStats((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          total_users: Math.max(0, (prev.total_users || 0) - 1),
-          filtered_total: Math.max(0, (prev.filtered_total || 0) - 1),
-          total_admins: (prev.total_admins || 0) - (user.is_admin ? 1 : 0),
-          total_confirmed:
-            (prev.total_confirmed || 0) - (user.is_confirmed ? 1 : 0),
-        };
-      });
-      showToast && showToast(t("admin.toastDeletedUser"), "success");
+      await reloadUsers();
     } catch (err) {
       console.error(err);
-      showToast &&
-        showToast(`${t("admin.toastActionError")}: ${err.message}`, "danger");
+      toast &&
+        toast(`${tr("admin.toastActionError")}: ${err.message}`, "danger");
     }
   };
-
-  // ---------- derived totals ----------
 
   const totalUsers = userStats?.total_users ?? users.length;
   const totalAdmins = userStats?.total_admins ?? 0;
@@ -363,6 +304,7 @@ export function useAdminUsers(authFetch, showToast, t) {
     toggleAdmin,
     toggleConfirmed,
     deleteUser,
+    reloadUsers,
     setUsers,
     setUserStats,
   };
