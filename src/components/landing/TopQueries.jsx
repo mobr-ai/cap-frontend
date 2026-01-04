@@ -9,7 +9,7 @@ export default function TopQueries({
 }) {
   return (
     <>
-      <div className="empty-state-left">{title}</div>
+      <div className="empty-state-examples-title">{title}</div>
 
       <div className="examples">
         {topQueries.map((q, i) => (

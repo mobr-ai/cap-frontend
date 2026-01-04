@@ -182,6 +182,10 @@
   .cap-root .landing-empty-line {
     font-size: 1.25rem;
   }
+
+  .cap-root .landing-empty {
+    min-height: 25rem !important;
+  }
 }
 
 .cap-root .landing-empty {
@@ -324,7 +328,7 @@
   }
 
   .cap-root .landing-empty-line {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
   }
 }
 
@@ -384,15 +388,7 @@
     min-height: 0;
   }
 
-  .cap-root .chat-container.is-empty .messages {
-    overflow-y: auto;
-    min-height: 0;
-    padding-bottom: 0; /* prevent extra push */
-  }
-
   .cap-root .chat-container.is-empty .input-container {
-    position: fixed;
-    bottom: 0;
     z-index: 5;
   }
 }
@@ -404,8 +400,10 @@
 
   .cap-root .landing-empty-typed {
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 5;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    max-height: 15%;
+    height: 15%;
   }
 }

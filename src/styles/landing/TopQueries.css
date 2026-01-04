@@ -14,7 +14,7 @@
   text-align: center;
 }
 
-.cap-root .empty-state-left {
+.cap-root .empty-state-examples-title {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -23,7 +23,7 @@
   color: var(--text-secondary);
   gap: 0.5rem;
 
-  padding: 0;
+  padding-bottom: 1rem;
   text-align: left;
 }
 
