@@ -69,3 +69,38 @@
     margin: 0 0 1rem;
   }
 }
+
+/* Wrapper for showing examples only in empty state, with a smooth collapse */
+.cap-root .top-queries-wrap {
+  overflow: hidden;
+  transform-origin: top center;
+
+  /* enough for title + 1-2 lines of chips */
+  /* max-height: 260px; */
+
+  opacity: 1;
+  transform: scaleY(1);
+
+  transition: max-height 280ms ease, opacity 200ms ease, transform 280ms ease,
+    margin 280ms ease, padding 280ms ease;
+}
+
+.cap-root .top-queries-wrap.is-hidden {
+  max-height: 0;
+  opacity: 0;
+  transform: scaleY(0.92);
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  pointer-events: none;
+}
+
+/* Mobile: slightly smaller max-height and quicker collapse */
+@media (max-width: 768px) {
+  .cap-root .top-queries-wrap {
+    /* max-height: 220px; */
+    transition: max-height 240ms ease, opacity 180ms ease, transform 240ms ease,
+      margin 240ms ease, padding 240ms ease;
+  }
+}

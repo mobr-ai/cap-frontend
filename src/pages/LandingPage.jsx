@@ -116,7 +116,7 @@ export default function LandingPage() {
   const hasBackendStatusRef = useRef(false);
 
   // Auto scroll behavior
-  useLandingAutoScroll({
+  const { scrollToBottom } = useLandingAutoScroll({
     messages,
     isLoadingConversation,
     routeConversationId,
@@ -553,15 +553,23 @@ export default function LandingPage() {
           </div>
 
           <div className="input-container">
-            <TopQueries
-              title={t("landing.topQueriesTitle")}
-              topQueries={topQueries}
-              isProcessing={isProcessing}
-              onSelectQuery={(q) => {
-                setQuery(q.query);
-                setCharCount(q.query.length);
-              }}
-            />
+            <div
+              className={`top-queries-wrap ${
+                isEmptyState ? "is-visible" : "is-hidden"
+              }`}
+              aria-hidden={!isEmptyState}
+            >
+              <TopQueries
+                title={t("landing.topQueriesTitle")}
+                topQueries={topQueries}
+                isProcessing={isProcessing}
+                onSelectQuery={(q) => {
+                  setQuery(q.query);
+                  setCharCount(q.query.length);
+                  scrollToBottom("smooth");
+                }}
+              />
+            </div>
 
             <ChatInput
               query={query}
@@ -579,9 +587,8 @@ export default function LandingPage() {
               sendLabel={t("landing.send")}
               onSend={sendQuery}
             />
-
-            <div ref={messagesEndRef} />
           </div>
+          <div ref={messagesEndRef} />
         </div>
         <ShareModal
           show={shareOpen}
