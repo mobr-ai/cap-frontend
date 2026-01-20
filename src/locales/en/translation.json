@@ -118,12 +118,33 @@
     "loadConversationError": "Could not load this conversation.",
     "pinToDashboard": "Pin to dashboard",
     "shareArtifact": "Share",
+    "syncBlockedOffline": "Sync service is offline. Queries are temporarily disabled.",
+    "syncBlockedUnknown": "Sync status is unavailable. Please wait a moment and retry.",
     "emptyRotating": {
       "0": "Show the latest 5 blocks on Cardano",
       "1": "What trends are visible in Cardano transactions this month?",
       "2": "Plot a chart of monthly NFT minting activity in December 2025",
       "3": "How much of the ADA supply is held by the top 1%?",
       "4": "Show the latest governance proposals and their IPFS links"
+    }
+  },
+  "sync": {
+    "status": {
+      "offline": "Offline",
+      "checking": "Checking…",
+      "syncing": "Syncing",
+      "synced": "Synced",
+      "unknown": "Unknown"
+    },
+    "tooltip": {
+      "blockedTitle": "Sync temporarily unavailable",
+      "offlineBody": "The sync service is offline. Queries are disabled.",
+      "unknownBody": "Sync status is not available yet. Please wait and retry.",
+      "statusLabel": "Status",
+      "capLabel": "CAP",
+      "cardanoLabel": "Cardano",
+      "lagLabel": "Lag",
+      "blocksSuffix": "blocks"
     }
   },
   "loading": {

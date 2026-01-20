@@ -37,7 +37,9 @@
   font-size: 0.938rem;
 
   resize: vertical;
-  transition: border-color 0.2s, opacity 0.2s;
+  transition:
+    border-color 0.2s,
+    opacity 0.2s;
 }
 
 .cap-root textarea:focus {
@@ -130,4 +132,64 @@
   .cap-root .input-container {
     padding: 1rem;
   }
+}
+
+/* Send tooltip (sync blocked) */
+.cap-root .cap-send-btn-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+}
+
+.cap-root .cap-send-tooltip {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  min-width: 240px;
+  max-width: 320px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+  color: #e5e7eb;
+  font-size: 0.78rem;
+  line-height: 1.25rem;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
+    visibility 0s linear 140ms;
+  z-index: 2000;
+}
+
+.cap-root .cap-tip-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 12px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: rgba(239, 68, 68, 0.95);
+  flex: 0 0 auto;
+}
+
+.cap-root .cap-send-btn-wrap:hover .cap-send-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
+    visibility 0s;
 }

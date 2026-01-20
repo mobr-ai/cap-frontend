@@ -112,7 +112,7 @@ function NavBar({
       { code: "pt", label: "🇧🇷 Português (BR)" },
       { code: "en", label: "🇺🇸 English (US)" },
     ],
-    []
+    [],
   );
   const currentLang = (i18n.language || "en").split("-")[0];
   const langMenuTitle = (
@@ -221,46 +221,51 @@ function NavBar({
                 const state = showOffline
                   ? "offline"
                   : showChecking
-                  ? "checking"
-                  : isSynced
-                  ? "synced"
-                  : "syncing";
+                    ? "checking"
+                    : isSynced
+                      ? "synced"
+                      : "syncing";
 
                 const pct = showSync ? syncPct : null;
 
-                const tooltip = showOffline
-                  ? [
-                      "Status: Offline",
-                      "CAP: —",
-                      "Cardano: —",
-                      "Lag: — blocks",
-                    ].join("\n")
-                  : showChecking
-                  ? [
-                      "Status: Checking…",
-                      `CAP: ${
-                        capBlock == null ? "—" : capBlock.toLocaleString()
-                      }`,
-                      `Cardano: ${
-                        cardanoBlock == null
-                          ? "—"
-                          : cardanoBlock.toLocaleString()
-                      }`,
-                    ].join("\n")
-                  : [
-                      `Status: ${syncStatus?.text || "—"}`,
-                      `CAP: ${
-                        capBlock == null ? "—" : capBlock.toLocaleString()
-                      }`,
-                      `Cardano: ${
-                        cardanoBlock == null
-                          ? "—"
-                          : cardanoBlock.toLocaleString()
-                      }`,
-                      `Lag: ${
-                        syncLag == null ? "—" : syncLag.toLocaleString()
-                      } blocks`,
-                    ].join("\n");
+                const statusCode = String(syncStatus?.code || "unknown");
+                const isUnknown =
+                  statusCode === "unknown" || statusCode === "checking";
+                const isBlocked =
+                  showOffline || isUnknown || healthOnline == null;
+
+                const tooltip = isBlocked ? (
+                  <div className="cap-sync-tooltip-blocked">
+                    <span className="cap-tip-icon" aria-hidden="true">
+                      !
+                    </span>
+                    <div className="cap-sync-tooltip-text">
+                      <div className="cap-sync-tooltip-title">
+                        {t("sync.tooltip.blockedTitle")}
+                      </div>
+                      <div className="cap-sync-tooltip-body">
+                        {showOffline
+                          ? t("sync.tooltip.offlineBody")
+                          : t("sync.tooltip.unknownBody")}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  [
+                    `${t("sync.tooltip.statusLabel")}: ${t(
+                      `sync.status.${statusCode}`,
+                    )}`,
+                    `${t("sync.tooltip.capLabel")}: ${
+                      capBlock == null ? "—" : capBlock.toLocaleString()
+                    }`,
+                    `${t("sync.tooltip.cardanoLabel")}: ${
+                      cardanoBlock == null ? "—" : cardanoBlock.toLocaleString()
+                    }`,
+                    `${t("sync.tooltip.lagLabel")}: ${
+                      syncLag == null ? "—" : syncLag.toLocaleString()
+                    } ${t("sync.tooltip.blocksSuffix")}`,
+                  ].join("\n")
+                );
 
                 return (
                   <div className="status-item nav-text">
@@ -304,7 +309,7 @@ function NavBar({
                   window.open(
                     "https://www.youtube.com/watch?v=nRsa_qiGhN0",
                     "_blank",
-                    "noopener,noreferrer"
+                    "noopener,noreferrer",
                   );
                   setExpanded(false);
                 }}

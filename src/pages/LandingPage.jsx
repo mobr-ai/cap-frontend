@@ -41,7 +41,7 @@ export default function LandingPage() {
   const NL_ENDPOINT = import.meta.env.VITE_NL_ENDPOINT || "/api/v1/nl/query";
 
   const outlet = useOutletContext() || {};
-  const { session, showToast } = outlet;
+  const { session, showToast, healthOnline, syncStatus } = outlet;
   const { authFetch } = useAuthRequest({ session, showToast });
   const authFetchRef = useRef(null);
 
@@ -56,6 +56,22 @@ export default function LandingPage() {
   const [query, setQuery] = useState("");
   const [charCount, setCharCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Block queries if sync service is Offline or Unknown
+  const statusCode = String(syncStatus?.code || "unknown");
+  const isSyncUnknown = statusCode === "unknown" || statusCode === "checking";
+  const isSyncOffline = healthOnline === false;
+  const isSyncBlocked = isSyncOffline || isSyncUnknown || healthOnline == null;
+
+  const sendBlockedReason = isSyncOffline
+    ? t(
+        "landing.syncBlockedOffline",
+        "Sync service is offline. Try again soon.",
+      )
+    : t(
+        "landing.syncBlockedUnknown",
+        "Sync service status is unknown. Please wait a moment and retry.",
+      );
 
   const {
     messages,
@@ -103,7 +119,7 @@ export default function LandingPage() {
       setSharePayload(payload);
       setShareOpen(true);
     },
-    [showToast, t]
+    [showToast, t],
   );
 
   const conversationMetaRef = useRef({
@@ -178,7 +194,7 @@ export default function LandingPage() {
         console.log("[messages tail]", messagesRef.current.slice(-3));
       }, 0);
     },
-    [upsertStatus]
+    [upsertStatus],
   );
 
   const handleChunk = useCallback(
@@ -188,7 +204,7 @@ export default function LandingPage() {
       if (!isViewingStreamConversation()) return;
       appendAssistantChunk(chunk);
     },
-    [isViewingStreamConversation, appendAssistantChunk]
+    [isViewingStreamConversation, appendAssistantChunk],
   );
 
   const handleDone = useCallback(() => {
@@ -253,7 +269,7 @@ export default function LandingPage() {
       dropAllStreamingAssistants,
       resetStreamRefs,
       emitStreamEvent,
-    ]
+    ],
   );
 
   const handleKVResults = useCallback(
@@ -285,7 +301,7 @@ export default function LandingPage() {
         insertBeforeStreamingAssistant: true,
       });
     },
-    [addMessage, isViewingStreamConversation]
+    [addMessage, isViewingStreamConversation],
   );
 
   const handleOnMetadata = useCallback(
@@ -331,12 +347,12 @@ export default function LandingPage() {
         emitStreamEvent("cap:stream-start", { conversationId: cid });
       }
     },
-    [emitStreamEvent]
+    [emitStreamEvent],
   );
 
   const isDev = import.meta.env.DEV === true;
   const isDemoEndpoint = String(NL_ENDPOINT || "").includes(
-    "/api/v1/demo/nl/query"
+    "/api/v1/demo/nl/query",
   );
 
   const { start, stop } = useLLMStream({
@@ -385,7 +401,7 @@ export default function LandingPage() {
     const trimmed = (query || "").trim();
     const fetchFn = authFetchRef.current;
 
-    if (!trimmed || isProcessing || !fetchFn) return;
+    if (!trimmed || isProcessing || !fetchFn || isSyncBlocked) return;
 
     resetStreamRefs();
     hasBackendStatusRef.current = false;
@@ -407,11 +423,6 @@ export default function LandingPage() {
       activeStreamRef.current._fallbackStatusWritten = true;
       upsertStatus(t("landing.statusPlanning"));
     }
-
-    // const isDev = import.meta.env.DEV === true;
-    // const isDemoEndpoint = String(NL_ENDPOINT || "").includes(
-    //   "/api/v1/demo/nl/query"
-    // );
 
     const demoDelayMs = Number(import.meta.env.VITE_DEMO_STREAM_DELAY_MS || 0);
     const shouldDelay =
@@ -448,6 +459,7 @@ export default function LandingPage() {
   }, [
     query,
     isProcessing,
+    isSyncBlocked,
     addMessage,
     upsertStatus,
     resetStreamRefs,
@@ -491,7 +503,7 @@ export default function LandingPage() {
         showToast?.(t("landing.pinError"), "danger");
       }
     },
-    [messages, showToast, navigate, t, routeConversationId]
+    [messages, showToast, navigate, t, routeConversationId],
   );
 
   const shareArtifact = useCallback(
@@ -505,7 +517,7 @@ export default function LandingPage() {
 
       handleSharePayload(payload);
     },
-    [messages, conversationTitle, tableElByMsgIdRef, handleSharePayload]
+    [messages, conversationTitle, tableElByMsgIdRef, handleSharePayload],
   );
 
   const isEmptyState = messages.length === 0 && !isLoadingConversation;
@@ -547,7 +559,7 @@ export default function LandingPage() {
                     streaming={!!m.streaming}
                     replayTyping={!!m.replayTyping}
                   />
-                )
+                ),
               )
             )}
           </div>
@@ -577,6 +589,8 @@ export default function LandingPage() {
               charCount={charCount}
               setCharCount={setCharCount}
               isProcessing={isProcessing}
+              isSyncBlocked={isSyncBlocked}
+              syncBlockedReason={sendBlockedReason}
               maxLength={1000}
               placeholder={t("landing.inputPlaceholder")}
               charCountText={t("landing.charCount", {

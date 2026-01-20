@@ -7,6 +7,8 @@ export default function ChatInput({
   charCount,
   setCharCount,
   isProcessing = false,
+  isSyncBlocked = false,
+  syncBlockedReason = "",
   maxLength = 1000,
   placeholder,
   charCountText,
@@ -14,6 +16,9 @@ export default function ChatInput({
   sendLabel,
   onSend,
 }) {
+  const canSendText = !!(query || "").trim();
+  const isSendDisabled = isProcessing || !canSendText || isSyncBlocked;
+
   return (
     <div className="input-wrapper">
       <div className="input-field">
@@ -31,29 +36,42 @@ export default function ChatInput({
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              if (!isProcessing && (query || "").trim()) onSend?.();
+              if (!isSendDisabled) onSend?.();
             }
           }}
           placeholder={placeholder}
           rows={2}
           maxLength={maxLength}
-          disabled={isProcessing}
+          disabled={isSendDisabled}
         />
         <div className="char-count">
           <span>{charCountText}</span>
         </div>
       </div>
 
-      <button
-        className={`send-button ${isProcessing ? "processing" : ""}`}
-        disabled={isProcessing || !(query || "").trim()}
-        onClick={() => {
-          if (!isProcessing && (query || "").trim()) onSend?.();
-        }}
-      >
-        <span>{isProcessing ? processingLabel : sendLabel}</span>
-        <span>{isProcessing ? <div className="button-spinner" /> : "→"}</span>
-      </button>
+      <div className="cap-send-btn-wrap">
+        <button
+          className={`send-button ${isProcessing ? "processing" : ""}`}
+          disabled={isSendDisabled}
+          aria-disabled={isSendDisabled}
+          data-disabled-reason={isSyncBlocked ? "sync" : ""}
+          onClick={() => {
+            if (!isSendDisabled) onSend?.();
+          }}
+        >
+          <span>{isProcessing ? processingLabel : sendLabel}</span>
+          <span>{isProcessing ? <div className="button-spinner" /> : "→"}</span>
+        </button>
+
+        {isSyncBlocked && !!syncBlockedReason && (
+          <div className="cap-send-tooltip" role="tooltip">
+            <span className="cap-tip-icon" aria-hidden="true">
+              !
+            </span>
+            <span className="cap-tip-text">{syncBlockedReason}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

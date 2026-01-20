@@ -118,12 +118,33 @@
     "loadConversationError": "Não foi possível carregar esta conversa.",
     "pinToDashboard": "Fixar no dashboard",
     "shareArtifact": "Compartilhar",
+    "syncBlockedOffline": "O serviço de sincronização está offline. As consultas estão temporariamente desativadas.",
+    "syncBlockedUnknown": "O status de sincronização está indisponível. Aguarde um momento e tente novamente.",
     "emptyRotating": {
       "0": "Mostre os 5 blocos mais recentes na Cardano",
       "1": "Quais são as tendências nas transações da Cardano neste mês?",
       "2": "Plote um gráfico da atividade mensal de mint de NFTs em dezembro de 2025",
       "3": "Quanto do supply de ADA está nas mãos do top 1%?",
       "4": "Mostre as propostas de governança mais recentes e seus links de IPFS"
+    }
+  },
+  "sync": {
+    "status": {
+      "offline": "Offline",
+      "checking": "Verificando…",
+      "syncing": "Sincronizando",
+      "synced": "Sincronizado",
+      "unknown": "Desconhecido"
+    },
+    "tooltip": {
+      "blockedTitle": "Sincronização temporariamente indisponível",
+      "offlineBody": "O serviço de sincronização está offline. As consultas estão desativadas.",
+      "unknownBody": "O status de sincronização ainda não está disponível. Aguarde e tente novamente.",
+      "statusLabel": "Status",
+      "capLabel": "CAP",
+      "cardanoLabel": "Cardano",
+      "lagLabel": "Atraso",
+      "blocksSuffix": "blocos"
     }
   },
   "loading": {

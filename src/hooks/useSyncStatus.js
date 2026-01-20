@@ -5,6 +5,15 @@ import { useLocation } from "react-router-dom";
 // Optional: set VITE_CAP_OFFLINE=true in .env.local to skip SPARQL during local dev
 const OFFLINE = import.meta.env?.VITE_CAP_OFFLINE === "true";
 
+// Canonical, i18n-friendly status codes (no UI strings in the hook)
+export const SYNC_STATUS = {
+  OFFLINE: "offline",
+  CHECKING: "checking",
+  SYNCING: "syncing",
+  SYNCED: "synced",
+  UNKNOWN: "unknown",
+};
+
 // Dev/StrictMode singleton to avoid double loops
 function getSingleton() {
   if (typeof window === "undefined") return { running: false };
@@ -154,7 +163,7 @@ export default function useSyncStatus(authFetch) {
         inFlight.current.health = false;
       }
     },
-    [authFetch, demoTick]
+    [authFetch, demoTick],
   );
 
   const fetchSyncInfo = useCallback(
@@ -220,27 +229,14 @@ export default function useSyncStatus(authFetch) {
         inFlight.current.sync = false;
       }
     },
-    [authFetch, demoTick]
+    [authFetch, demoTick],
   );
-
-  const syncStatus = useMemo(() => {
-    if (capBlock == null && cardanoBlock == null)
-      return { text: "Unknown", cls: "" };
-    if (capBlock == null || cardanoBlock == null)
-      return { text: "Checking...", cls: "" };
-    if (cardanoBlock - capBlock <= 5) return { text: "Synced", cls: "synced" };
-    const pct = Math.max(
-      0,
-      Math.min(100, Math.round((capBlock / Math.max(1, cardanoBlock)) * 100))
-    );
-    return { text: `Syncing (${pct}%)`, cls: "syncing" };
-  }, [capBlock, cardanoBlock]);
 
   const syncPct = useMemo(() => {
     if (capBlock == null || cardanoBlock == null) return null;
     return Math.max(
       0,
-      Math.min(100, Math.round((capBlock / Math.max(1, cardanoBlock)) * 100))
+      Math.min(100, Math.round((capBlock / Math.max(1, cardanoBlock)) * 100)),
     );
   }, [capBlock, cardanoBlock]);
 
@@ -248,6 +244,31 @@ export default function useSyncStatus(authFetch) {
     if (capBlock == null || cardanoBlock == null) return null;
     return Math.max(0, cardanoBlock - capBlock);
   }, [capBlock, cardanoBlock]);
+
+  // Machine-readable status object (no UI strings)
+  const syncStatus = useMemo(() => {
+    // If health is explicitly offline, treat as offline even if blocks exist
+    if (healthOnline === false) {
+      return { code: SYNC_STATUS.OFFLINE, cls: "" };
+    }
+
+    // Unknown: nothing known yet
+    if (capBlock == null && cardanoBlock == null) {
+      return { code: SYNC_STATUS.UNKNOWN, cls: "" };
+    }
+
+    // Checking: one side still missing
+    if (capBlock == null || cardanoBlock == null) {
+      return { code: SYNC_STATUS.CHECKING, cls: "" };
+    }
+
+    // Synced vs syncing
+    if (cardanoBlock - capBlock <= 5) {
+      return { code: SYNC_STATUS.SYNCED, cls: "synced" };
+    }
+
+    return { code: SYNC_STATUS.SYNCING, cls: "syncing" };
+  }, [healthOnline, capBlock, cardanoBlock]);
 
   // Stable loop: no dependency on backoff/failCount
   useEffect(() => {
@@ -276,7 +297,7 @@ export default function useSyncStatus(authFetch) {
         ? 2500
         : Math.max(
             5_000, // minimum 5s when healthy
-            computeBackoff()
+            computeBackoff(),
           );
       loopTimerRef.current = setTimeout(loop, delay);
     };
@@ -300,9 +321,10 @@ export default function useSyncStatus(authFetch) {
     healthOnline,
     capBlock,
     cardanoBlock,
-    syncStatus,
+    syncStatus, // { code, cls }
     syncPct,
     syncLag,
     refreshAll,
+    SYNC_STATUS,
   };
 }

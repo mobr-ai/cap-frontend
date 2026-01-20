@@ -2,8 +2,9 @@
    NAVBAR STRUCTURE & LAYOUT
    ─────────────────────────────── */
 :root {
-  --nav-font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
-    Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  --nav-font:
+    ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+    "Apple Color Emoji", "Segoe UI Emoji";
   --nav-size: 14px;
   --nav-height: 56px; /* slightly taller than before */
   --nav-fg: #e5e7eb;
@@ -402,7 +403,9 @@
   stroke-width: 2.5;
   stroke-linecap: round;
   opacity: 0.95;
-  transition: stroke-dasharray 600ms ease, opacity 200ms ease;
+  transition:
+    stroke-dasharray 600ms ease,
+    opacity 200ms ease;
 }
 
 .cap-sync-slash {
@@ -507,7 +510,9 @@
   transform: translateY(-4px);
   pointer-events: none;
 
-  transition: opacity 140ms ease, transform 140ms ease,
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
     visibility 0s linear 140ms;
   z-index: 2000;
 }
@@ -516,5 +521,44 @@
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
-  transition: opacity 140ms ease, transform 140ms ease, visibility 0s;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
+    visibility 0s;
+}
+
+.cap-sync-tooltip-blocked {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.cap-sync-tooltip-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cap-sync-tooltip-title {
+  font-weight: 600;
+}
+
+.cap-sync-tooltip-body {
+  opacity: 0.9;
+}
+
+.cap-tip-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 12px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: rgba(239, 68, 68, 0.95);
+  flex: 0 0 auto;
+  vertical-align: middle;
 }

@@ -90,7 +90,7 @@ function Layout() {
         onClick: options.onClick || null,
       });
     },
-    []
+    [],
   );
 
   // --- Auth & Session -------------------------------------------------------
@@ -103,7 +103,7 @@ function Layout() {
       const from = (location.state && location.state.from) || "/";
       navigate(from, { replace: true });
     },
-    [location.state, navigate]
+    [location.state, navigate],
   );
 
   const handleLogout = useCallback(() => {
@@ -115,6 +115,13 @@ function Layout() {
     navigate("/login", { replace: true });
   }, [navigate]);
 
+  // --- Authenticated fetch wrapper -----------------------------------------
+  const { authFetch } = useAuthRequest({ session, showToast, handleLogout });
+
+  // --- CAP status polling (health + sync)
+  const { healthOnline, capBlock, cardanoBlock, syncStatus, syncPct, syncLag } =
+    useSyncStatus(session ? authFetch : null);
+
   const outletContext = useMemo(
     () => ({
       session,
@@ -122,19 +129,30 @@ function Layout() {
       setUser: setSession,
       handleLogout,
       handleLogin,
+      showToast,
       setLoading,
       loading,
-      showToast,
+      healthOnline,
+      capBlock,
+      cardanoBlock,
+      syncStatus,
+      syncPct,
+      syncLag,
     }),
-    [session, showToast, handleLogout, handleLogin, loading]
+    [
+      session,
+      showToast,
+      handleLogout,
+      handleLogin,
+      loading,
+      healthOnline,
+      capBlock,
+      cardanoBlock,
+      syncStatus,
+      syncPct,
+      syncLag,
+    ],
   );
-
-  // --- Authenticated fetch wrapper -----------------------------------------
-  const { authFetch } = useAuthRequest({ session, showToast, handleLogout });
-
-  // --- CAP status polling (health + sync)
-  const { healthOnline, capBlock, cardanoBlock, syncStatus, syncPct, syncLag } =
-    useSyncStatus(session ? authFetch : null);
 
   // --- Enforce allowed routes when not logged in ---------------------------
   useEffect(() => {
