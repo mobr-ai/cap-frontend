@@ -1,5 +1,5 @@
 // src/components/landing/ChatMessage.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import ReactMarkdown from "react-markdown";
@@ -8,13 +8,18 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
 
-function ReplayTyping({ text, speedMs = 12, onDone, renderMarkdown }) {
+// Tracks replay completion per message id and per replayKey.
+// NOTE: Map updates do NOT trigger rerenders; we also use local state for that.
+const lastReplayKeyDoneByMessageId = new Map();
+
+function ReplayTypingPlain({ text, speedMs = 2, onDone }) {
   const FULL = String(text || "");
   const [shown, setShown] = useState("");
   const timerRef = useRef(null);
 
   useEffect(() => {
     setShown("");
+
     if (!FULL) {
       onDone?.();
       return;
@@ -25,6 +30,7 @@ function ReplayTyping({ text, speedMs = 12, onDone, renderMarkdown }) {
 
     const tick = () => {
       if (cancelled) return;
+
       i += 1;
       setShown(FULL.slice(0, i));
 
@@ -45,49 +51,61 @@ function ReplayTyping({ text, speedMs = 12, onDone, renderMarkdown }) {
     };
   }, [FULL, speedMs, onDone]);
 
-  // use the same markdown renderer so layout & sizing match streaming/final.
-  return renderMarkdown ? renderMarkdown(shown, { streamingMode: true }) : null;
+  return <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{shown}</pre>;
 }
 
-export default function ChatMessage({
+function ChatMessageImpl({
+  id,
   type,
   content,
   streaming = false,
   replayTyping = false,
+  replayKey = null,
   statusText = "",
 }) {
-  const [replayDone, setReplayDone] = useState(false);
-
-  useEffect(() => {
-    setReplayDone(false);
-  }, [replayTyping, content]);
-
   const { t } = useTranslation();
+
+  const isUser = type === "user";
+  const assistantHasText = String(content || "").trim().length > 0;
+
+  if (!isUser && type !== "error" && !streaming && !assistantHasText) {
+    return null;
+  }
 
   if (type === "error") {
     return <div className="error-message">{content}</div>;
   }
 
-  const isUser = type === "user";
-  const assistantHasText = String(content || "").trim().length > 0;
+  const trimmedStatus = String(statusText || "").trim();
+  const hasStatus = trimmedStatus.length > 0;
+  const statusToShow = hasStatus ? trimmedStatus : t("landing.defaultStatus");
+  const showStatusRow = !isUser && (hasStatus || !assistantHasText);
 
-  // Hide empty non-streaming assistant placeholders (common in convo history).
-  // Keep streaming empty assistant visible (it shows the thinking UI).
-  if (!isUser && type !== "error" && !streaming && !assistantHasText) {
-    return null;
-  }
+  // Local state that forces the transition from replay -> final markdown
+  const [replayDone, setReplayDone] = useState(false);
 
-  const renderMarkdown = (md, { streamingMode = false } = {}) => {
-    const text =
-      typeof md === "string"
-        ? md
-        : md == null
-        ? ""
-        : typeof md === "number" || typeof md === "boolean"
-        ? String(md)
-        : md?.toString?.()
-        ? String(md)
-        : "";
+  // When message id or replayKey changes, determine if it was already done for this key
+  useEffect(() => {
+    if (!id || replayKey == null) {
+      setReplayDone(true);
+      return;
+    }
+    const doneKey = lastReplayKeyDoneByMessageId.get(id);
+    setReplayDone(doneKey === replayKey);
+  }, [id, replayKey]);
+
+  const canReplay =
+    !!id &&
+    replayTyping &&
+    replayKey != null &&
+    !streaming &&
+    assistantHasText &&
+    !replayDone;
+
+  // Final markdown (with highlight) — only rendered when not streaming and not replaying
+  const finalMarkdown = useMemo(() => {
+    const text = typeof content === "string" ? content : String(content || "");
+    if (!text.trim()) return null;
 
     return (
       <ReactMarkdown
@@ -95,23 +113,15 @@ export default function ChatMessage({
           remarkGfm,
           [remarkMath, { singleDollarTextMath: true, strict: false }],
         ]}
-        rehypePlugins={
-          streamingMode
-            ? [
-                rehypeKatex,
-                // keep streaming light: no highlight while typing
-              ]
-            : [rehypeKatex, [rehypeHighlight, { ignoreMissing: true }]]
-        }
+        rehypePlugins={[
+          rehypeKatex,
+          [rehypeHighlight, { ignoreMissing: true }],
+        ]}
         components={{
           h1: ({ node, ...props }) => <h3 {...props} />,
           h2: ({ node, ...props }) => <h4 {...props} />,
           h3: ({ node, ...props }) => <h5 {...props} />,
           h4: ({ node, ...props }) => <h6 {...props} />,
-          p: ({ node, ...props }) => <p {...props} />,
-          ul: ({ node, ...props }) => <ul {...props} />,
-          ol: ({ node, ...props }) => <ol {...props} />,
-          li: ({ node, ...props }) => <li {...props} />,
           a({ node, href, children, ...props }) {
             const isExternal =
               typeof href === "string" && /^https?:\/\//i.test(href);
@@ -124,13 +134,6 @@ export default function ChatMessage({
               >
                 {children}
               </a>
-            );
-          },
-          code({ node, inline, className, children, ...props }) {
-            return (
-              <code className={className} {...props}>
-                {children}
-              </code>
             );
           },
           pre({ node, children, ...props }) {
@@ -155,19 +158,30 @@ export default function ChatMessage({
         {text}
       </ReactMarkdown>
     );
-  };
+  }, [content]);
 
-  // keep this near effectiveStatus
-  const trimmedStatus = String(statusText || "").trim();
-  const hasStatus = trimmedStatus.length > 0;
+  // Streaming markdown (no highlight to keep it light)
+  const streamingMarkdown = useMemo(() => {
+    const text = typeof content === "string" ? content : String(content || "");
+    if (!text.trim()) return null;
 
-  // Prefer backend status if present; otherwise use default fallback label
-  const statusToShow = hasStatus ? trimmedStatus : t("landing.defaultStatus");
-  const showStatusRow = !isUser && (hasStatus || !assistantHasText);
+    return (
+      <ReactMarkdown
+        remarkPlugins={[
+          remarkGfm,
+          [remarkMath, { singleDollarTextMath: true, strict: false }],
+        ]}
+        rehypePlugins={[rehypeKatex]}
+      >
+        {text}
+      </ReactMarkdown>
+    );
+  }, [content]);
 
   return (
     <div className={`message ${isUser ? "user" : "assistant"}`}>
-      <div className="message-avatar">{isUser ? "🧑" : "🤖"}</div>
+      <div className="message-avatar">{isUser ? "U" : "A"}</div>
+
       <div className="message-content">
         <div className="message-bubble markdown-body">
           {isUser ? (
@@ -176,44 +190,37 @@ export default function ChatMessage({
             </div>
           ) : (
             <div
-              className={`rm-chat ${
-                streaming || replayTyping ? "typing-mode" : "fade-in"
-              }`}
+              className={`rm-chat ${streaming || canReplay ? "typing-mode" : "fade-in"}`}
             >
               {streaming ? (
                 <div className="fade-in">
-                  {/* 
-                  always show if we have a backend status
-                  also show when assistant has no text yet (initial "thinking" UI) */}
                   {showStatusRow ? (
                     <div className="rm-assistant-statusRow">
                       <span className="rm-assistant-statusText">
                         {statusToShow}
                       </span>
-                      {streaming ? (
-                        <span className="thinking-animation">
-                          <span></span>
-                          <span></span>
-                          <span></span>
-                        </span>
-                      ) : null}
+                      <span className="thinking-animation">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </span>
                     </div>
                   ) : null}
-
-                  {/* Content: only render markdown when we have text */}
-                  {assistantHasText
-                    ? renderMarkdown(content || "", { streamingMode: true })
-                    : null}
+                  {assistantHasText ? streamingMarkdown : null}
                 </div>
-              ) : replayTyping && !replayDone ? (
-                <ReplayTyping
+              ) : canReplay ? (
+                <ReplayTypingPlain
                   text={content || ""}
-                  speedMs={3}
-                  onDone={() => setReplayDone(true)}
-                  renderMarkdown={renderMarkdown}
+                  speedMs={2}
+                  onDone={() => {
+                    if (id && replayKey != null) {
+                      lastReplayKeyDoneByMessageId.set(id, replayKey);
+                    }
+                    setReplayDone(true);
+                  }}
                 />
               ) : (
-                renderMarkdown(content || "", { streamingMode: false })
+                finalMarkdown
               )}
             </div>
           )}
@@ -222,3 +229,15 @@ export default function ChatMessage({
     </div>
   );
 }
+
+export default React.memo(ChatMessageImpl, (prev, next) => {
+  return (
+    prev.id === next.id &&
+    prev.type === next.type &&
+    prev.content === next.content &&
+    prev.streaming === next.streaming &&
+    prev.replayTyping === next.replayTyping &&
+    prev.replayKey === next.replayKey &&
+    prev.statusText === next.statusText
+  );
+});

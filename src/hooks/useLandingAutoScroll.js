@@ -1,43 +1,112 @@
 // src/hooks/useLandingAutoScroll.js
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 export function useLandingAutoScroll({
   messages,
   isLoadingConversation,
   routeConversationId,
-  messagesEndRef,
+  messagesEndRef, // still used for fallback
+  messageElsRef, // Map<messageId, HTMLElement>
+  initialScrollMessageId = null, // string | null
 }) {
   const lastMsgCountRef = useRef(0);
+  const lastRouteRef = useRef(routeConversationId);
+  const lastLoadDoneKeyRef = useRef(null);
 
-  const scrollToBottom = (behavior = "smooth") => {
-    messagesEndRef?.current?.scrollIntoView({
-      behavior,
-      block: "end",
-    });
-  };
-
-  // Jump to bottom when a conversation finishes loading (instant on switch)
-  useEffect(() => {
-    if (!isLoadingConversation && (messages?.length || 0) > 0) {
+  const scrollToBottom = useCallback(
+    (behavior = "smooth") => {
       messagesEndRef?.current?.scrollIntoView({
-        behavior: "auto",
+        behavior,
         block: "end",
       });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeConversationId, isLoadingConversation]);
+    },
+    [messagesEndRef],
+  );
 
-  // Smooth scroll only when a message was appended (not updated)
+  const scrollToMessageId = useCallback(
+    (messageId, behavior = "auto") => {
+      if (!messageId) return false;
+
+      const el = messageElsRef?.current?.get(messageId);
+      if (!el) return false;
+
+      el.scrollIntoView({
+        behavior,
+        block: "start",
+        inline: "nearest",
+      });
+
+      return true;
+    },
+    [messageElsRef],
+  );
+
+  const scrollToLastMessageStart = useCallback(
+    (behavior = "auto") => {
+      const last = messages?.length ? messages[messages.length - 1] : null;
+      if (last?.id && scrollToMessageId(last.id, behavior)) return true;
+
+      // fallback if the element isn't registered yet
+      scrollToBottom(behavior);
+      return false;
+    },
+    [messages, scrollToMessageId, scrollToBottom],
+  );
+
+  // 1) On conversation load finished, scroll to target message start (default last).
+  useEffect(() => {
+    const routeChanged = lastRouteRef.current !== routeConversationId;
+    if (routeChanged) lastRouteRef.current = routeConversationId;
+
+    // wait for load completion
+    if (isLoadingConversation) return;
+
+    const len = messages?.length || 0;
+    if (len === 0) return;
+
+    // Build a stable key: route + len + optional target
+    const key = `${String(routeConversationId || "root")}::${len}::${String(
+      initialScrollMessageId || "",
+    )}`;
+
+    // Prevent re-scrolling for the same “loaded” state
+    if (lastLoadDoneKeyRef.current === key) return;
+    lastLoadDoneKeyRef.current = key;
+
+    // Ensure DOM is painted (especially with big markdown / artifacts)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (initialScrollMessageId) {
+          const ok = scrollToMessageId(initialScrollMessageId, "auto");
+          if (!ok) scrollToLastMessageStart("auto");
+        } else {
+          scrollToLastMessageStart("auto");
+        }
+      });
+    });
+  }, [
+    routeConversationId,
+    isLoadingConversation,
+    messages,
+    initialScrollMessageId,
+    scrollToMessageId,
+    scrollToLastMessageStart,
+  ]);
+
+  // 2) Smooth scroll only when a new message is appended (length increases).
   useEffect(() => {
     const len = messages?.length || 0;
 
     if (len > lastMsgCountRef.current) {
-      scrollToBottom("smooth");
+      // If the user is near bottom, scroll smoothly to last message start.
+      // If not, do nothing (future improvement: detect near-bottom).
+      requestAnimationFrame(() => {
+        scrollToLastMessageStart("smooth");
+      });
     }
 
     lastMsgCountRef.current = len;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages]);
+  }, [messages, scrollToLastMessageStart]);
 
-  return { scrollToBottom };
+  return { scrollToBottom, scrollToMessageId, scrollToLastMessageStart };
 }

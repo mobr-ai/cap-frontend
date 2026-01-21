@@ -130,13 +130,16 @@ export default function LandingPage() {
 
   const messagesEndRef = useRef(null);
   const hasBackendStatusRef = useRef(false);
+  const messageElsRef = useRef(new Map()); // Map<messageId, HTMLElement>
 
   // Auto scroll behavior
-  const { scrollToBottom } = useLandingAutoScroll({
+  const { scrollToBottom, scrollToMessageId } = useLandingAutoScroll({
     messages,
     isLoadingConversation,
     routeConversationId,
     messagesEndRef,
+    messageElsRef,
+    initialScrollMessageId: null, // later: set to a specific id
   });
 
   // Keep ref in sync with route
@@ -537,30 +540,40 @@ export default function LandingPage() {
                 fadeMs={200}
               />
             ) : (
-              messages.map((m) =>
-                (m.type === "chart" && m.vegaSpec) ||
-                (m.type === "table" && m.kv) ? (
-                  <ArtifactMessage
-                    key={m.id}
-                    message={m}
-                    pinArtifact={pinArtifact}
-                    shareArtifact={shareArtifact}
-                    chartElByMsgIdRef={chartElByMsgIdRef}
-                    chartViewByMsgIdRef={chartViewByMsgIdRef}
-                    tableElByMsgIdRef={tableElByMsgIdRef}
-                    ArtifactToolBtn={ArtifactToolButton}
-                  />
-                ) : (
-                  <ChatMessage
-                    key={m.id}
-                    type={m.type}
-                    content={m.content}
-                    statusText={m.statusText}
-                    streaming={!!m.streaming}
-                    replayTyping={!!m.replayTyping}
-                  />
-                ),
-              )
+              messages.map((m) => (
+                <div
+                  key={m.id}
+                  ref={(el) => {
+                    if (!messageElsRef.current) return;
+                    if (el) messageElsRef.current.set(m.id, el);
+                    else messageElsRef.current.delete(m.id);
+                  }}
+                  data-msgid={m.id}
+                >
+                  {(m.type === "chart" && m.vegaSpec) ||
+                  (m.type === "table" && m.kv) ? (
+                    <ArtifactMessage
+                      message={m}
+                      pinArtifact={pinArtifact}
+                      shareArtifact={shareArtifact}
+                      chartElByMsgIdRef={chartElByMsgIdRef}
+                      chartViewByMsgIdRef={chartViewByMsgIdRef}
+                      tableElByMsgIdRef={tableElByMsgIdRef}
+                      ArtifactToolBtn={ArtifactToolButton}
+                    />
+                  ) : (
+                    <ChatMessage
+                      id={m.id}
+                      type={m.type}
+                      content={m.content}
+                      statusText={m.statusText}
+                      streaming={!!m.streaming}
+                      replayTyping={!!m.replayTyping}
+                      replayKey={m.replayKey ?? null}
+                    />
+                  )}
+                </div>
+              ))
             )}
           </div>
 

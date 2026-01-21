@@ -7,25 +7,48 @@ export function useLandingMessages() {
   const [messages, setMessages] = useState([]);
   const streamingAssistantIdRef = useRef(null);
   const pendingStatusRef = useRef("");
+  const ensuringRef = useRef(false);
 
   const ensureStreamingAssistant = useCallback((initial = {}) => {
-    setMessages((prev) => {
-      const next = [...prev];
-      const last = next[next.length - 1];
+    console.count("ensureStreamingAssistant setMessages");
 
-      if (last && last.type === "assistant" && last.streaming) {
-        // Bind ref to the existing streaming assistant so upsertStatus/appendChunk target it
-        streamingAssistantIdRef.current = last.id;
-        return next;
+    if (ensuringRef.current) return;
+    ensuringRef.current = true;
+
+    queueMicrotask(() => {
+      ensuringRef.current = false;
+    });
+
+    setMessages((prev) => {
+      const next = Array.isArray(prev) ? prev.slice() : [];
+
+      // 1) Prefer the tracked streaming assistant id, if it still exists and is streaming
+      const sid = streamingAssistantIdRef.current;
+      if (sid) {
+        const idx = next.findIndex((m) => m?.id === sid);
+        if (
+          idx >= 0 &&
+          next[idx]?.type === "assistant" &&
+          next[idx]?.streaming
+        ) {
+          return prev;
+        }
       }
 
-      const id = `assistant_${Date.now()}_${Math.random()
-        .toString(36)
-        .slice(2, 6)}`;
+      // 2) Fallback: find the most recent streaming assistant anywhere in the list
+      for (let i = next.length - 1; i >= 0; i--) {
+        if (next[i]?.type === "assistant" && next[i]?.streaming) {
+          streamingAssistantIdRef.current = next[i].id;
+          return prev;
+        }
+      }
 
+      // 3) Otherwise, create a new streaming assistant exactly once
+      const id = `assistant_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       streamingAssistantIdRef.current = id;
 
       const pendingStatus = String(pendingStatusRef.current || "").trim();
+      pendingStatusRef.current = "";
 
       next.push({
         id,
@@ -35,9 +58,6 @@ export function useLandingMessages() {
         statusText: pendingStatus || "",
         ...initial,
       });
-
-      // consume pending status once the streaming assistant exists
-      pendingStatusRef.current = "";
 
       return next;
     });
@@ -82,7 +102,7 @@ export function useLandingMessages() {
 
   const updateMessage = useCallback((id, patch) => {
     setMessages((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, ...patch } : m))
+      prev.map((m) => (m.id === id ? { ...m, ...patch } : m)),
     );
   }, []);
 
@@ -91,6 +111,8 @@ export function useLandingMessages() {
   }, []);
 
   const upsertStatus = useCallback((text) => {
+    console.count("upsertStatus setMessages");
+
     if (!text) return;
 
     setMessages((prev) => {
@@ -134,6 +156,8 @@ export function useLandingMessages() {
   }, []);
 
   const appendAssistantChunk = useCallback((chunk) => {
+    console.count("appendAssistantChunk setMessages");
+
     if (!chunk) return;
 
     setMessages((prev) => {
@@ -157,11 +181,10 @@ export function useLandingMessages() {
       }
 
       if (idx >= 0) {
+        const nextContent = appendChunkSmart(next[idx].content || "", chunk);
+        if (nextContent === next[idx].content) return prev;
+        next[idx] = { ...next[idx], content: nextContent };
         streamingAssistantIdRef.current = next[idx].id;
-        next[idx] = {
-          ...next[idx],
-          content: appendChunkSmart(next[idx].content || "", chunk),
-        };
         return next;
       }
 
@@ -211,7 +234,7 @@ export function useLandingMessages() {
         }
 
         return m;
-      })
+      }),
     );
 
     streamingAssistantIdRef.current = null;
@@ -220,7 +243,7 @@ export function useLandingMessages() {
 
   const dropAllStreamingAssistants = useCallback(() => {
     setMessages((prev) =>
-      prev.filter((m) => !(m?.type === "assistant" && m?.streaming))
+      prev.filter((m) => !(m?.type === "assistant" && m?.streaming)),
     );
   }, []);
 
@@ -230,7 +253,7 @@ export function useLandingMessages() {
         if (m.type !== "assistant") return m;
         if (!String(m.statusText || "").trim()) return m;
         return { ...m, statusText: "" };
-      })
+      }),
     );
   }, []);
 

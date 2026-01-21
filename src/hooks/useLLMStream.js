@@ -69,7 +69,7 @@ export function useLLMStream({
                 _localUpdatedAt: Date.now(),
               },
             },
-          })
+          }),
         );
       };
 
@@ -87,13 +87,22 @@ export function useLLMStream({
                 title: makeTitleCandidate(),
               },
             },
-          })
+          }),
         );
       };
 
       const completeOnce = () => {
         emitTouched();
         onDone?.({ ...streamMeta });
+      };
+
+      const hardStopStream = (reader) => {
+        try {
+          reader?.cancel();
+        } catch {}
+        try {
+          abortRef.current?.abort();
+        } catch {}
       };
 
       const tryHandleStatusLine = (line) => {
@@ -158,7 +167,7 @@ export function useLLMStream({
 
         if (!response.ok) {
           const err = new Error(
-            `Streaming request failed: ${response.status} ${response.statusText}`
+            `Streaming request failed: ${response.status} ${response.statusText}`,
           );
           onError?.(err);
           return;
@@ -188,7 +197,7 @@ export function useLLMStream({
         } catch (metaErr) {
           console.warn(
             "useLLMStream: failed to read metadata headers",
-            metaErr
+            metaErr,
           );
         }
         // -----------------------------------
@@ -261,7 +270,7 @@ export function useLLMStream({
               if (before) {
                 if (before.trimStart().startsWith("data:")) {
                   const payloadBeforeDone = extractDataPayload(
-                    before.trimStart()
+                    before.trimStart(),
                   );
                   if (payloadBeforeDone) {
                     const r = emitText(payloadBeforeDone);
@@ -272,6 +281,7 @@ export function useLLMStream({
                       }
                       lastWasText = false;
                       queueMicrotask(() => completeOnce());
+                      hardStopStream(reader);
                       return;
                     }
                   }
@@ -284,6 +294,7 @@ export function useLLMStream({
                     }
                     lastWasText = false;
                     queueMicrotask(() => completeOnce());
+                    hardStopStream(reader);
                     return;
                   }
                 }
@@ -296,6 +307,7 @@ export function useLLMStream({
 
               lastWasText = false;
               queueMicrotask(() => completeOnce());
+              hardStopStream(reader);
               return;
             }
 
@@ -321,6 +333,7 @@ export function useLLMStream({
               }
               lastWasText = false;
               queueMicrotask(() => completeOnce());
+              hardStopStream(reader);
               return;
             }
 
@@ -375,6 +388,7 @@ export function useLLMStream({
                 }
                 lastWasText = false;
                 queueMicrotask(() => completeOnce());
+                hardStopStream(reader);
                 return;
               }
 
@@ -391,6 +405,7 @@ export function useLLMStream({
                 }
                 lastWasText = false;
                 queueMicrotask(() => completeOnce());
+                hardStopStream(reader);
                 return;
               }
 
@@ -402,6 +417,7 @@ export function useLLMStream({
                 }
                 lastWasText = false;
                 queueMicrotask(() => completeOnce());
+                hardStopStream(reader);
                 return;
               }
 
@@ -424,6 +440,7 @@ export function useLLMStream({
                 }
                 lastWasText = false;
                 queueMicrotask(() => completeOnce());
+                hardStopStream(reader);
                 return;
               }
               lastWasText = true;
@@ -442,6 +459,7 @@ export function useLLMStream({
         }
 
         completeOnce();
+        hardStopStream(reader);
       } catch (err) {
         if (abortRef.current?.signal?.aborted) return;
         onError?.(err);
@@ -456,7 +474,7 @@ export function useLLMStream({
       onError,
       onMetadata,
       acceptBareStatusLines,
-    ]
+    ],
   );
 
   const stop = useCallback(() => {

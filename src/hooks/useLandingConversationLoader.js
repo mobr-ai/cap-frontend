@@ -14,30 +14,70 @@ export function useLandingConversationLoader({
   t,
 }) {
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
-  const lastLoadedConversationIdRef = useRef(null);
+
+  // Conversation currently shown in the UI (only updated when we commit messages for that convo)
+  const lastCommittedConversationIdRef = useRef(null);
+
+  // A monotonic token that increments on each route conversation load.
+  // Used to ensure replay typing happens exactly once per load.
+  const routeLoadTokenRef = useRef(0);
+
+  // Avoid re-applying identical rendered payloads (prevents redraw churn)
+  const lastAppliedSigRef = useRef({ id: null, sig: null });
+
+  // Drop stale responses deterministically
+  const inFlightRef = useRef({ id: null, seq: 0 });
 
   useEffect(() => {
-    const id = routeConversationId ? Number(routeConversationId) : null;
     const fetchFn = authFetchRef?.current;
 
+    const isRootRoute =
+      routeConversationId == null || routeConversationId === "";
+
+    const parsedId = isRootRoute ? null : Number(routeConversationId);
+    const id = Number.isFinite(parsedId) ? parsedId : null;
+
     if (!fetchFn) {
-      // no fetcher yet, do nothing (don't wipe UI)
       setIsLoadingConversation(false);
       return;
     }
 
-    if (!id) {
-      // We're on "/" (new chat). Only clear if we *came from* a conversation route.
-      if (lastLoadedConversationIdRef.current != null) {
+    // Param exists but not a valid numeric id yet: do nothing (don’t clear, don’t load)
+    if (!isRootRoute && id == null) {
+      setIsLoadingConversation(false);
+      return;
+    }
+
+    // "/" route: clear only if we came from a conversation
+    if (isRootRoute) {
+      if (lastCommittedConversationIdRef.current != null) {
         setMessages([]);
-        lastLoadedConversationIdRef.current = null;
+        lastCommittedConversationIdRef.current = null;
+        lastAppliedSigRef.current = { id: null, sig: null };
       }
       setIsLoadingConversation(false);
       return;
     }
 
+    const prevCommittedId = lastCommittedConversationIdRef.current;
+    const isRouteSwitch = prevCommittedId !== id;
+
+    // If switching to another conversation route, clear immediately to prevent any “mixed” UI
+    // while the new conversation loads.
+    if (isRouteSwitch) {
+      setMessages([]);
+      setConversationTitle?.("");
+      // new load token for this route switch
+      routeLoadTokenRef.current += 1;
+      // reset signature guard so new convo can commit even if structurally similar
+      lastAppliedSigRef.current = { id: null, sig: null };
+    }
+
     let cancelled = false;
     const controller = new AbortController();
+
+    const seq = inFlightRef.current.seq + 1;
+    inFlightRef.current = { id, seq };
 
     setIsLoadingConversation(true);
 
@@ -49,61 +89,116 @@ export function useLandingConversationLoader({
         if (!res?.ok) throw new Error("Failed to load conversation");
 
         const data = await res.json();
+
         if (cancelled) return;
+        if (inFlightRef.current.seq !== seq || inFlightRef.current.id !== id)
+          return;
 
         setConversationTitle?.(
-          String(data?.title || data?.conversation?.title || "")
+          String(data?.title || data?.conversation?.title || ""),
         );
 
         // Restore raw conversation messages (keep raw assistant markdown)
         const restoredMsgsRaw = (data?.messages || []).map((m) => {
-          const msgIdNum = m?.id; // numeric id from backend
+          const msgIdNum = m?.id;
           const role = m?.role;
           const isUser = role === "user";
 
           return {
             id: `conv_${msgIdNum}`,
-            conv_message_id: msgIdNum, // numeric anchor
+            conv_message_id: msgIdNum,
             type: isUser ? "user" : "assistant",
             content: m?.content || "",
           };
         });
 
-        // Replay typing for the LAST assistant message only
-        let replayId = null;
-        for (let i = restoredMsgsRaw.length - 1; i >= 0; i--) {
-          if (restoredMsgsRaw[i].type === "assistant") {
-            replayId = restoredMsgsRaw[i].id;
+        // Inject artifacts using conversation_message_id anchoring
+        const restoredWithArtifactsBase = injectArtifactsAfterMessage(
+          restoredMsgsRaw,
+          data?.artifacts || [],
+        );
+
+        // Apply replayTyping ONLY for the last assistant message,
+        // and only for this route load token (so it types once per load).
+        const replayKey = routeLoadTokenRef.current;
+
+        let lastAssistantId = null;
+        for (let i = restoredWithArtifactsBase.length - 1; i >= 0; i--) {
+          if (restoredWithArtifactsBase[i]?.type === "assistant") {
+            lastAssistantId = restoredWithArtifactsBase[i].id;
             break;
           }
         }
 
-        const restoredMsgs = restoredMsgsRaw.map((m) =>
-          m.id === replayId ? { ...m, replayTyping: true } : m
+        const restoredWithArtifacts = lastAssistantId
+          ? restoredWithArtifactsBase.map((m) =>
+              m.id === lastAssistantId
+                ? { ...m, replayTyping: true, replayKey }
+                : m,
+            )
+          : restoredWithArtifactsBase;
+
+        // Signature guard: if identical payload for this conversation id, do nothing.
+        // Include replayKey so the “type once per load” is preserved (new load => new sig).
+        const sig = JSON.stringify(
+          restoredWithArtifacts.map((m) => ({
+            id: m.id,
+            type: m.type,
+            content: m.content,
+            replayTyping: !!m.replayTyping,
+            replayKey: m.replayKey || 0,
+            statusText: m.statusText || "",
+            streaming: !!m.streaming,
+            kind: m.kind || "",
+          })),
         );
 
-        // Inject artifacts using conversation_message_id anchoring
-        const restoredWithArtifacts = injectArtifactsAfterMessage(
-          restoredMsgs,
-          data?.artifacts || []
-        );
-
-        const prevLoadedId = lastLoadedConversationIdRef.current;
-        const isNewConversationRoute = prevLoadedId !== id;
-
-        if (isNewConversationRoute) {
-          // Replace, but also ensure no client-side streaming placeholders leak across route swaps
-          setMessages(restoredWithArtifacts);
-          lastLoadedConversationIdRef.current = id;
-        } else {
-          // Merge, but first drop any live streaming assistant placeholders
-          setMessages((prev) => {
-            const cleanedPrev = prev.filter(
-              (m) => !(m?.type === "assistant" && m?.streaming)
-            );
-            return mergeById(cleanedPrev, restoredWithArtifacts);
-          });
+        if (
+          lastAppliedSigRef.current.id === id &&
+          lastAppliedSigRef.current.sig === sig
+        ) {
+          return;
         }
+
+        lastAppliedSigRef.current = { id, sig };
+
+        // Route switch: ALWAYS replace (never merge) to prevent cross-convo mixing.
+        if (isRouteSwitch) {
+          setMessages(restoredWithArtifacts);
+          lastCommittedConversationIdRef.current = id;
+          return;
+        }
+
+        // Same conversation route: merge silently (no repeated replay unless replayKey changed)
+        setMessages((prev) => {
+          const cleanedPrev = Array.isArray(prev)
+            ? prev.filter((m) => !(m?.type === "assistant" && m?.streaming))
+            : [];
+
+          const merged = mergeById(cleanedPrev, restoredWithArtifacts);
+
+          // No-op if shallow-equal for stable fields
+          if (merged.length === cleanedPrev.length) {
+            let same = true;
+            for (let i = 0; i < merged.length; i++) {
+              const a = merged[i];
+              const b = cleanedPrev[i];
+              if (
+                a?.id !== b?.id ||
+                a?.type !== b?.type ||
+                a?.content !== b?.content ||
+                !!a?.replayTyping !== !!b?.replayTyping ||
+                (a?.replayKey || 0) !== (b?.replayKey || 0)
+              ) {
+                same = false;
+                break;
+              }
+            }
+            if (same) return prev;
+          }
+
+          return merged;
+        });
       } catch (err) {
         if (cancelled) return;
         if (err?.name === "AbortError") return;
@@ -121,7 +216,7 @@ export function useLandingConversationLoader({
     };
   }, [
     routeConversationId,
-    authFetchRef,
+    authFetchRef?.current,
     setMessages,
     setConversationTitle,
     showToast,
