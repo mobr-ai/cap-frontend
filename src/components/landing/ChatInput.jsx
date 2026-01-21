@@ -42,7 +42,7 @@ export default function ChatInput({
           placeholder={placeholder}
           rows={2}
           maxLength={maxLength}
-          disabled={isSendDisabled}
+          disabled={isProcessing}
         />
         <div className="char-count">
           <span>{charCountText}</span>
