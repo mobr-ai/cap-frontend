@@ -52,7 +52,7 @@
 }
 
 .cap-root .message.user .message-avatar {
-  background: linear-gradient(135deg, var(--primary), #7c3aed);
+  background: linear-gradient(135deg, #62636462, #f8f8ff17);
   color: white;
 }
 
@@ -269,8 +269,9 @@
 /* Inline code */
 .cap-root .message-bubble.markdown-body code,
 .cap-root .rm-chat code {
-  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
-    Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
   font-size: 0.95em;
   background: rgba(15, 23, 42, 0.8);
   padding: 0.15rem 0.3rem;

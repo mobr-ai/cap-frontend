@@ -178,9 +178,15 @@ function ChatMessageImpl({
     );
   }, [content]);
 
+  // Avatars (unicode escapes)
+  const userAvatar = "\uD83D\uDC64"; // 👤
+  const assistantAvatar = "\uD83E\uDD16"; // 🤖
+
   return (
     <div className={`message ${isUser ? "user" : "assistant"}`}>
-      <div className="message-avatar">{isUser ? "U" : "A"}</div>
+      <div className="message-avatar">
+        {isUser ? userAvatar : assistantAvatar}
+      </div>
 
       <div className="message-content">
         <div className="message-bubble markdown-body">
