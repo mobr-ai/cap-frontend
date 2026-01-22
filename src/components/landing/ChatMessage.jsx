@@ -12,7 +12,7 @@ import rehypeHighlight from "rehype-highlight";
 // NOTE: Map updates do NOT trigger rerenders; we also use local state for that.
 const lastReplayKeyDoneByMessageId = new Map();
 
-function ReplayTypingPlain({ text, speedMs = 2, onDone }) {
+function ReplayTypingPlain({ text, speedMs = 1, onDone }) {
   const FULL = String(text || "");
   const [shown, setShown] = useState("");
   const timerRef = useRef(null);
@@ -217,7 +217,7 @@ function ChatMessageImpl({
               ) : canReplay ? (
                 <ReplayTypingPlain
                   text={content || ""}
-                  speedMs={2}
+                  speedMs={1}
                   onDone={() => {
                     if (id && replayKey != null) {
                       lastReplayKeyDoneByMessageId.set(id, replayKey);
