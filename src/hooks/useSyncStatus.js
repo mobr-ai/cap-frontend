@@ -176,35 +176,23 @@ export default function useSyncStatus(authFetch) {
 
       if (inFlight.current.sync) return;
       inFlight.current.sync = true;
-      try {
-        const sparqlQuery = `
-        PREFIX b: <https://mobr.ai/ont/blockchain#>
-        PREFIX c: <https://mobr.ai/ont/cardano#>
-        SELECT ?currentCardanoHeight (MAX(?blockNum) AS ?capBlockNum) (COUNT(?block) AS ?count)
-        WHERE {
-          c:Cardano c:hasBlockNumber ?currentCardanoHeight .
-          ?block a b:Block .
-          ?block c:hasBlockNumber ?blockNum .
-        }
-        GROUP BY (?currentCardanoHeight)
-      `;
 
-        const res = await authFetch("/api/v1/query", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: sparqlQuery, type: "SELECT" }),
-          signal,
-        });
+      try {
+        // backend endpoint runs SPARQL server-side
+        const res = await authFetch("/api/v1/query/sync_data", { signal });
 
         if (!res.ok) throw new Error(String(res.status));
 
         const data = await res.json();
 
-        // Some backends wrap results twice, some three times.
-        // Try the deepest one first, fall back to the old shape.
+        // Be tolerant to multiple backend shapes:
+        // - QueryResponse(results=<sparql json>)
+        // - older wrappers that nest results multiple times
         const bindings =
+          data?.results?.results?.bindings ||
           data?.results?.results?.results?.bindings ||
-          data?.results?.results?.bindings;
+          data?.results?.results?.results?.results?.bindings ||
+          data?.results?.bindings;
 
         const row = bindings?.[0];
 
@@ -216,7 +204,7 @@ export default function useSyncStatus(authFetch) {
           if (!Number.isNaN(chain)) setCardanoBlock(chain);
           resetFailure();
         } else {
-          console.debug("Sync info: no bindings in SPARQL response", data);
+          console.debug("Sync info: no bindings in sync_data response", data);
           bumpFailure();
         }
       } catch (e) {
