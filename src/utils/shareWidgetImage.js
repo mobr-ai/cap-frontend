@@ -3,8 +3,6 @@ import { toPng } from "html-to-image";
 
 /**
  * Watermark presets
- * - default is logoBottomRight
- * - share uses logoCenterBig by default in your DashboardWidget.jsx
  */
 export const WATERMARK_PRESETS = {
   none: { kind: "none" },
@@ -47,13 +45,58 @@ function safeText(s) {
   return String(s || "").trim();
 }
 
+function isNumericHeaderName(h) {
+  const x = String(h || "").toLowerCase();
+  return (
+    x === "count" ||
+    x.endsWith("count") ||
+    x.includes("votes") ||
+    x.includes("vote") ||
+    x.includes("yes") ||
+    x.includes("no") ||
+    x.includes("abstain") ||
+    x.includes("total") ||
+    x.includes("amount") ||
+    x.includes("sum") ||
+    x.includes("avg") ||
+    x.includes("min") ||
+    x.includes("max")
+  );
+}
+
+function isTimeHeaderName(h) {
+  const x = String(h || "").toLowerCase();
+  return (
+    x.includes("timestamp") ||
+    x.includes("time") ||
+    x.includes("date") ||
+    x.includes("slot") ||
+    x.includes("epoch")
+  );
+}
+
+function isHashishHeaderName(h) {
+  const x = String(h || "").toLowerCase();
+  return (
+    x.includes("hash") ||
+    x.includes("tx") ||
+    x.endsWith("id") ||
+    x.includes("address") ||
+    x.includes("policy") ||
+    x.includes("fingerprint")
+  );
+}
+
+function isUrlHeaderName(h) {
+  const x = String(h || "").toLowerCase();
+  return x.includes("url") || x.includes("link") || x.includes("ipfs");
+}
+
 // Cache the logo as data URL so html-to-image embeds it reliably.
 let _logoDataUrl = null;
 async function getLogoDataUrl(src) {
   if (!src) return null;
   if (_logoDataUrl && src === "/icons/logo.svg") return _logoDataUrl;
-
-  // If already a data URL, just return it.
   if (src.startsWith("data:")) return src;
 
   try {
@@ -71,20 +114,194 @@ async function getLogoDataUrl(src) {
   }
 }
 
+function approxCellText(cell) {
+  if (!cell) return "";
+  const a = cell.querySelector && cell.querySelector("a");
+  if (a && a.textContent) return String(a.textContent).trim();
+  return String(cell.textContent || "").trim();
+}
+
 /**
- * Some components (tables) rely on "height: 100%" + overflow containers.
- * In an offscreen clone, that often collapses to 0px or crops to the visible part.
- * This forces "natural height" for export.
+ * Content-aware smart <colgroup> for mixed tables.
+ * - numeric cols narrow
+ * - timestamps medium
+ * - hashes/ids large
+ * - urls largest
+ * - also considers actual body text lengths (sampled) so it adapts per table
+ *
+ * Works best with table-layout: fixed.
  */
-function forceExpandForExport(root) {
+function applySmartColGroup(tableEl, sandboxWidthPx) {
+  if (!tableEl) return;
+
+  const headerRow = tableEl.querySelector("thead tr");
+  if (!headerRow) return;
+
+  const ths = Array.from(headerRow.querySelectorAll("th"));
+  const headers = ths.map((th) => String(th.textContent || "").trim());
+  const headersLower = headers.map((h) => h.toLowerCase());
+  const n = headers.length;
+  if (!n) return;
+
+  tableEl.querySelectorAll("colgroup").forEach((cg) => cg.remove());
+
+  const rows = Array.from(tableEl.querySelectorAll("tbody tr")).slice(0, 25);
+  const maxLens = new Array(n).fill(0);
+
+  rows.forEach((tr) => {
+    const tds = Array.from(tr.querySelectorAll("td"));
+    for (let i = 0; i < n; i += 1) {
+      const txt = approxCellText(tds[i]);
+      const len = Math.min(90, txt.length);
+      if (len > maxLens[i]) maxLens[i] = len;
+    }
+  });
+
+  const baseWeights = headersLower.map((h) => {
+    if (isNumericHeaderName(h)) return 0.55;
+    if (isTimeHeaderName(h)) return 1.25;
+    if (isUrlHeaderName(h)) return 2.6;
+    if (isHashishHeaderName(h)) return 2.2;
+    return 1.0;
+  });
+
+  // Minimum px widths so headers like "proposalTimestamp" never get crushed.
+  const minPx = headersLower.map((h) => {
+    if (isNumericHeaderName(h)) return 90;
+    if (isTimeHeaderName(h)) return 210;
+    if (isUrlHeaderName(h)) return 320;
+    if (isHashishHeaderName(h)) return 320;
+    return 160;
+  });
+
+  const extra = headers.map((h, i) => {
+    const headerLen = Math.min(30, String(h || "").length);
+    const contentLen = maxLens[i];
+
+    if (isNumericHeaderName(headersLower[i])) {
+      return 0.08 * headerLen + 0.02 * Math.min(20, contentLen);
+    }
+    if (isTimeHeaderName(headersLower[i])) {
+      return 0.06 * headerLen + 0.03 * Math.min(40, contentLen);
+    }
+    if (
+      isUrlHeaderName(headersLower[i]) ||
+      isHashishHeaderName(headersLower[i])
+    ) {
+      return 0.05 * headerLen + 0.035 * Math.min(70, contentLen);
+    }
+    return 0.06 * headerLen + 0.03 * Math.min(50, contentLen);
+  });
+
+  const weights = baseWeights.map((b, i) => b + extra[i]);
+
+  const wDen = weights.reduce((a, b) => a + b, 0) || 1;
+  let pct = weights.map((w) => (w / wDen) * 100);
+
+  const denomW = Math.max(600, Number(sandboxWidthPx) || 1200);
+  let minPct = minPx.map((px) => (px / denomW) * 100);
+
+  let totalMin = minPct.reduce((a, b) => a + b, 0);
+  if (totalMin > 100) {
+    const scale = 100 / totalMin;
+    minPct = minPct.map((p) => p * scale);
+    totalMin = 100;
+  }
+
+  // Enforce minimums
+  let used = 0;
+  const fixed = new Array(n).fill(false);
+  for (let i = 0; i < n; i += 1) {
+    if (pct[i] < minPct[i]) {
+      pct[i] = minPct[i];
+      fixed[i] = true;
+    }
+    used += pct[i];
+  }
+
+  // If over budget, reduce flex columns proportionally
+  if (used > 100) {
+    const over = used - 100;
+    let flexSum = 0;
+    for (let i = 0; i < n; i += 1) if (!fixed[i]) flexSum += pct[i];
+
+    if (flexSum > 0) {
+      for (let i = 0; i < n; i += 1) {
+        if (!fixed[i]) {
+          const cut = (pct[i] / flexSum) * over;
+          pct[i] = Math.max(minPct[i], pct[i] - cut);
+        }
+      }
+    }
+  } else if (used < 100) {
+    // If under budget, give it to non-numeric columns
+    const remain = 100 - used;
+    let flexW = 0;
+    for (let i = 0; i < n; i += 1) {
+      if (!isNumericHeaderName(headersLower[i])) flexW += weights[i];
+    }
+
+    if (flexW > 0) {
+      for (let i = 0; i < n; i += 1) {
+        if (!isNumericHeaderName(headersLower[i])) {
+          pct[i] += (weights[i] / flexW) * remain;
+        }
+      }
+    }
+  }
+
+  // Clamp extremes a bit, then renormalize
+  pct = pct.map((p, i) => {
+    if (isNumericHeaderName(headersLower[i])) return clamp(p, minPct[i], 14);
+    return clamp(p, minPct[i], 52);
+  });
+
+  const sumPct = pct.reduce((a, b) => a + b, 0) || 1;
+  pct = pct.map((p) => (p / sumPct) * 100);
+
+  const colgroup = document.createElement("colgroup");
+  for (let i = 0; i < n; i += 1) {
+    const col = document.createElement("col");
+    col.style.width = `${pct[i].toFixed(3)}%`;
+    colgroup.appendChild(col);
+  }
+  tableEl.insertBefore(colgroup, tableEl.firstChild);
+
+  // Wrap long strings sanely
+  tableEl.querySelectorAll("th, td").forEach((cell) => {
+    cell.style.whiteSpace = "normal";
+    cell.style.wordBreak = "break-word";
+    cell.style.overflowWrap = "anywhere";
+    cell.style.verticalAlign = "top";
+  });
+
+  // Numeric columns: compact + right aligned (header + body)
+  headersLower.forEach((h, idx) => {
+    if (!isNumericHeaderName(h)) return;
+    const nth = idx + 1;
+    tableEl
+      .querySelectorAll(
+        `thead th:nth-child(${nth}), tbody td:nth-child(${nth})`,
+      )
+      .forEach((cell) => {
+        cell.style.whiteSpace = "nowrap";
+        cell.style.textAlign = "right";
+      });
+  });
+}
+
+/**
+ * Expand scroll containers and normalize KVTable so it exports cleanly.
+ * IMPORTANT: this is export-only (runs on a clone).
+ */
+function forceExpandForExport(root, sandboxWidthPx) {
   if (!root) return;
 
-  // Make sure all ancestors in the clone allow full painting
+  // Expand all descendants that may clip/collapse in the clone
   const all = root.querySelectorAll("*");
   all.forEach((el) => {
     const cs = window.getComputedStyle(el);
 
-    // Expand scroll containers
     if (
       cs.overflow === "auto" ||
       cs.overflow === "scroll" ||
@@ -93,41 +310,60 @@ function forceExpandForExport(root) {
       el.style.overflow = "visible";
     }
 
-    // Remove constraints that cause cropping/collapse in the clone
     if (cs.maxHeight && cs.maxHeight !== "none") el.style.maxHeight = "none";
     if (cs.height && cs.height.endsWith("%")) el.style.height = "auto";
 
-    // Ensure tables remain readable even if your app theme uses light text
     if (el.classList?.contains("kv-table") || el.closest?.(".kv-table")) {
-      // Keep structure but force readable export colors
       el.style.color = "#0f172a";
       el.style.background = "#ffffff";
     }
   });
 
-  // Specific known wrappers
-  const kvWrap = root.querySelector(".kv-table-wrapper");
+  // Also expand the root itself if it is a scroll container
+  {
+    const cs = window.getComputedStyle(root);
+    if (
+      cs.overflow === "auto" ||
+      cs.overflow === "scroll" ||
+      cs.overflow === "hidden"
+    ) {
+      root.style.overflow = "visible";
+    }
+    if (cs.maxHeight && cs.maxHeight !== "none") root.style.maxHeight = "none";
+  }
+
+  const isRootWrap = root.classList?.contains("kv-table-wrapper");
+  const isRootTable = root.classList?.contains("kv-table");
+
+  const kvWrap = isRootWrap ? root : root.querySelector(".kv-table-wrapper");
   if (kvWrap) {
     kvWrap.style.overflow = "visible";
     kvWrap.style.height = "auto";
     kvWrap.style.maxHeight = "none";
-    kvWrap.style.alignContent = "stretch";
+    kvWrap.style.display = "block";
+    kvWrap.style.width = "100%";
+    kvWrap.style.maxWidth = "100%";
+    kvWrap.style.boxSizing = "border-box";
+    kvWrap.style.background = "#ffffff";
   }
 
-  // If we have a table, let it size naturally
-  const kvTable = root.querySelector(".kv-table");
+  // Critical fix: if root IS the table, use it directly.
+  const kvTable = isRootTable ? root : root.querySelector(".kv-table");
   if (kvTable) {
-    kvTable.style.width = "max-content";
+    kvTable.style.width = "100%";
+    kvTable.style.maxWidth = "100%";
+    kvTable.style.tableLayout = "fixed";
+    kvTable.style.borderCollapse = "collapse";
+    kvTable.style.boxSizing = "border-box";
     kvTable.style.background = "#ffffff";
     kvTable.style.color = "#0f172a";
+
+    applySmartColGroup(kvTable, sandboxWidthPx);
   }
 }
 
 /**
- * Builds a share card that looks like your live widgets:
- * - rounded outer container
- * - title bar (bigger and readable)
- * - content area (white) with watermark overlay
+ * Builds the share card frame.
  */
 async function buildShareCardNode({
   contentNode,
@@ -139,14 +375,17 @@ async function buildShareCardNode({
   const outer = document.createElement("div");
   outer.setAttribute("data-cap-sharecard", "1");
 
-  outer.style.display = "inline-block";
+  // Critical: do NOT shrink-wrap the card; let it fill sandbox width
+  outer.style.display = "block";
+  outer.style.width = "100%";
+  outer.style.boxSizing = "border-box";
+
   outer.style.borderRadius = "26px";
   outer.style.overflow = "hidden";
   outer.style.background = "#ffffff";
   outer.style.border = "1px solid rgba(2, 6, 23, 0.18)";
   outer.style.boxShadow = "0 14px 45px rgba(0,0,0,0.20)";
 
-  // Title bar
   if (titleBar) {
     const head = document.createElement("div");
     head.style.background = "#3f4756";
@@ -176,24 +415,25 @@ async function buildShareCardNode({
     outer.appendChild(head);
   }
 
-  // Body
   const body = document.createElement("div");
   body.style.position = "relative";
   body.style.background = "#ffffff";
   body.style.padding = "18px";
-  body.style.display = "inline-block";
+  body.style.display = "block";
+  body.style.width = "100%";
+  body.style.boxSizing = "border-box";
 
-  // Content wrapper (ensures no stretching)
   const contentWrap = document.createElement("div");
-  contentWrap.style.display = "inline-block";
+  contentWrap.style.display = "block";
+  contentWrap.style.width = "100%";
+  contentWrap.style.maxWidth = "100%";
+  contentWrap.style.boxSizing = "border-box";
   contentWrap.style.background = "#ffffff";
   contentWrap.style.color = "#0f172a";
 
-  // Insert cloned node
   contentWrap.appendChild(contentNode);
   body.appendChild(contentWrap);
 
-  // Watermark overlay
   const wm = watermark || WATERMARK_PRESETS.none;
   if (wm.kind !== "none") {
     const overlay = document.createElement("div");
@@ -229,7 +469,6 @@ async function buildShareCardNode({
       overlay.appendChild(img);
     }
 
-    // Positioning
     if (wm.position === "bottom-right") {
       overlay.style.alignItems = "flex-end";
       overlay.style.justifyContent = "flex-end";
@@ -252,7 +491,7 @@ async function buildShareCardNode({
  */
 async function exportNodeToPngDataUrl(
   node,
-  { pixelRatio = 2, backgroundColor = "#ffffff" } = {}
+  { pixelRatio = 2, backgroundColor = "#ffffff", sandboxWidth = 1200 } = {},
 ) {
   const sandbox = document.createElement("div");
   sandbox.style.position = "fixed";
@@ -263,10 +502,14 @@ async function exportNodeToPngDataUrl(
   sandbox.style.margin = "0";
   sandbox.style.background = "transparent";
 
+  sandbox.style.width = `${sandboxWidth}px`;
+  sandbox.style.maxWidth = `${sandboxWidth}px`;
+  sandbox.style.boxSizing = "border-box";
+  sandbox.style.display = "block";
+
   document.body.appendChild(sandbox);
   sandbox.appendChild(node);
 
-  // Force a layout pass
   await new Promise((r) => requestAnimationFrame(r));
 
   const rect = node.getBoundingClientRect();
@@ -280,7 +523,6 @@ async function exportNodeToPngDataUrl(
       backgroundColor,
       width,
       height,
-      // ensure correct sizing in foreignObject
       style: {
         transform: "scale(1)",
         transformOrigin: "top left",
@@ -293,9 +535,6 @@ async function exportNodeToPngDataUrl(
 
 /* ----------------------------- public API ----------------------------- */
 
-/**
- * Export a DOM element (tables use this)
- */
 export async function exportElementAsPngDataUrl({
   element,
   title,
@@ -306,11 +545,13 @@ export async function exportElementAsPngDataUrl({
 } = {}) {
   if (!element) return null;
 
-  // Clone the element so we can safely override styles for export.
+  const sandboxWidthPx = 1200;
+
   const clone = element.cloneNode(true);
 
-  // IMPORTANT: make sure clone paints fully (no scroll-crop / no 0-height collapse)
-  forceExpandForExport(clone);
+  // Make sure clone paints fully and tables are normalized even when
+  // element === .kv-table (dashboard often passes the table node directly).
+  forceExpandForExport(clone, sandboxWidthPx);
 
   // Make links readable in export
   clone.querySelectorAll("a").forEach((a) => {
@@ -319,10 +560,18 @@ export async function exportElementAsPngDataUrl({
   });
 
   // Ensure table header/background remains visible
-  clone.querySelectorAll(".kv-table thead th").forEach((th) => {
-    th.style.background = "#0b1222";
-    th.style.color = "#ffffff";
-  });
+  // (also handle case where clone itself is the table)
+  if (clone.classList?.contains("kv-table")) {
+    clone.querySelectorAll("thead th").forEach((th) => {
+      th.style.background = "#0b1222";
+      th.style.color = "#ffffff";
+    });
+  } else {
+    clone.querySelectorAll(".kv-table thead th").forEach((th) => {
+      th.style.background = "#0b1222";
+      th.style.color = "#ffffff";
+    });
+  }
 
   const card = await buildShareCardNode({
     contentNode: clone,
@@ -335,14 +584,10 @@ export async function exportElementAsPngDataUrl({
   return exportNodeToPngDataUrl(card, {
     pixelRatio,
     backgroundColor: "#ffffff",
+    sandboxWidth: sandboxWidthPx,
   });
 }
 
-/**
- * Export a Vega chart view (charts use this)
- * Note: This does NOT fix your expanded tooltip issue (separate topic).
- * It just exports a consistent image.
- */
 export async function exportChartAsPngDataUrl({
   vegaView,
   title,
@@ -353,14 +598,11 @@ export async function exportChartAsPngDataUrl({
 } = {}) {
   if (!vegaView) return null;
 
-  // Vega can render to a PNG at a target width; scale keeps it sharp.
-  // (If width isn't available, fallback to DOM export in caller.)
   let dataUrl = null;
 
   try {
     let w = Number(vegaView.width?.() || 0);
 
-    // Force a sane width if Vega reports 0 (VERY common offscreen)
     if (!w || w < 10) {
       w = 800;
       try {
@@ -380,7 +622,6 @@ export async function exportChartAsPngDataUrl({
 
   if (!dataUrl) return null;
 
-  // Wrap it in the same share card frame for consistent look
   const img = document.createElement("img");
   img.src = dataUrl;
   img.alt = safeText(title) || "chart";
@@ -391,7 +632,10 @@ export async function exportChartAsPngDataUrl({
   img.style.background = "#ffffff";
 
   const wrap = document.createElement("div");
-  wrap.style.display = "inline-block";
+  wrap.style.display = "block";
+  wrap.style.width = "100%";
+  wrap.style.maxWidth = "100%";
+  wrap.style.boxSizing = "border-box";
   wrap.style.background = "#ffffff";
   wrap.appendChild(img);
 
@@ -403,9 +647,9 @@ export async function exportChartAsPngDataUrl({
     watermark,
   });
 
-  // High-ish pixel ratio but not insane
   return exportNodeToPngDataUrl(card, {
     pixelRatio: 2,
     backgroundColor: "#ffffff",
+    sandboxWidth: 1200,
   });
 }
