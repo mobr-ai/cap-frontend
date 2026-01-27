@@ -1,5 +1,5 @@
 // src/pages/AdminPage.jsx
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useOutletContext, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuthRequest } from "@/hooks/useAuthRequest";
@@ -20,9 +20,35 @@ import { UserDirectory } from "@/components/admin/UserDirectory";
 import { WaitlistDirectory } from "@/components/admin/WaitlistDirectory";
 import { NewUserAlertsPanel } from "@/components/admin/NewUserAlertsPanel";
 import { WaitlistAlertsPanel } from "@/components/admin/WaitlistAlertsPanel";
+import { UserConfirmedAlertsPanel } from "@/components/admin/UserConfirmedAlertsPanel";
 import { MetricsOverview } from "@/components/admin/MetricsOverview";
+import { AlertsRecipientsPool } from "@/components/admin/AlertsRecipientsPool";
 
 import "@/styles/AdminPage.css";
+
+function uniqEmails(list) {
+  const out = [];
+  const seen = new Set();
+  for (const x of list || []) {
+    const v = String(x || "")
+      .trim()
+      .toLowerCase();
+    if (!v || seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+  }
+  return out;
+}
+
+function arraysEqual(a, b) {
+  if (a === b) return true;
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
 
 export default function AdminPage() {
   const { session, showToast } = useOutletContext() || {};
@@ -33,6 +59,14 @@ export default function AdminPage() {
   const initialTab = searchParams.get("tab") || "overview";
   const [activeTab, setActiveTab] = useState(initialTab);
 
+  const system = useAdminSystemMetrics(authFetch);
+  const users = useAdminUsers(authFetch, showToast, t);
+  const waitlist = useAdminWaitlist(authFetch, showToast, t, {
+    refreshUsers: users.reloadUsers,
+  });
+  const notifications = useAdminNotifications(authFetch, showToast, t);
+  const metrics = useAdminMetrics(authFetch, activeTab === "metrics");
+
   const tabs = [
     { key: "overview" },
     { key: "users" },
@@ -41,7 +75,53 @@ export default function AdminPage() {
     { key: "alerts" },
   ];
 
-  //Sync tab → URL
+  const [recipientPool, setRecipientPool] = useState(() => {
+    try {
+      const raw = localStorage.getItem("cap.admin.alertRecipientsPool");
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? uniqEmails(parsed) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist pool
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "cap.admin.alertRecipientsPool",
+        JSON.stringify(uniqEmails(recipientPool)),
+      );
+    } catch {}
+  }, [recipientPool]);
+
+  // Seed pool from configs WITHOUT depending on `notifications` object identity
+  const newUserRecipients =
+    notifications?.newUser?.notifyConfig?.recipients || [];
+  const waitlistRecipients =
+    notifications?.waitlist?.notifyConfig?.recipients || [];
+  const userConfirmedRecipients =
+    notifications?.userConfirmed?.notifyConfig?.recipients || [];
+
+  const seededFromConfigs = useMemo(() => {
+    return uniqEmails([
+      ...newUserRecipients,
+      ...waitlistRecipients,
+      ...userConfirmedRecipients,
+    ]);
+  }, [newUserRecipients, waitlistRecipients, userConfirmedRecipients]);
+
+  useEffect(() => {
+    if (!seededFromConfigs.length) return;
+
+    setRecipientPool((prev) => {
+      const prevArr = Array.isArray(prev) ? prev : [];
+      const next = uniqEmails([...prevArr, ...seededFromConfigs]);
+      return arraysEqual(next, prevArr) ? prevArr : next;
+    });
+  }, [seededFromConfigs]);
+
+  // Sync tab → URL
   const changeTab = (tab) => {
     setActiveTab(tab);
     setSearchParams({ tab });
@@ -51,14 +131,8 @@ export default function AdminPage() {
     activeTab,
     tabs,
     onChange: changeTab,
-    swipeMinPx: 80, // feels better for full-page gestures
+    swipeMinPx: 80,
   });
-
-  const system = useAdminSystemMetrics(authFetch);
-  const users = useAdminUsers(authFetch, showToast, t);
-  const waitlist = useAdminWaitlist(authFetch, showToast, t);
-  const notifications = useAdminNotifications(authFetch, showToast, t);
-  const metrics = useAdminMetrics(authFetch, activeTab === "metrics");
 
   // Guard (backend still enforces admin)
   if (!session || !session.is_admin) {
@@ -111,9 +185,33 @@ export default function AdminPage() {
 
         {activeTab === "alerts" && (
           <>
-            <NewUserAlertsPanel t={t} {...notifications.newUser} />
+            <AlertsRecipientsPool
+              t={t}
+              value={recipientPool}
+              onChange={setRecipientPool}
+              disabled={false}
+            />
 
-            <WaitlistAlertsPanel t={t} {...notifications.waitlist} />
+            <NewUserAlertsPanel
+              t={t}
+              {...notifications.newUser}
+              recipientPool={recipientPool}
+              setRecipientPool={setRecipientPool}
+            />
+
+            <WaitlistAlertsPanel
+              t={t}
+              {...notifications.waitlist}
+              recipientPool={recipientPool}
+              setRecipientPool={setRecipientPool}
+            />
+
+            <UserConfirmedAlertsPanel
+              t={t}
+              {...notifications.userConfirmed}
+              recipientPool={recipientPool}
+              setRecipientPool={setRecipientPool}
+            />
           </>
         )}
       </div>

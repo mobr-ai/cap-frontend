@@ -141,7 +141,7 @@ export function useWaitlistFlow({ flow }) {
   }, [isWalletFlow, walletStorageKey, uidStorageKey]);
 
   // Email redirect behavior: auto-submit when URL has ?email=...
-  useEffect(async () => {
+  useEffect(() => {
     if (!isEmailRedirectFlow) return;
 
     const e = (prefillEmail || "").trim();
@@ -151,7 +151,10 @@ export function useWaitlistFlow({ flow }) {
     didAutoSubmitRef.current = true;
 
     setEmail(e);
-    await submitEmail(e);
+
+    (async () => {
+      await submitEmail(e);
+    })();
   }, [isEmailRedirectFlow, prefillEmail, submitEmail]);
 
   return {

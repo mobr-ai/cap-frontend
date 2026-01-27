@@ -117,9 +117,9 @@ function Layout() {
 
   // --- Authenticated fetch wrapper -----------------------------------------
   const { authFetch } = useAuthRequest({ session, showToast, handleLogout });
-  useEffect(() => {
-    console.count("authFetch changed");
-  }, [authFetch]);
+  // useEffect(() => {
+  //   console.count("authFetch changed");
+  // }, [authFetch]);
 
   // --- CAP status polling (health + sync)
   const { healthOnline, capBlock, cardanoBlock, syncStatus, syncPct, syncLag } =

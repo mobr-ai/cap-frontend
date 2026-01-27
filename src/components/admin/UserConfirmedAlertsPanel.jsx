@@ -1,4 +1,4 @@
-// src/components/admin/WaitlistAlertsPanel.jsx
+// src/components/admin/UserConfirmedAlertsPanel.jsx
 import React, { useMemo, useState, useId } from "react";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
@@ -34,7 +34,7 @@ function formatRecipients(list) {
   return uniq(list).join("\n");
 }
 
-export function WaitlistAlertsPanel({
+export function UserConfirmedAlertsPanel({
   t,
   notifyConfig,
   notifyRecipientsText,
@@ -51,8 +51,8 @@ export function WaitlistAlertsPanel({
   recipientPool,
   setRecipientPool,
 }) {
-  const uid = typeof useId === "function" ? useId() : "waitlist-alerts";
-  const enabledId = `adminWaitlistNotifyEnabled-${uid}`;
+  const uid = typeof useId === "function" ? useId() : "user-confirmed-alerts";
+  const enabledId = `adminUserConfirmedNotifyEnabled-${uid}`;
 
   const busy = !!(notifyLoading || notifySaving);
 
@@ -101,10 +101,10 @@ export function WaitlistAlertsPanel({
     <section className="admin-section">
       <div className="admin-section-header">
         <h2 className="admin-section-title">
-          {t("admin.waitlistNotifySectionTitle")}
+          {t("admin.userConfirmedNotifySectionTitle")}
         </h2>
         <p className="admin-section-subtitle">
-          {t("admin.waitlistNotifySectionSubtitle")}
+          {t("admin.userConfirmedNotifySectionSubtitle")}
         </p>
       </div>
 
@@ -120,7 +120,7 @@ export function WaitlistAlertsPanel({
               disabled={busy}
             />
             <label className="form-check-label" htmlFor={enabledId}>
-              {t("admin.waitlistNotifyToggleLabel")}
+              {t("admin.userConfirmedNotifyToggleLabel")}
             </label>
           </div>
         </div>
@@ -183,7 +183,7 @@ export function WaitlistAlertsPanel({
           </div>
 
           <small className="d-block mt-2">
-            {t("admin.waitlistNotifyRecipientsHelp")}
+            {t("admin.userConfirmedNotifyRecipientsHelp")}
           </small>
 
           {invalidSelectedCount > 0 && (

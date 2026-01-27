@@ -1,7 +1,15 @@
 // src/hooks/useAdminWaitlist.js
 import { useEffect, useMemo, useState } from "react";
 
-export function useAdminWaitlist(authFetch, showToast, t) {
+/**
+ * Backwards-compatible signature:
+ *   useAdminWaitlist(authFetch, showToast, t)
+ * New (Option A):
+ *   useAdminWaitlist(authFetch, showToast, t, { refreshUsers })
+ * or:
+ *   useAdminWaitlist(authFetch, showToast, t, refreshUsersFn)
+ */
+export function useAdminWaitlist(authFetch, showToast, t, optsOrFn) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -9,6 +17,13 @@ export function useAdminWaitlist(authFetch, showToast, t) {
   const [search, setSearch] = useState("");
 
   const authReady = !!authFetch;
+
+  const refreshUsers =
+    typeof optsOrFn === "function"
+      ? optsOrFn
+      : typeof optsOrFn === "object" && optsOrFn
+        ? optsOrFn.refreshUsers
+        : null;
 
   useEffect(() => {
     if (!authReady) return;
@@ -27,7 +42,7 @@ export function useAdminWaitlist(authFetch, showToast, t) {
 
         const res = await authFetch(
           `/api/v1/admin/wait_list/?${params.toString()}`,
-          { method: "GET" }
+          { method: "GET" },
         );
 
         if (!res.ok) {
@@ -42,9 +57,10 @@ export function useAdminWaitlist(authFetch, showToast, t) {
       } catch (err) {
         if (!cancelled) {
           console.error(err);
-          setError(err.message || "Failed to load waitlist");
+          const msg = err?.message || "Failed to load waitlist";
+          setError(msg);
           showToast &&
-            showToast(`${t("admin.toastLoadError")}: ${err.message}`, "danger");
+            showToast(`${t("admin.toastLoadError")}: ${msg}`, "danger");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -69,7 +85,7 @@ export function useAdminWaitlist(authFetch, showToast, t) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ confirm }),
-        }
+        },
       );
 
       const data = await res.json().catch(() => null);
@@ -85,10 +101,24 @@ export function useAdminWaitlist(authFetch, showToast, t) {
           confirm
             ? t("admin.toastWaitlistUserCreatedConfirmed")
             : t("admin.toastWaitlistUserCreated"),
-          "success"
+          "success",
         );
 
+      // Remove from waitlist immediately (current working behavior)
       setItems((prev) => prev.filter((i) => i.email !== email));
+
+      // Option A: refresh user directory after success
+      if (typeof refreshUsers === "function") {
+        try {
+          await refreshUsers();
+        } catch (e) {
+          // Don’t break the flow; just log.
+          console.warn(
+            "[admin] refreshUsers failed after waitlist promotion:",
+            e,
+          );
+        }
+      }
     } catch (err) {
       console.error(err);
       showToast &&
@@ -102,7 +132,7 @@ export function useAdminWaitlist(authFetch, showToast, t) {
     try {
       const res = await authFetch(
         `/api/v1/admin/wait_list/${encodeURIComponent(email)}`,
-        { method: "DELETE" }
+        { method: "DELETE" },
       );
 
       const data = await res.json().catch(() => null);
