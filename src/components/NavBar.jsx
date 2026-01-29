@@ -82,12 +82,11 @@ function NavBar({
     navigate(0);
   };
 
-  // Status indicators
-  const showChecking = healthOnline === null;
-  const showOffline = healthOnline === false;
-  const showSync = healthOnline === true;
-
-  const displayName = String(userData?.username || "Account").trim();
+  const displayName =
+    userData?.display_name ||
+    userData?.username ||
+    userData?.email ||
+    "Account";
   const shortName =
     displayName.length > 20 ? displayName.slice(0, 17) + "…" : displayName;
 
@@ -198,13 +197,6 @@ function NavBar({
             to="/"
             className="Navbar-brand-container nav-text"
           >
-            {/* <img
-              alt="CAP"
-              src="/icons/logo.png"
-              width="32"
-              height="32"
-              className="d-inline-block align-top Navbar-brand-img"
-            /> */}
             <span className="Navbar-brand-slot">{brand || "CAP"}</span>
           </Navbar.Brand>
 

@@ -29,6 +29,8 @@ import useOnClickOutside from "../hooks/useOnClickOutside";
 import avatarImg from "/icons/avatar.png";
 
 const USERNAME_REGEX = /^[a-zA-Z][a-zA-Z0-9._]{5,29}$/;
+// Simple, friendly display name rule: 2-30 chars, trimmed, no control chars
+const DISPLAY_NAME_REGEX = /^[^\x00-\x1F\x7F]{2,30}$/;
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
@@ -44,23 +46,46 @@ export default function SettingsPage() {
 
   const [language, setLanguage] = useState(i18n.language.split("-")[0] || "en");
   const [showShareModal, setShowShareModal] = useState(false);
+
+  // Editing states
   const [editingUsername, setEditingUsername] = useState(false);
+  const [editingDisplayName, setEditingDisplayName] = useState(false);
   const [editingAvatar, setEditingAvatar] = useState(false);
+
+  // Values
   const [newUsername, setNewUsername] = useState(user ? user.username : "");
+  const [newDisplayName, setNewDisplayName] = useState(
+    user ? user.display_name : "",
+  );
+
+  // Spinners
   const [isSavingUsername, setIsSavingUsername] = useState(false);
+  const [isSavingDisplayName, setIsSavingDisplayName] = useState(false);
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const navigate = useNavigate();
   const avatarInputRef = useRef(null);
-  const usernameRef = useRef(null);
 
+  const usernameRef = useRef(null);
+  const displayNameRef = useRef(null);
+
+  // Close editors on outside click
   useOnClickOutside(usernameRef, () => {
-    if (editingUsername) {
-      if (newUsername && newUsername !== user.username) {
-        handleUsernameSubmit();
-      }
+    if (!editingUsername) return;
+    if (newUsername && newUsername.trim() !== (user.username || "")) {
+      handleUsernameSubmit();
+    } else {
       setEditingUsername(false);
+    }
+  });
+
+  useOnClickOutside(displayNameRef, () => {
+    if (!editingDisplayName) return;
+    if (newDisplayName && newDisplayName.trim() !== (user.display_name || "")) {
+      handleDisplayNameSubmit();
+    } else {
+      setEditingDisplayName(false);
     }
   });
 
@@ -69,7 +94,21 @@ export default function SettingsPage() {
     if (!user || !user.id || !outlet?.session?.access_token) navigate("/login");
   }, [user, outlet?.session, navigate]);
 
+  // Keep editor inputs in sync if user changes (login/logout)
+  useEffect(() => {
+    setNewUsername(user?.username || "");
+    setNewDisplayName(user?.display_name || "");
+  }, [user?.username, user?.display_name]);
+
   // ---- Helpers -------------------------------------------------------------
+
+  function safeParse(json) {
+    try {
+      return json ? JSON.parse(json) : {};
+    } catch {
+      return {};
+    }
+  }
 
   // Local-only settings updater (no extra POST to /api/v1/user/{id})
   async function saveSettingsLocally(updated) {
@@ -82,17 +121,14 @@ export default function SettingsPage() {
       // mirror common top-level fields for convenience in UI
       avatar: updated.avatar ?? prev.avatar,
       username: updated.username ?? prev.username,
+      display_name: updated.display_name ?? prev.display_name,
     }));
 
     showToast?.(t("settingsSaved"), "success");
   }
 
-  function safeParse(json) {
-    try {
-      return json ? JSON.parse(json) : {};
-    } catch {
-      return {};
-    }
+  function displayHeaderName(u) {
+    return (u?.display_name || u?.username || u?.email || "").trim();
   }
 
   // ---- Avatar flow ---------------------------------------------------------
@@ -103,15 +139,12 @@ export default function SettingsPage() {
     try {
       setIsSavingAvatar(true);
 
-      // resize on client (optional utility you already have)
-      const resized = await resizeImage(file); // e.g., 512x512 @ ~85%
+      const resized = await resizeImage(file);
 
-      // upload to /user/{id}/avatar (already persists server-side)
       const uploadResult = await handleUploads([resized]);
       const avatarUrl = uploadResult?.[0]?.url;
       if (!avatarUrl) throw new Error("No upload URL returned");
 
-      // Update UI state only; no extra POST to /api/v1/user/{id}
       await saveSettingsLocally({ avatar: avatarUrl });
     } catch (err) {
       console.error(err);
@@ -130,11 +163,49 @@ export default function SettingsPage() {
     i18n.changeLanguage(selected);
   };
 
+  // ---- Display name flow ---------------------------------------------------
+  const handleDisplayNameSubmit = async () => {
+    const trimmed = (newDisplayName || "").trim();
+    const current = (user.display_name || "").trim();
+
+    if (!trimmed || trimmed === current) {
+      setEditingDisplayName(false);
+      return;
+    }
+
+    if (!DISPLAY_NAME_REGEX.test(trimmed)) {
+      showToast?.(t("invalidDisplayName"), "danger");
+      return;
+    }
+
+    setIsSavingDisplayName(true);
+    try {
+      // Persist server-side
+      const res = await authRequest
+        .post("/api/v1/user/display_name")
+        .send({ display_name: trimmed });
+
+      const saved = res?.body?.display_name || trimmed;
+      await saveSettingsLocally({ display_name: saved });
+    } catch (e) {
+      console.error(e);
+      showToast?.(t("settingsFailed"), "danger");
+    } finally {
+      setIsSavingDisplayName(false);
+      setEditingDisplayName(false);
+    }
+  };
+
   // ---- Username flow -------------------------------------------------------
   const handleUsernameSubmit = async () => {
-    if (!newUsername || newUsername === user.username) return;
+    const trimmed = (newUsername || "").trim();
+    const current = (user.username || "").trim();
 
-    const trimmed = newUsername.trim();
+    if (!trimmed || trimmed === current) {
+      setEditingUsername(false);
+      return;
+    }
+
     if (!USERNAME_REGEX.test(trimmed)) {
       showToast?.(t("invalidUsername"), "danger");
       return;
@@ -142,18 +213,30 @@ export default function SettingsPage() {
 
     setIsSavingUsername(true);
     try {
-      // Optional: server-side username availability check
-      const res = await authRequest
-        .post("/api/validate_username")
+      // Optional server-side availability check
+      const chk = await authRequest
+        .post("/api/v1/user/validate_username")
         .send({ username: trimmed });
 
-      if (res?.body && res.body.available === false) {
-        showToast?.(t("usernameTaken"), "danger");
+      if (chk?.body?.available === false) {
+        if (chk?.body?.suggested) {
+          showToast?.(
+            t("usernameSuggested", { name: chk.body.suggested }),
+            "info",
+          );
+        } else {
+          showToast?.(t("usernameTaken"), "danger");
+        }
         return;
       }
 
-      // Apply locally; if/when you add a proper PATCH endpoint, call it here.
-      await saveSettingsLocally({ username: trimmed });
+      // Persist server-side
+      const res = await authRequest
+        .post("/api/v1/user/username")
+        .send({ username: trimmed });
+
+      const saved = res?.body?.username || trimmed;
+      await saveSettingsLocally({ username: saved });
     } catch (e) {
       console.error(e);
       showToast?.(t("settingsFailed"), "danger");
@@ -190,8 +273,8 @@ export default function SettingsPage() {
     const ALPH =
       "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     if (num === 0) return ALPH[0];
-    let out = "",
-      n = num;
+    let out = "";
+    let n = num;
     while (n > 0) {
       out = ALPH[n % 62] + out;
       n = Math.floor(n / 62);
@@ -205,9 +288,7 @@ export default function SettingsPage() {
 
   const copyReferralMessage = async () => {
     const link = generateReferralLink(user.id);
-    const message = `${t("shareMessageIntro")}\n\n${link}\n\n${t(
-      "shareMessageOutro"
-    )}`;
+    const message = `${t("shareMessageIntro")}\n\n${link}\n\n${t("shareMessageOutro")}`;
     try {
       await navigator.clipboard.writeText(message);
       showToast?.(t("copiedToClipboard"), "success");
@@ -232,6 +313,7 @@ export default function SettingsPage() {
                 onMouseEnter={() => setEditingAvatar(true)}
                 onMouseLeave={() => setEditingAvatar(false)}
                 onClick={() => avatarInputRef.current?.click()}
+                title={t("tooltipAvatar")}
               >
                 <Image
                   src={user.avatar || avatarImg}
@@ -266,47 +348,92 @@ export default function SettingsPage() {
             </Col>
 
             <Col xs={8}>
-              <h5>
-                <div
-                  className="Settings-username-wrapper"
-                  onClick={() => setEditingUsername(true)}
-                  ref={usernameRef}
-                >
-                  {editingUsername ? (
-                    <input
-                      type="text"
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (
-                          e.key === "Enter" &&
-                          newUsername !== user.username
-                        ) {
-                          handleUsernameSubmit();
-                        }
-                      }}
-                      autoFocus
-                    />
-                  ) : (
-                    <div style={{ cursor: "pointer" }}>
-                      {user.username ||
-                        user.display_name ||
-                        `CAP User${user.id}`}
-                      {isSavingUsername ? (
-                        <Spinner animation="border" size="sm" />
-                      ) : (
-                        <FontAwesomeIcon
-                          icon={faPen}
-                          className="Settings-username-icon"
-                        />
-                      )}
-                    </div>
-                  )}
-                </div>
-              </h5>
+              {/* Display name (primary) */}
+              <div
+                className="Settings-name-row"
+                ref={displayNameRef}
+                title={t("tooltipDisplayName")}
+              >
+                {editingDisplayName ? (
+                  <input
+                    type="text"
+                    value={newDisplayName}
+                    onChange={(e) => setNewDisplayName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleDisplayNameSubmit();
+                      if (e.key === "Escape") {
+                        setNewDisplayName(user.display_name || "");
+                        setEditingDisplayName(false);
+                      }
+                    }}
+                    autoFocus
+                    className="Settings-inline-input"
+                  />
+                ) : (
+                  <div
+                    className="Settings-editable-line"
+                    onClick={() => setEditingDisplayName(true)}
+                  >
+                    <span className="Settings-primary-name">
+                      {user.display_name || displayHeaderName(user)}
+                    </span>
+                    {isSavingDisplayName ? (
+                      <Spinner animation="border" size="sm" />
+                    ) : (
+                      <FontAwesomeIcon
+                        icon={faPen}
+                        className="Settings-username-icon"
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
 
+              {/* Username (secondary) */}
+              <div
+                className="Settings-handle-row"
+                ref={usernameRef}
+                title={t("tooltipUsername")}
+              >
+                {editingUsername ? (
+                  <input
+                    type="text"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleUsernameSubmit();
+                      if (e.key === "Escape") {
+                        setNewUsername(user.username || "");
+                        setEditingUsername(false);
+                      }
+                    }}
+                    className="Settings-inline-input"
+                  />
+                ) : (
+                  <div
+                    className="Settings-editable-line"
+                    onClick={() => setEditingUsername(true)}
+                  >
+                    <span className="Settings-secondary-handle">
+                      @
+                      {user.username ||
+                        (user.email ? user.email.split("@")[0] : "")}
+                    </span>
+                    {isSavingUsername ? (
+                      <Spinner animation="border" size="sm" />
+                    ) : (
+                      <FontAwesomeIcon
+                        icon={faPen}
+                        className="Settings-username-icon"
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Email */}
               <p className="Settings-username-wallet mb-1">
-                {user.email || user.display_name || ""}
+                {user.email || ""}
               </p>
 
               <small className="Settings-referral-row">
@@ -357,10 +484,7 @@ export default function SettingsPage() {
           </Form.Group>
         </Form>
 
-        <div
-          className="mt-4 p-3"
-          style={{ backgroundColor: "#59454d", borderRadius: 6 }}
-        >
+        <div className="mt-4 p-3 Settings-danger-zone">
           <h5 className="text-danger">{t("dangerZone")}</h5>
           <Button
             variant="danger"
@@ -381,9 +505,7 @@ export default function SettingsPage() {
           .split(/\s+/)
           .map((tag) => tag.replace(/^#/, ""))}
         link={generateReferralLink(user.id)}
-        message={`${t("shareMessageIntro")}\n\n${generateReferralLink(
-          user.id
-        )}\n\n${t("shareMessageOutro")}`}
+        message={`${t("shareMessageIntro")}\n\n${generateReferralLink(user.id)}\n\n${t("shareMessageOutro")}`}
       />
     </div>
   );

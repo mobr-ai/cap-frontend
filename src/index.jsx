@@ -117,19 +117,26 @@ function Layout() {
 
   // --- Authenticated fetch wrapper -----------------------------------------
   const { authFetch } = useAuthRequest({ session, showToast, handleLogout });
-  // useEffect(() => {
-  //   console.count("authFetch changed");
-  // }, [authFetch]);
 
   // --- CAP status polling (health + sync)
   const { healthOnline, capBlock, cardanoBlock, syncStatus, syncPct, syncLag } =
     useSyncStatus(session ? authFetch : null);
 
+  const setUser = useCallback((next) => {
+    setSession((prev) => {
+      const resolved = typeof next === "function" ? next(prev) : next;
+      try {
+        localStorage.setItem("cap_user_session", JSON.stringify(resolved));
+      } catch {}
+      return resolved;
+    });
+  }, []);
+
   const outletContext = useMemo(
     () => ({
       session,
       user: session,
-      setUser: setSession,
+      setUser: setUser,
       handleLogout,
       handleLogin,
       showToast,
