@@ -77,7 +77,7 @@ function parseLink(rawValue) {
   // 1) Literal <a ...>...</a> (common from backend rendering as string)
   // Keep it simple and safe: only extract href and inner text.
   const anchorMatch = raw.match(
-    /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i
+    /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i,
   );
   if (anchorMatch) {
     const href = normalizeHref(anchorMatch[1]);
@@ -148,7 +148,7 @@ export default function KVTable({ kv, sortable = true }) {
 
   // Filter out rows that are completely empty (extra safety)
   const nonEmptyRows = rows.filter((row) =>
-    columns.some((col) => row[col] !== "")
+    columns.some((col) => row[col] !== ""),
   );
   if (!nonEmptyRows.length) return null;
 
@@ -203,7 +203,7 @@ export default function KVTable({ kv, sortable = true }) {
   };
 
   return (
-    <div className="kv-table-wrapper">
+    <div className="kv-table-wrapper table-scroll">
       <table className="kv-table">
         <thead>
           <tr>

@@ -16,6 +16,7 @@
 .vega-chart-container svg {
   max-width: 100%;
   height: auto;
+  /* max-height: 600px; */
 }
 
 /* KV tables must never stretch layout */
@@ -53,8 +54,6 @@
   opacity: 0.5;
 }
 
-/* Artifacts.css */
-
 /* Wrapper MUST define the width context */
 .kv-table-wrapper {
   width: 100%;
@@ -85,6 +84,49 @@
   background-color: #111827;
   z-index: 1;
   cursor: pointer;
+}
+
+/* table scrollbars */
+
+.table-scroll {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+}
+
+/* WebKit browsers */
+.table-scroll::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.table-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  transition:
+    background-color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.table-scroll::-webkit-scrollbar-thumb {
+  opacity: 0;
+}
+
+.table-scroll:hover::-webkit-scrollbar-thumb {
+  opacity: 1;
+}
+
+/* Hover / active state */
+.table-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.45);
+}
+
+/* Optional: active drag */
+.table-scroll::-webkit-scrollbar-thumb:active {
+  background-color: rgba(255, 255, 255, 0.6);
 }
 
 /* Links */
@@ -120,7 +162,9 @@
   justify-content: center;
 
   cursor: pointer;
-  transition: transform 120ms ease, background 120ms ease,
+  transition:
+    transform 120ms ease,
+    background 120ms ease,
     border-color 120ms ease;
 }
 
