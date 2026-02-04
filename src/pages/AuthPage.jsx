@@ -50,6 +50,7 @@ function AuthPage(props) {
 
   const googleHandledHashRef = useRef(false);
   const setpassInputRef = useRef(null);
+  const passwordInputRef = useRef(null);
 
   // detect mode from URL
   useEffect(() => {

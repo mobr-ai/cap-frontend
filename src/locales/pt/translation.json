@@ -63,6 +63,14 @@
   "walletNotFound": "Nenhuma carteira Cardano detectada. Instale <nami>Nami</nami>, <lace>Lace</lace>, <flint>Flint</flint> ou <eternl>Eternl</eternl> e recarregue a página.",
   "walletLoginSuccess": "Login com carteira realizado com sucesso",
   "loginError": "Falha no login. Por favor, tente novamente.",
+
+  "tooltipAvatar": "Alterar seu avatar",
+  "tooltipDisplayName": "Nome de exibição: aparece primeiro publicamente (header e perfil).",
+  "tooltipUsername": "Nome de usuário: identificador único usado em links e menções.",
+  "invalidDisplayName": "Nome de exibição inválido. Use de 2 a 30 caracteres e evite caracteres de controle.",
+  "usernameSuggested": "Esse nome de usuário não está disponível. Sugestão: {{name}}",
+  "accountDeletionFailed": "Falha ao excluir a conta. Tente novamente.",
+
   "settings": "Configurações",
   "languageConf": "Idioma",
   "referralLink": "Link de indicação",

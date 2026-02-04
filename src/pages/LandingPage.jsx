@@ -380,6 +380,10 @@ export default function LandingPage() {
   const { topQueries } = useLandingTopQueries({
     authFetchRef,
     initialTopQueries: [
+      { query: "Heatmap of transaction activity by day and hour" },
+      { query: "Treemap breaking down NFT mints by policy ID" },
+      { query: "Transaction fee vs transaction value" },
+      { query: "Bubble chart representing governance proposals" },
       { query: "Markdown formatting test" },
       { query: "Current trends" },
       { query: "List the latest 5 blocks" },
