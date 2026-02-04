@@ -34,13 +34,15 @@ function safeNumber(n, fallback) {
 
 function normalizeSpec(
   spec,
-  { preferContainerSizing = true, targetW, targetH, slotW, slotH } = {}
+  { preferContainerSizing = true, targetW, targetH, slotW, slotH } = {},
 ) {
   if (!spec || typeof spec !== "object") return spec;
 
   const copy = Array.isArray(spec) ? [...spec] : { ...spec };
+  const schema = String(copy.$schema || "");
 
-  if (copy.$schema && String(copy.$schema).includes("vega-lite")) {
+  // Vega-Lite (existing code)
+  if (schema.includes("vega-lite")) {
     if (preferContainerSizing) {
       const autosize =
         copy.autosize && typeof copy.autosize === "object" ? copy.autosize : {};
@@ -73,6 +75,17 @@ function normalizeSpec(
         };
       }
     }
+  }
+
+  // Vega (not-lite): must use numeric width/height
+  if (schema.includes("vega/v")) {
+    if (preferContainerSizing) {
+      copy.width = targetW;
+      copy.height = targetH;
+      copy.padding = 2.5;
+      copy.autosize = "none";
+    }
+    return copy;
   }
 
   return copy;
