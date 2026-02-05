@@ -124,8 +124,9 @@ function NavBar({
   );
 
   function SyncRadial({ pct, state, tooltip }) {
-    const size = 18;
-    const stroke = 2.5;
+    const size = 26;
+    const stroke = 3.2;
+
     const r = (size - stroke) / 2;
     const c = 2 * Math.PI * r;
 
@@ -165,9 +166,13 @@ function NavBar({
               }`}
             />
           </svg>
+
+          {hasPct && clamped < 100 ? (
+            <span className="cap-sync-ring-text">{clamped.toFixed(1)}</span>
+          ) : null}
         </span>
 
-        <span className="cap-sync-pct">{hasPct ? `${clamped}%` : "—"}</span>
+        {/* <span className="cap-sync-pct">{hasPct ? `${clamped}%` : "—"}</span> */}
 
         <span className="cap-sync-tooltip" role="tooltip">
           {tooltip}

@@ -222,10 +222,21 @@ export default function useSyncStatus(authFetch) {
 
   const syncPct = useMemo(() => {
     if (capBlock == null || cardanoBlock == null) return null;
-    return Math.max(
-      0,
-      Math.min(100, Math.round((capBlock / Math.max(1, cardanoBlock)) * 100)),
-    );
+
+    const chain = Math.max(1, cardanoBlock);
+    const raw = (capBlock / chain) * 100;
+    const lag = Math.max(0, chain - capBlock);
+
+    // Only show 100% when we're effectively synced (same threshold used by syncStatus)
+    if (lag <= 5) return 100;
+
+    // Clamp
+    const clamped = Math.max(0, Math.min(100, raw));
+
+    // Keep one decimal place, but avoid rounding up to 100.0 unless it's truly 100
+    if (clamped >= 100) return 100;
+
+    return Math.floor(clamped * 10) / 10; // 99.99 -> 99.9
   }, [capBlock, cardanoBlock]);
 
   const syncLag = useMemo(() => {
