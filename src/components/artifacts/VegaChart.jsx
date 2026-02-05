@@ -5,86 +5,108 @@ import React, {
   useRef,
   useState,
 } from "react";
-
 import vegaEmbed from "vega-embed";
-
-/*
-  VegaChart goals:
-  - Render Vega/Vega-Lite specs reliably inside:
-    - LandingPage message bubbles
-    - Dashboard widgets
-    - Dashboard modal (expanded)
-  - Avoid CSS stretching/distortion. Prefer re-rendering to container.
-  - Respond to:
-    - container resize (ResizeObserver)
-    - window resize
-    - orientation/viewport changes (visualViewport)
-  - Keep rendering stable (avoid flicker + render storms).
-*/
 
 function clamp(n, min, max) {
   if (typeof n !== "number" || Number.isNaN(n)) return min;
   return Math.max(min, Math.min(max, n));
 }
 
-function safeNumber(n, fallback) {
-  if (typeof n !== "number" || Number.isNaN(n)) return fallback;
-  return n;
+function isUrlLike(v) {
+  if (v === undefined || v === null) return false;
+  const s = String(v).trim();
+  return s.startsWith("http://") || s.startsWith("https://");
 }
 
-function normalizeSpec(
-  spec,
-  { preferContainerSizing = true, targetW, targetH, slotW, slotH } = {},
-) {
-  if (!spec || typeof spec !== "object") return spec;
+function pickFirstUrlFromDatum(datum, preferredField = null) {
+  if (!datum || typeof datum !== "object") return null;
 
-  const copy = Array.isArray(spec) ? [...spec] : { ...spec };
-  const schema = String(copy.$schema || "");
+  if (preferredField && isUrlLike(datum[preferredField])) {
+    return String(datum[preferredField]).trim();
+  }
+  for (const k of Object.keys(datum)) {
+    if (isUrlLike(datum[k])) return String(datum[k]).trim();
+  }
+  return null;
+}
 
-  // Vega-Lite (existing code)
-  if (schema.includes("vega-lite")) {
-    if (preferContainerSizing) {
-      const autosize =
-        copy.autosize && typeof copy.autosize === "object" ? copy.autosize : {};
+// Recursively strip any Vega-Lite href encoding to prevent in-place navigation.
+// This guarantees "new tab only" behavior across Brave/Firefox.
+function stripHrefEverywhere(node) {
+  if (!node || typeof node !== "object") return;
 
-      // If the container is not measurable yet (common in modals),
-      // do NOT use "container" sizing because it can resolve to 0.
-      const slotIsMeasurable = (slotW || 0) >= 40 && (slotH || 0) >= 40;
-
-      delete copy.width;
-      delete copy.height;
-
-      if (slotIsMeasurable) {
-        copy.width = "container";
-        copy.height = "container";
-        copy.autosize = {
-          type: "fit",
-          contains: "padding",
-          resize: true,
-          ...autosize,
-        };
-      } else {
-        // Force numeric sizing as a fallback so Vega-Lite can render immediately.
-        copy.width = targetW;
-        copy.height = targetH;
-        copy.autosize = {
-          type: "fit",
-          contains: "padding",
-          resize: true,
-          ...autosize,
-        };
-      }
-    }
+  if (node.encoding && typeof node.encoding === "object") {
+    if (node.encoding.href) delete node.encoding.href;
   }
 
-  // Vega (not-lite): must use numeric width/height
-  if (schema.includes("vega/v")) {
-    if (preferContainerSizing) {
+  // Common nested places
+  const nestedKeys = [
+    "layer",
+    "hconcat",
+    "vconcat",
+    "concat",
+    "spec",
+    "facet",
+    "repeat",
+  ];
+  for (const k of nestedKeys) {
+    const v = node[k];
+    if (Array.isArray(v)) {
+      for (const child of v) stripHrefEverywhere(child);
+    } else if (v && typeof v === "object") {
+      stripHrefEverywhere(v);
+    }
+  }
+}
+
+function normalizeSpec(spec, { targetW, targetH, slotW, slotH } = {}) {
+  if (!spec || typeof spec !== "object") return spec;
+
+  const schema = String(spec.$schema || "");
+
+  // Deep clone so we can safely modify nested encodings.
+  // (Structured clone would be nicer but not always available.)
+  let copy;
+  try {
+    copy = JSON.parse(JSON.stringify(spec));
+  } catch {
+    copy = { ...spec };
+  }
+
+  if (schema.includes("vega-lite")) {
+    // Strip href everywhere so Vega never navigates in-place.
+    stripHrefEverywhere(copy);
+
+    const autosize =
+      copy.autosize && typeof copy.autosize === "object" ? copy.autosize : {};
+    const slotIsMeasurable = (slotW || 0) >= 40 && (slotH || 0) >= 40;
+
+    delete copy.width;
+    delete copy.height;
+
+    if (slotIsMeasurable) {
+      copy.width = "container";
+      copy.height = "container";
+    } else {
       copy.width = targetW;
       copy.height = targetH;
-      copy.padding = 2.5;
-      copy.autosize = "none";
     }
+
+    copy.autosize = {
+      type: "fit",
+      contains: "padding",
+      resize: true,
+      ...autosize,
+    };
+
+    return copy;
+  }
+
+  if (schema.includes("vega/v")) {
+    copy.width = targetW;
+    copy.height = targetH;
+    copy.padding = 2.5;
+    copy.autosize = "none";
     return copy;
   }
 
@@ -94,11 +116,6 @@ function normalizeSpec(
 function getSlotEl(containerEl) {
   if (!containerEl) return null;
 
-  // Priority order:
-  // 1) explicit slot
-  // 2) dashboard modal inner (expanded)
-  // 3) widget capture (collapsed)
-  // 4) parent element
   const explicit =
     containerEl.closest?.(".vega-chart-slot") ||
     containerEl.querySelector?.(".vega-chart-slot");
@@ -116,11 +133,77 @@ function getSlotEl(containerEl) {
 function getSlotSize(containerEl) {
   const slotEl = getSlotEl(containerEl);
   if (!slotEl) return { w: 0, h: 0 };
+  return { w: slotEl.clientWidth || 0, h: slotEl.clientHeight || 0 };
+}
 
-  // clientWidth/clientHeight are more stable for flex containers than offset*
-  const w = slotEl.clientWidth || 0;
-  const h = slotEl.clientHeight || 0;
-  return { w, h };
+function detachHandlers(view) {
+  if (!view || !view.__capLinkHandlers) return;
+  const { click, move, out } = view.__capLinkHandlers;
+
+  try {
+    if (click) view.removeEventListener?.("click", click);
+    if (move) view.removeEventListener?.("mousemove", move);
+    if (out) view.removeEventListener?.("mouseout", out);
+  } catch {
+    // ignore
+  }
+
+  view.__capLinkHandlers = null;
+}
+
+function attachHandlers(view, rawSpec, hostEl) {
+  if (!view || !hostEl) return;
+
+  detachHandlers(view);
+
+  const preferredUriField = rawSpec?.usermeta?.uriField || null;
+  const canvasEl = hostEl.querySelector("canvas");
+
+  const setCanvasCursor = (value) => {
+    if (!canvasEl) return;
+    canvasEl.style.cursor = value || "";
+  };
+
+  const click = (event, item) => {
+    try {
+      const datum = item?.datum;
+      const url = pickFirstUrlFromDatum(datum, preferredUriField);
+
+      // If not clicking a URL-bearing mark, allow normal bubbling
+      // (dashboard widget click should open modal).
+      if (!url) return;
+
+      const domEvt = event?.event || event;
+      domEvt?.preventDefault?.();
+      domEvt?.stopPropagation?.();
+      domEvt?.stopImmediatePropagation?.();
+
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      // ignore
+    }
+  };
+
+  const move = (event, item) => {
+    try {
+      const datum = item?.datum;
+      const url = pickFirstUrlFromDatum(datum, preferredUriField);
+      setCanvasCursor(url ? "pointer" : "");
+    } catch {
+      setCanvasCursor("");
+    }
+  };
+
+  const out = () => setCanvasCursor("");
+
+  try {
+    view.addEventListener?.("click", click);
+    view.addEventListener?.("mousemove", move);
+    view.addEventListener?.("mouseout", out);
+    view.__capLinkHandlers = { click, move, out };
+  } catch {
+    // ignore
+  }
 }
 
 export default function VegaChart({
@@ -129,25 +212,25 @@ export default function VegaChart({
   style = {},
   onError,
   onRendered,
+  onViewReady,
   embedOptions = {},
 }) {
   const containerRef = useRef(null);
-  const embedRef = useRef(null); // holds { view, ... }
-  const resizeRafRef = useRef(null);
+  const embedRef = useRef(null);
+  const rafRef = useRef(null);
   const lastSizeRef = useRef({ w: 0, h: 0 });
   const lastSpecKeyRef = useRef("");
   const [renderError, setRenderError] = useState(null);
 
   const specKey = useMemo(() => {
-    // A cheap "key" to detect changes without deep hashing every render.
-    // If you already provide deterministic IDs in spec/metadata, adapt this.
     try {
       return JSON.stringify({
-        t: spec?.title || "",
-        d: spec?.description || "",
-        m: spec?.mark || "",
-        e: spec?.encoding ? Object.keys(spec.encoding) : [],
         s: spec?.$schema || "",
+        d: spec?.description || "",
+        t: spec?.title || "",
+        u: spec?.usermeta ? Object.keys(spec.usermeta) : [],
+        e: spec?.encoding ? Object.keys(spec.encoding) : [],
+        l: Array.isArray(spec?.layer) ? spec.layer.length : 0,
       });
     } catch {
       return String(Date.now());
@@ -174,25 +257,21 @@ export default function VegaChart({
     const maxW = inModal ? 1400 : 1100;
     const maxH = inModal ? 900 : 700;
 
-    // Key: do NOT force 320px min for non-modal charts.
-    // This prevents rendering a canvas bigger than its widget slot.
     const minW = 240;
     const minH = inModal ? 320 : 180;
 
-    const safeW = clamp(w, minW, maxW);
-    const safeH = clamp(h, minH, maxH);
-
-    return { safeW, safeH };
+    return { safeW: clamp(w, minW, maxW), safeH: clamp(h, minH, maxH) };
   };
 
   const destroyEmbed = async () => {
     try {
       if (embedRef.current?.view) {
+        try {
+          detachHandlers(embedRef.current.view);
+        } catch {}
         embedRef.current.view.finalize();
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
     embedRef.current = null;
   };
 
@@ -201,7 +280,9 @@ export default function VegaChart({
     if (!el) return;
 
     if (!spec || typeof spec !== "object") {
-      setRenderError(new Error("Invalid Vega spec"));
+      const err = new Error("Invalid Vega spec");
+      setRenderError(err);
+      onError?.(err);
       return;
     }
 
@@ -209,58 +290,50 @@ export default function VegaChart({
     const { safeW, safeH } = computeTargetDims(slotW, slotH);
 
     const sameSpecKey = lastSpecKeyRef.current === specKey;
-
-    // Use a slightly larger threshold to avoid resize oscillation loops in chat bubbles
     const sizeEps = inModal ? 2 : 8;
-
     const sameSize =
       Math.abs(lastSizeRef.current.w - safeW) < sizeEps &&
       Math.abs(lastSizeRef.current.h - safeH) < sizeEps;
 
-    // If nothing meaningful changed, bail
     if (!force && sameSize && sameSpecKey && embedRef.current?.view) return;
 
-    // Update "last"
     lastSizeRef.current = { w: safeW, h: safeH };
     lastSpecKeyRef.current = specKey;
 
     setRenderError(null);
 
-    // If we already have a view and spec didn't change, resize the view instead of re-embedding.
     if (embedRef.current?.view && sameSpecKey) {
       try {
         const v = embedRef.current.view;
-
-        // These exist on Vega View; safe to guard.
         v.width?.(safeW);
         v.height?.(safeH);
-
         v.resize?.();
         await v.runAsync?.();
-
         onRendered?.(embedRef.current);
+        onViewReady?.(embedRef.current.view);
         return;
       } catch {
-        // If resize fails for any reason, fall back to a full re-embed below.
+        // fall through
       }
     }
 
-    // Full embed only when needed (first render or spec change)
     const normalizedSpec = normalizeSpec(spec, {
-      preferContainerSizing: true,
       targetW: safeW,
       targetH: safeH,
       slotW,
       slotH,
     });
 
-    // Clear container before embedding (avoid stacking)
     if (embedRef.current?.view) {
+      try {
+        detachHandlers(embedRef.current.view);
+      } catch {}
       try {
         embedRef.current.view.finalize();
       } catch {}
       embedRef.current = null;
     }
+
     el.innerHTML = "";
 
     try {
@@ -273,39 +346,38 @@ export default function VegaChart({
       const result = await vegaEmbed(el, normalizedSpec, opts);
       embedRef.current = result;
 
+      attachHandlers(result.view, spec, el);
+
       try {
         result.view.resize?.();
         await result.view.runAsync?.();
       } catch {}
 
       onRendered?.(result);
+      onViewReady?.(result.view);
     } catch (err) {
       setRenderError(err);
       onError?.(err);
     }
   };
 
-  const scheduleResize = ({ force = false } = {}) => {
-    if (resizeRafRef.current) {
-      cancelAnimationFrame(resizeRafRef.current);
-    }
-    resizeRafRef.current = requestAnimationFrame(() => {
-      resizeRafRef.current = null;
+  const schedule = ({ force = false } = {}) => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
       runEmbed({ force }).catch(() => {});
     });
   };
 
-  // Initial render + when spec changes
   useLayoutEffect(() => {
-    scheduleResize({ force: true });
+    schedule({ force: true });
     return () => {
-      if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
-      resizeRafRef.current = null;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [specKey]);
 
-  // ResizeObserver to follow container size changes (widgets, modal, rotation)
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -313,29 +385,20 @@ export default function VegaChart({
     const slotEl = getSlotEl(el);
     if (!slotEl) return;
 
-    const ro = new ResizeObserver(() => {
-      scheduleResize({ force: false });
-    });
-
+    const ro = new ResizeObserver(() => schedule({ force: false }));
     ro.observe(slotEl);
-
-    // Also observe the container itself (sometimes slotEl doesn't change,
-    // but the container gets reflowed)
     if (slotEl !== el) ro.observe(el);
 
     return () => {
       try {
         ro.disconnect();
-      } catch {
-        // ignore
-      }
+      } catch {}
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [specKey]);
 
-  // Window resize / visualViewport resize (mobile rotate + address bar)
   useEffect(() => {
-    const onWinResize = () => scheduleResize({ force: false });
+    const onWinResize = () => schedule({ force: false });
 
     window.addEventListener("resize", onWinResize, { passive: true });
 
@@ -355,7 +418,6 @@ export default function VegaChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [specKey]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       destroyEmbed().catch(() => {});

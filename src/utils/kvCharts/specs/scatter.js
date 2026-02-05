@@ -1,5 +1,6 @@
 // src/utils/kvCharts/specs/scatter.js
 import { safeColumns, inferXYFields, shouldUseLogScale } from "../helpers.js";
+import { detectUriField } from "../linking.js";
 
 export function kvToScatterChartSpec(kv) {
   const values = kv?.data?.values || [];
@@ -17,10 +18,30 @@ export function kvToScatterChartSpec(kv) {
   const useLogX = shouldUseLogScale(xs);
   const useLogY = shouldUseLogScale(ys);
 
+  const uriFieldRaw = detectUriField(kv);
+
+  // Ensure the URL is present in the point datum even if some pipeline mutates keys later.
+  const prepared = uriFieldRaw
+    ? values.map((row) => ({ ...row, __uri: row?.[uriFieldRaw] }))
+    : values;
+
+  const tooltip = [
+    { field: xField, type: "quantitative", title: xTitle },
+    { field: yField, type: "quantitative", title: yTitle },
+  ];
+
+  if (uriFieldRaw) {
+    tooltip.push({ field: "__uri", type: "nominal", title: "URI" });
+  }
+
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     description: "Scatter chart from kv_results",
-    data: { values },
+
+    // Contract used by VegaChart.jsx for new-tab navigation + mark-only pointer cursor
+    usermeta: { uriField: uriFieldRaw ? "__uri" : null },
+
+    data: { values: prepared },
     mark: { type: "point", filled: true, opacity: 0.7 },
     encoding: {
       x: {
@@ -35,10 +56,7 @@ export function kvToScatterChartSpec(kv) {
         title: yTitle,
         scale: useLogY ? { type: "log", zero: false } : { zero: false },
       },
-      tooltip: [
-        { field: xField, type: "quantitative", title: xTitle },
-        { field: yField, type: "quantitative", title: yTitle },
-      ],
+      tooltip,
     },
   };
 }

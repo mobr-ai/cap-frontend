@@ -177,3 +177,20 @@
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+/* Clickable Vega charts: force pointer on the actual vega-embed wrapper */
+.vega-chart-clickable .vega-embed,
+.vega-chart-clickable .vega-embed * {
+  cursor: pointer !important;
+}
+
+/* Also cover the canvas explicitly (some browsers are picky) */
+.vega-chart-clickable canvas {
+  cursor: pointer !important;
+}
+
+/* Modal wrapper may also win in some layouts */
+.dashboard-widget-modal-inner .vega-chart-clickable,
+.dashboard-widget-modal-inner .vega-chart-clickable * {
+  cursor: pointer !important;
+}

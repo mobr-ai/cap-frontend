@@ -1,5 +1,6 @@
 // src/utils/kvCharts/specs/heatmap.js
 import { safeColumns } from "../helpers.js";
+import { detectUriField } from "../linking.js";
 
 export function kvToHeatmapSpec(kv) {
   const values = Array.isArray(kv?.data?.values) ? kv.data.values : [];
@@ -134,10 +135,29 @@ export function kvToHeatmapSpec(kv) {
 
   const colorField = "__v_num";
 
+  // URL clicking contract
+  const uriField = detectUriField(kv);
+
+  const tooltip = [
+    xLooksDate
+      ? { field: "__x_dt", type: "temporal", title: xTitle }
+      : { field: xField, type: "ordinal", title: xTitle },
+    { field: yField, type: "ordinal", title: yTitle },
+    { field: colorField, type: "quantitative", title: vTitle },
+  ];
+
+  if (uriField) {
+    tooltip.push({ field: uriField, type: "nominal", title: "URI" });
+  }
+
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     width: "container",
     height: 320,
+
+    // Contract used by VegaChart.jsx for new-tab navigation + mark-only pointer cursor
+    usermeta: { uriField: uriField || null },
+
     data: { values },
     transform: transforms,
     mark: { type: "rect" },
@@ -169,13 +189,7 @@ export function kvToHeatmapSpec(kv) {
         scale: { zero: false, nice: true },
         legend: { type: "gradient" },
       },
-      tooltip: [
-        xLooksDate
-          ? { field: "__x_dt", type: "temporal", title: xTitle }
-          : { field: xField, type: "ordinal", title: xTitle },
-        { field: yField, type: "ordinal", title: yTitle },
-        { field: colorField, type: "quantitative", title: vTitle },
-      ],
+      tooltip,
     },
   };
 }

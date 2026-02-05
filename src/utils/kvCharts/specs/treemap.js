@@ -1,5 +1,6 @@
 // src/utils/kvCharts/specs/treemap.js
 import { safeColumns } from "../helpers.js";
+import { detectUriField } from "../linking.js";
 
 export function kvToTreemapSpec(kv) {
   const values = kv?.data?.values || [];
@@ -9,19 +10,41 @@ export function kvToTreemapSpec(kv) {
   const nameTitle = cols[0] || "Name";
   const valueTitle = cols[1] || "Value";
 
+  // URL detection from original input rows
+  const uriFieldRaw = detectUriField(kv);
+
   const prepared = [
     { id: "__root__", parent: null, name: "root", value: 0 },
-    ...values.map((r, i) => ({
-      id: String(r?.name ?? `item_${i}`),
-      parent: "__root__",
-      name: String(r?.name ?? `item_${i}`),
-      value: Number(r?.value ?? 0),
-    })),
+    ...values.map((r, i) => {
+      const name = String(r?.name ?? `item_${i}`);
+      const node = {
+        id: name,
+        parent: "__root__",
+        name,
+        value: Number(r?.value ?? 0),
+      };
+
+      // Carry URL into leaf datum so VegaChart.jsx can open it.
+      if (uriFieldRaw) node.__uri = r?.[uriFieldRaw];
+
+      return node;
+    }),
   ];
+
+  // Tooltip signal:
+  // Keep the original tooltip object, but optionally extend it with URI when present.
+  // We must build this as a Vega expression string.
+  const tooltipSignal = uriFieldRaw
+    ? `merge({ "${nameTitle}": datum.label, "${valueTitle}": format(datum.value, ",.0f") }, { "URI": datum.__uri })`
+    : `{ "${nameTitle}": datum.label, "${valueTitle}": format(datum.value, ",.0f") }`;
 
   return {
     $schema: "https://vega.github.io/schema/vega/v6.json",
     description: "Treemap from kv_results",
+
+    // Contract used by VegaChart.jsx for new-tab navigation + mark-only pointer cursor
+    usermeta: { uriField: uriFieldRaw ? "__uri" : null },
+
     autosize: { type: "fit", contains: "padding" },
     padding: 8,
     width: 820,
@@ -74,7 +97,7 @@ export function kvToTreemapSpec(kv) {
         name: "color",
         type: "ordinal",
         domain: { data: "leaves", field: "label" },
-        range: { scheme: "tableau20" },
+        range: { scheme: "category20c" },
       },
       {
         name: "stroke",
@@ -100,9 +123,7 @@ export function kvToTreemapSpec(kv) {
             y2: { field: "y1" },
             fill: { scale: "color", field: "label" },
             fillOpacity: { value: 0.92 },
-            tooltip: {
-              signal: `{ "${nameTitle}": datum.label, "${valueTitle}": format(datum.value, ",.0f") }`,
-            },
+            tooltip: { signal: tooltipSignal },
           },
           hover: {
             stroke: { value: "rgba(255,255,255,0.9)" },

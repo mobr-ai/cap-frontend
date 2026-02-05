@@ -1,5 +1,6 @@
 // src/utils/kvCharts/specs/line.js
 import { safeColumns, shortSeries, uniqueCount } from "../helpers.js";
+import { detectUriField } from "../linking.js";
 
 export function kvToLineChartSpec(kv) {
   const values = kv?.data?.values || [];
@@ -28,6 +29,9 @@ export function kvToLineChartSpec(kv) {
     return null;
   };
 
+  // Shared URL detection from original rows
+  const uriFieldRaw = detectUriField(kv);
+
   let prepared = [];
 
   if (looksLong) {
@@ -40,11 +44,16 @@ export function kvToLineChartSpec(kv) {
         (fromC != null && String(fromC)) ||
         `series_${i}`;
 
-      return {
+      const out = {
         x: toTemporalMonth(row.x),
         y: row.y,
         series: shortSeries(series),
       };
+
+      // Carry URL into the mark datum (so VegaChart can open it).
+      if (uriFieldRaw) out.__uri = row?.[uriFieldRaw];
+
+      return out;
     });
   } else {
     const xField = cols[0] || keys[0];
@@ -54,20 +63,38 @@ export function kvToLineChartSpec(kv) {
 
     prepared = values.flatMap((row) => {
       const xVal = toTemporalMonth(row[xField]);
-      return measureFields.map((mf) => ({
-        x: xVal,
-        y: row[mf],
-        series: shortSeries(mf),
-      }));
+      const rowUri = uriFieldRaw ? row?.[uriFieldRaw] : undefined;
+
+      return measureFields.map((mf) => {
+        const out = {
+          x: xVal,
+          y: row[mf],
+          series: shortSeries(mf),
+        };
+        if (uriFieldRaw) out.__uri = rowUri;
+        return out;
+      });
     });
   }
 
   const seriesCount = uniqueCount(prepared.map((r) => r.series));
   const showLegend = seriesCount > 1;
 
+  const tooltip = [
+    { field: "x", type: "temporal" },
+    { field: "series", type: "nominal" },
+    { field: "y", type: "quantitative" },
+  ];
+
+  if (uriFieldRaw) {
+    tooltip.push({ field: "__uri", type: "nominal", title: "URI" });
+  }
+
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     description: "Line chart from kv_results",
+    // Contract used by VegaChart.jsx for new-tab navigation + mark-only pointer cursor
+    usermeta: { uriField: uriFieldRaw ? "__uri" : null },
     data: { values: prepared },
     mark: "line",
     encoding: {
@@ -81,11 +108,7 @@ export function kvToLineChartSpec(kv) {
             legend: { title: null },
           }
         : undefined,
-      tooltip: [
-        { field: "x", type: "temporal" },
-        { field: "series", type: "nominal" },
-        { field: "y", type: "quantitative" },
-      ],
+      tooltip,
     },
   };
 }
