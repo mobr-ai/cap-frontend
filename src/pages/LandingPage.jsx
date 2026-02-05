@@ -379,27 +379,30 @@ export default function LandingPage() {
 
   const { topQueries } = useLandingTopQueries({
     authFetchRef,
-    initialTopQueries: [
-      { query: "Heatmap of transaction activity by day and hour" },
-      { query: "Treemap breaking down NFT mints by policy ID" },
-      { query: "Transaction fee vs transaction value" },
-      { query: "Bubble chart representing governance proposals" },
-      { query: "Markdown formatting test" },
-      { query: "Current trends" },
-      { query: "List the latest 5 blocks" },
-      { query: "Show the last 5 proposals" },
-      {
-        query: "Plot a bar chart showing monthly multi assets created in 2021",
-      },
-      {
-        query:
-          "Plot a line chart showing monthly number of transactions and outputs",
-      },
-      {
-        query:
-          "Plot a pie chart to show how much the top 1% ADA holders represent from the total supply on the Cardano network",
-      },
-    ],
+    initialTopQueries: isDev
+      ? [
+          { query: "Heatmap of transaction activity by day and hour" },
+          { query: "Treemap breaking down NFT mints by policy ID" },
+          { query: "Transaction fee vs transaction value" },
+          { query: "Bubble chart representing governance proposals" },
+          { query: "Markdown formatting test" },
+          { query: "Current trends" },
+          { query: "List the latest 5 blocks" },
+          { query: "Show the last 5 proposals" },
+          {
+            query:
+              "Plot a bar chart showing monthly multi assets created in 2021",
+          },
+          {
+            query:
+              "Plot a line chart showing monthly number of transactions and outputs",
+          },
+          {
+            query:
+              "Plot a pie chart to show how much the top 1% ADA holders represent from the total supply on the Cardano network",
+          },
+        ]
+      : undefined,
     limit: 5,
     refreshMs: 5 * 60 * 1000,
   });
