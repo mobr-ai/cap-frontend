@@ -196,17 +196,23 @@ export default function DashboardWidget({
 
       const shareSubtitle = item.conversation_id ? item.conversation_title : "";
 
+      // Always use logo watermark. (Make sure shareWidgetImage.js embeds SVG safely for Firefox.)
+      const watermarkPreset = WATERMARK_PRESETS.logoCenterBig;
+
       // Offscreen render for charts, deterministic export, avoids blank live-view images
       const renderOffscreenChartView = async (spec) => {
         const mod = await import("vega-embed");
         const vegaEmbed = mod?.default || mod;
 
+        const W = 1200;
+        const H = 700;
+
         const host = document.createElement("div");
         host.style.position = "fixed";
         host.style.left = "-10000px";
         host.style.top = "-10000px";
-        host.style.width = "1200px";
-        host.style.height = "700px";
+        host.style.width = `${W}px`;
+        host.style.height = `${H}px`;
         host.style.pointerEvents = "none";
         host.style.opacity = "0";
         document.body.appendChild(host);
@@ -223,6 +229,17 @@ export default function DashboardWidget({
           } catch {}
           throw new Error("offscreen_view_missing");
         }
+
+        // Firefox: force a layout pass and deterministic view size before rendering
+        try {
+          host.getBoundingClientRect();
+        } catch {}
+
+        try {
+          view.width(W);
+          view.height(H);
+          view.resize();
+        } catch {}
 
         await view.runAsync();
         return { view, host };
@@ -243,7 +260,7 @@ export default function DashboardWidget({
             title: item.title,
             subtitle: shareSubtitle,
             titleBar: true,
-            watermark: WATERMARK_PRESETS.logoCenterBig,
+            watermark: watermarkPreset,
             targetWidth: 1600,
           });
         } finally {
@@ -254,12 +271,16 @@ export default function DashboardWidget({
             host.remove();
           } catch {}
         }
+
+        if (!imageDataUrl) throw new Error("chart_export_failed");
       } else {
         const root = captureRef.current;
 
         const tableEl = root?.querySelector(".kv-table");
         const wrapperEl = root?.querySelector(".kv-table-wrapper");
-        let targetEl = tableEl || wrapperEl || root;
+        const targetEl = tableEl || wrapperEl || root;
+
+        if (!targetEl) throw new Error("missing_capture_target");
 
         const prev = {};
         const applyTempStyles = (el) => {
@@ -299,12 +320,14 @@ export default function DashboardWidget({
             title: item.title,
             subtitle: shareSubtitle,
             titleBar: true,
-            watermark: WATERMARK_PRESETS.logoCenterBig,
+            watermark: watermarkPreset,
             pixelRatio: 2,
           });
         } finally {
           if (needsExpand) restoreTempStyles(targetEl);
         }
+
+        if (!imageDataUrl) throw new Error("element_export_failed");
       }
 
       onShare({
@@ -313,7 +336,10 @@ export default function DashboardWidget({
         hashtags: ["CAP", "Cardano", "Analytics"],
         message: item.source_query ? item.source_query : "",
       });
-    } catch {
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[DashboardWidget] share export failed:", err);
+
       onShare({
         title: item.title,
         imageDataUrl: null,
@@ -383,10 +409,10 @@ export default function DashboardWidget({
                       ts: new Date(item.updated_at).toLocaleString(),
                     })
                   : item.created_at
-                  ? t("dashboard.createdAt", {
-                      ts: new Date(item.created_at).toLocaleString(),
-                    })
-                  : null}
+                    ? t("dashboard.createdAt", {
+                        ts: new Date(item.created_at).toLocaleString(),
+                      })
+                    : null}
               </div>
             </div>
 

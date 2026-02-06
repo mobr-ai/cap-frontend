@@ -24,16 +24,23 @@ function findSourceQuery(messages, messageId) {
   return "";
 }
 
+/**
+ * Render Vega / Vega-Lite spec offscreen and return a View.
+ * Hardened for Firefox: forces layout + explicit width/height + resize.
+ */
 async function renderVegaOffscreenToView(vegaOrVegaLiteSpec) {
   const mod = await import("vega-embed");
   const vegaEmbed = mod?.default || mod;
+
+  const W = 1200;
+  const H = 700;
 
   const host = document.createElement("div");
   host.style.position = "fixed";
   host.style.left = "-10000px";
   host.style.top = "-10000px";
-  host.style.width = "1200px";
-  host.style.height = "700px";
+  host.style.width = `${W}px`;
+  host.style.height = `${H}px`;
   host.style.pointerEvents = "none";
   host.style.opacity = "0";
   document.body.appendChild(host);
@@ -50,6 +57,18 @@ async function renderVegaOffscreenToView(vegaOrVegaLiteSpec) {
     } catch {}
     throw new Error("offscreen_view_missing");
   }
+
+  // Firefox: ensure layout is committed before Vega computes bounds
+  try {
+    host.getBoundingClientRect();
+  } catch {}
+
+  // Firefox: make view size deterministic
+  try {
+    view.width(W);
+    view.height(H);
+    view.resize();
+  } catch {}
 
   await view.runAsync();
   return { view, host };
@@ -74,6 +93,9 @@ export async function createSharePayloadForArtifact({
     const title = buildTitle({ message, sourceQuery });
     const subtitle = conversationTitle ? String(conversationTitle) : "";
 
+    // Always request logo watermark (Firefox logo reliability depends on shareWidgetImage.js SVG handling)
+    const watermarkPreset = WATERMARK_PRESETS.logoCenterBig;
+
     let imageDataUrl = null;
 
     if (message.type === "chart" && message.vegaSpec) {
@@ -85,7 +107,7 @@ export async function createSharePayloadForArtifact({
           title,
           subtitle,
           titleBar: true,
-          watermark: WATERMARK_PRESETS.logoCenterBig,
+          watermark: watermarkPreset,
           targetWidth: 1600,
         });
       } finally {
@@ -96,6 +118,8 @@ export async function createSharePayloadForArtifact({
           host.remove();
         } catch {}
       }
+
+      if (!imageDataUrl) throw new Error("chart_export_failed");
     } else if (message.type === "table" && message.kv) {
       const el = tableElByMsgIdRef?.current?.get(message.id) || null;
       if (!el) throw new Error("table_ref_missing");
@@ -105,9 +129,11 @@ export async function createSharePayloadForArtifact({
         title,
         subtitle,
         titleBar: true,
-        watermark: WATERMARK_PRESETS.logoCenterBig,
+        watermark: watermarkPreset,
         pixelRatio: 2,
       });
+
+      if (!imageDataUrl) throw new Error("table_export_failed");
     } else {
       throw new Error("unsupported_message_type");
     }
@@ -118,7 +144,11 @@ export async function createSharePayloadForArtifact({
       hashtags: ["CAP", "Cardano", "Analytics"],
       message: sourceQuery || "",
     };
-  } catch {
+  } catch (err) {
+    // Keep it visible; Firefox failures can be silent otherwise.
+    // eslint-disable-next-line no-console
+    console.error("[landingShareOps] share export failed:", err);
+
     return {
       title: "CAP",
       imageDataUrl: null,
