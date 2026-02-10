@@ -227,8 +227,8 @@ export default function useSyncStatus(authFetch) {
     const raw = (capBlock / chain) * 100;
     const lag = Math.max(0, chain - capBlock);
 
-    // Only show 100% when we're effectively synced (same threshold used by syncStatus)
-    if (lag <= 5) return 100;
+    // Show 100% when we're under the threshold
+    if (lag <= 50) return 100;
 
     // Clamp
     const clamped = Math.max(0, Math.min(100, raw));

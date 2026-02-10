@@ -53,3 +53,5 @@ Thumbs.db
 
 # Local/production env
 .env.production
+
+git-diff-frontend.txt
