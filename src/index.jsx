@@ -248,11 +248,15 @@ function AppRouter() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/analyses" element={<AnalysesPage />} />
-            <Route path="/analyses" element={<AnalysesPage />} />
             <Route
               path="/admin/users/:userId/queries"
               element={<UserQueryMetricsPage />}
             />
+            <Route
+              path="/admin/conversations/:conversationId"
+              element={<LandingPage />}
+            />
+
             <Route path="/login" element={<AuthPage type="login" />} />
             <Route path="/signup" element={<WaitingListPage />} />
             <Route path="/settings" element={<SettingsPage />} />

@@ -17,6 +17,7 @@ export function MetricsOverview({
   recentQueries,
   isLoading,
   error,
+  onOpenQuery,
 }) {
   const cards = useMemo(() => {
     const llm = report?.llm_capability;
@@ -55,7 +56,7 @@ export function MetricsOverview({
         value: kg ? (kg.total_triples_loaded || 0).toLocaleString() : "—",
         caption: kg
           ? `${t("admin.metrics.ontologyAlignmentRate")}: ${fmtPct(
-              kg.ontology_alignment_rate
+              kg.ontology_alignment_rate,
             )}`
           : "",
       },
@@ -73,7 +74,7 @@ export function MetricsOverview({
         value: perf ? fmtMs(perf.avg_total_latency_ms) : "—",
         caption: perf
           ? `p95 LLM: ${fmtMs(perf.p95_llm_latency_ms)} • p95 SPARQL: ${fmtMs(
-              perf.p95_sparql_latency_ms
+              perf.p95_sparql_latency_ms,
             )}`
           : "",
       },
@@ -133,7 +134,12 @@ export function MetricsOverview({
               </thead>
               <tbody>
                 {recentQueries.queries.map((q) => (
-                  <tr key={q.id}>
+                  <tr
+                    key={q.id}
+                    className={onOpenQuery ? "admin-recentq-row" : ""}
+                    onClick={() => onOpenQuery?.(q)}
+                    style={{ cursor: onOpenQuery ? "pointer" : "default" }}
+                  >
                     <td>{q.id}</td>
                     <td
                       style={{

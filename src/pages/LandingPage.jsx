@@ -1,6 +1,12 @@
 // src/pages/LandingPage.jsx
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useOutletContext, useNavigate, useParams } from "react-router-dom";
+import {
+  useOutletContext,
+  useNavigate,
+  useParams,
+  useLocation,
+} from "react-router-dom";
+
 import { useTranslation } from "react-i18next";
 
 import "katex/dist/katex.min.css";
@@ -63,6 +69,31 @@ export default function LandingPage() {
   const isSyncOffline = healthOnline === false;
   const isSyncBlocked = isSyncOffline || isSyncUnknown || healthOnline == null;
 
+  const location = useLocation();
+
+  // Prefer location.state (internal navigation), fallback to URL (?mid=123)
+  const initialScrollMessageId = React.useMemo(() => {
+    const st = location?.state || {};
+    const v =
+      st.initialScrollMessageId ??
+      st.focusMessageId ??
+      st.conversation_message_id ??
+      st.conversationMessageId ??
+      null;
+
+    if (v != null) return String(v);
+
+    // Optional fallback: /admin/conversations/123?mid=456
+    const params = new URLSearchParams(location?.search || "");
+    const mid = params.get("mid") || params.get("messageId") || null;
+    return mid ? String(mid) : null;
+  }, [location?.state, location?.search]);
+
+  const isAdminReadonlyRoute = location.pathname.startsWith(
+    "/admin/conversations/",
+  );
+  const readOnly = !!isAdminReadonlyRoute;
+
   const sendBlockedReason = isSyncOffline
     ? t(
         "landing.syncBlockedOffline",
@@ -103,6 +134,7 @@ export default function LandingPage() {
     setConversationTitle,
     showToast,
     t,
+    mode: readOnly ? "admin" : "user",
   });
 
   // Per-artifact refs for exporting images
@@ -139,7 +171,7 @@ export default function LandingPage() {
     routeConversationId,
     messagesEndRef,
     messageElsRef,
-    initialScrollMessageId: null, // later: set to a specific id
+    initialScrollMessageId,
   });
 
   // Keep ref in sync with route
@@ -408,6 +440,11 @@ export default function LandingPage() {
   });
 
   const sendQuery = useCallback(() => {
+    if (readOnly) {
+      showToast?.(t("admin.queryDetails.readOnlyConversation"), "secondary");
+      return;
+    }
+
     const trimmed = (query || "").trim();
     const fetchFn = authFetchRef.current;
 
@@ -552,8 +589,9 @@ export default function LandingPage() {
                   key={m.id}
                   ref={(el) => {
                     if (!messageElsRef.current) return;
-                    if (el) messageElsRef.current.set(m.id, el);
-                    else messageElsRef.current.delete(m.id);
+                    const key = String(m.id);
+                    if (el) messageElsRef.current.set(key, el);
+                    else messageElsRef.current.delete(key);
                   }}
                   data-msgid={m.id}
                 >
@@ -604,6 +642,8 @@ export default function LandingPage() {
             </div>
 
             <ChatInput
+              readOnly={readOnly}
+              readOnlyReason={t("admin.queryDetails.readOnlyConversation")}
               query={query}
               setQuery={setQuery}
               charCount={charCount}

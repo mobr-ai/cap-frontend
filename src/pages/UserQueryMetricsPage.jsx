@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { useAuthRequest } from "@/hooks/useAuthRequest";
 import LoadingPage from "@/pages/LoadingPage";
 import "@/styles/AnalysesPage.css";
+import QueryDetailsModal from "@/components/admin/QueryDetailsModal";
 
 const lower = (v) => String(v ?? "").toLowerCase();
 function fmtMs(v) {
@@ -33,7 +34,7 @@ export default function UserQueryMetricsPage() {
   }, [authFetch]);
   const stableAuthFetch = useCallback(
     (url, options) => authFetchRef.current(url, options),
-    []
+    [],
   );
 
   const [query, setQuery] = useState("");
@@ -52,7 +53,7 @@ export default function UserQueryMetricsPage() {
       try {
         const res = await stableAuthFetch(
           `/api/v1/metrics/queries/by-user/${userId}?limit=500`,
-          { method: "GET" }
+          { method: "GET" },
         );
 
         if (!res.ok) {
@@ -218,63 +219,12 @@ export default function UserQueryMetricsPage() {
         )}
       </div>
       {selected && (
-        <div className="uq-modal-backdrop" onClick={() => setSelected(null)}>
-          <div className="uq-modal" onClick={(e) => e.stopPropagation()}>
-            <header className="uq-modal-header">
-              <h3>{t("admin.userQueries.modalTitle")}</h3>
-              <button
-                className="uq-modal-close"
-                onClick={() => setSelected(null)}
-                aria-label={t("common.close")}
-              >
-                ×
-              </button>
-            </header>
-
-            <section className="uq-modal-section">
-              <label>{t("admin.userQueries.query")}</label>
-              <pre className="uq-modal-query">{selected.nl_query}</pre>
-            </section>
-
-            <section className="uq-modal-grid">
-              <div>
-                <strong>ID</strong> #{selected.id}
-              </div>
-              <div>
-                <strong>{t("admin.userQueries.language")}</strong>{" "}
-                {selected.language}
-              </div>
-              <div>
-                <strong>{t("admin.userQueries.totalLatency")}</strong>{" "}
-                {fmtMs(selected.total_latency_ms)}
-              </div>
-              <div>
-                <strong>LLM</strong> {fmtMs(selected.llm_latency_ms)}
-              </div>
-              <div>
-                <strong>SPARQL</strong> {fmtMs(selected.sparql_latency_ms)}
-              </div>
-              <div>
-                <strong>{t("admin.userQueries.resultType")}</strong>{" "}
-                {selected.result_type}
-              </div>
-              <div>
-                <strong>{t("admin.userQueries.results")}</strong>{" "}
-                {selected.result_count}
-              </div>
-              <div>
-                <strong>{t("admin.userQueries.succeeded")}</strong>{" "}
-                {selected.succeeded ? t("common.yes") : t("common.no")}
-              </div>
-            </section>
-
-            {selected.error_message && (
-              <section className="uq-modal-error">
-                {selected.error_message}
-              </section>
-            )}
-          </div>
-        </div>
+        <QueryDetailsModal
+          t={t}
+          queryId={selected.id}
+          initialData={selected}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );

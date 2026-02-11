@@ -2,6 +2,8 @@
 import React from "react";
 
 export default function ChatInput({
+  readOnly = false,
+  readOnlyReason = "",
   query,
   setQuery,
   charCount,
@@ -17,7 +19,8 @@ export default function ChatInput({
   onSend,
 }) {
   const canSendText = !!(query || "").trim();
-  const isSendDisabled = isProcessing || !canSendText || isSyncBlocked;
+  const isSendDisabled =
+    readOnly || isProcessing || !canSendText || isSyncBlocked;
 
   return (
     <div className="input-wrapper">
@@ -42,7 +45,7 @@ export default function ChatInput({
           placeholder={placeholder}
           rows={2}
           maxLength={maxLength}
-          disabled={isProcessing}
+          disabled={isProcessing || readOnly}
         />
         <div className="char-count">
           <span>{charCountText}</span>
@@ -63,6 +66,14 @@ export default function ChatInput({
           <span>{isProcessing ? <div className="button-spinner" /> : "→"}</span>
         </button>
 
+        {readOnly && !!readOnlyReason && (
+          <div className="cap-send-tooltip" role="tooltip">
+            <span className="cap-tip-icon" aria-hidden="true">
+              !
+            </span>
+            <span className="cap-tip-text">{readOnlyReason}</span>
+          </div>
+        )}
         {isSyncBlocked && !!syncBlockedReason && (
           <div className="cap-send-tooltip" role="tooltip">
             <span className="cap-tip-icon" aria-hidden="true">

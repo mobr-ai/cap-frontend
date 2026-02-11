@@ -453,6 +453,27 @@
     },
     "userActions": {
       "viewQueries": "Ver consultas"
+    },
+    "queryDetails": {
+      "title": "Detalhes da consulta",
+      "tabNl": "Consulta NL",
+      "tabSparql": "SPARQL",
+      "query": "Consulta",
+      "sparql": "SPARQL",
+      "openConversation": "Abrir conversa",
+      "openConversationUnavailable": "Conversa não encontrada para esta consulta.",
+      "readOnlyConversation": "Somente leitura: você está visualizando a conversa de outro usuário.",
+      "userId": "ID do usuário",
+      "createdAt": "Criado em",
+      "complexity": "Complexidade",
+      "sparqlValid": "SPARQL válido",
+      "semanticValid": "Semântico válido",
+      "federated": "Federada",
+      "sequential": "Sequencial",
+      "temporal": "Temporal",
+      "offchainMetadata": "Metadados off-chain",
+      "aggregation": "Agregação",
+      "multiRel": "Multi-relacionamento"
     }
   },
   "common": {

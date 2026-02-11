@@ -449,6 +449,27 @@
     },
     "userActions": {
       "viewQueries": "View queries"
+    },
+    "queryDetails": {
+      "title": "Query details",
+      "tabNl": "NL query",
+      "tabSparql": "SPARQL",
+      "query": "Query",
+      "sparql": "SPARQL",
+      "openConversation": "Open conversation",
+      "openConversationUnavailable": "Conversation not found for this query.",
+      "readOnlyConversation": "Read-only: you are viewing another user's conversation.",
+      "userId": "User ID",
+      "createdAt": "Created",
+      "complexity": "Complexity",
+      "sparqlValid": "SPARQL valid",
+      "semanticValid": "Semantic valid",
+      "federated": "Federated",
+      "sequential": "Sequential",
+      "temporal": "Temporal",
+      "offchainMetadata": "Off-chain metadata",
+      "aggregation": "Aggregation",
+      "multiRel": "Multi-relationship"
     }
   },
   "common": {

@@ -23,6 +23,7 @@ import { WaitlistAlertsPanel } from "@/components/admin/WaitlistAlertsPanel";
 import { UserConfirmedAlertsPanel } from "@/components/admin/UserConfirmedAlertsPanel";
 import { MetricsOverview } from "@/components/admin/MetricsOverview";
 import { AlertsRecipientsPool } from "@/components/admin/AlertsRecipientsPool";
+import QueryDetailsModal from "@/components/admin/QueryDetailsModal";
 
 import "@/styles/AdminPage.css";
 
@@ -58,6 +59,7 @@ export default function AdminPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "overview";
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [selectedQuery, setSelectedQuery] = useState(null);
 
   const system = useAdminSystemMetrics(authFetch);
   const users = useAdminUsers(authFetch, showToast, t);
@@ -177,7 +179,11 @@ export default function AdminPage() {
 
         {activeTab === "metrics" && (
           <>
-            <MetricsOverview t={t} {...metrics} />
+            <MetricsOverview
+              t={t}
+              {...metrics}
+              onOpenQuery={(q) => setSelectedQuery(q)}
+            />
           </>
         )}
 
@@ -215,6 +221,14 @@ export default function AdminPage() {
           </>
         )}
       </div>
+      {selectedQuery && (
+        <QueryDetailsModal
+          t={t}
+          queryId={selectedQuery.id}
+          initialData={selectedQuery}
+          onClose={() => setSelectedQuery(null)}
+        />
+      )}
     </div>
   );
 }

@@ -12,6 +12,7 @@ export function useLandingConversationLoader({
   setConversationTitle,
   showToast,
   t,
+  mode = "user", // "user" | "admin"
 }) {
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
 
@@ -83,9 +84,13 @@ export function useLandingConversationLoader({
 
     (async () => {
       try {
-        const res = await fetchFn(`/api/v1/conversations/${id}`, {
-          signal: controller.signal,
-        });
+        const url =
+          mode === "admin"
+            ? `/api/v1/admin/conversations/${id}`
+            : `/api/v1/conversations/${id}`;
+
+        const res = await fetchFn(url, { signal: controller.signal });
+
         if (!res?.ok) throw new Error("Failed to load conversation");
 
         const data = await res.json();

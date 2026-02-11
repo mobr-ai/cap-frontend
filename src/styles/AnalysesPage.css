@@ -93,7 +93,9 @@
   background: linear-gradient(135deg, #111827, #020617);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
   cursor: pointer;
-  transition: border-color 0.15s ease, transform 0.08s ease,
+  transition:
+    border-color 0.15s ease,
+    transform 0.08s ease,
     background 0.15s ease;
   position: relative;
   overflow: hidden;
@@ -356,4 +358,86 @@
   background: rgba(220, 38, 38, 0.12);
   color: #fecaca;
   font-size: 0.8rem;
+}
+
+.uq-modal-tabs {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0 0.75rem 0;
+}
+
+.uq-tab {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  border-radius: 10px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.uq-tab.active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.uq-tabs-spacer {
+  flex: 1;
+}
+
+.uq-modal-code {
+  margin: 0;
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.25);
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+/* Open conversation button: always show pointer unless disabled */
+.uq-open-convo-btn {
+  cursor: pointer;
+}
+
+.uq-open-convo-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.uq-modal-backdrop {
+  opacity: 1;
+  transition: opacity 140ms ease;
+}
+
+.uq-modal {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  transition:
+    transform 140ms ease,
+    opacity 140ms ease;
+  will-change: transform, opacity;
+}
+
+.uq-modal-backdrop--closing {
+  opacity: 0;
+}
+
+.uq-modal--closing {
+  opacity: 0;
+  transform: translateY(6px) scale(0.99);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uq-modal-backdrop,
+  .uq-modal {
+    transition: none;
+  }
 }
