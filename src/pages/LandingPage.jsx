@@ -62,6 +62,7 @@ export default function LandingPage() {
   const [query, setQuery] = useState("");
   const [charCount, setCharCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [conversationOwnerId, setConversationOwnerId] = useState(null);
 
   // Block queries if sync service is Offline or Unknown
   const statusCode = String(syncStatus?.code || "unknown");
@@ -92,7 +93,17 @@ export default function LandingPage() {
   const isAdminReadonlyRoute = location.pathname.startsWith(
     "/admin/conversations/",
   );
-  const readOnly = !!isAdminReadonlyRoute;
+  const sessionUserId =
+    session?.user_id ?? session?.userId ?? session?.id ?? null;
+
+  const isOwner =
+    sessionUserId != null &&
+    conversationOwnerId != null &&
+    String(sessionUserId) === String(conversationOwnerId);
+
+  // Admin route is read-only only when viewing someone else's conversation.
+  // If owner is unknown, stay conservative (read-only) to avoid privilege bugs.
+  const readOnly = !!isAdminReadonlyRoute && !isOwner;
 
   const sendBlockedReason = isSyncOffline
     ? t(
@@ -132,9 +143,10 @@ export default function LandingPage() {
     authFetchRef,
     setMessages,
     setConversationTitle,
+    setConversationOwnerId,
     showToast,
     t,
-    mode: readOnly ? "admin" : "user",
+    mode: isAdminReadonlyRoute ? "admin" : "user",
   });
 
   // Per-artifact refs for exporting images

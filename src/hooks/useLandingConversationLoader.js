@@ -10,6 +10,7 @@ export function useLandingConversationLoader({
   authFetchRef,
   setMessages,
   setConversationTitle,
+  setConversationOwnerId,
   showToast,
   t,
   mode = "user", // "user" | "admin"
@@ -56,7 +57,9 @@ export function useLandingConversationLoader({
         lastCommittedConversationIdRef.current = null;
         lastAppliedSigRef.current = { id: null, sig: null };
       }
+      setConversationOwnerId?.(null);
       setIsLoadingConversation(false);
+
       return;
     }
 
@@ -68,6 +71,7 @@ export function useLandingConversationLoader({
     if (isRouteSwitch) {
       setMessages([]);
       setConversationTitle?.("");
+      setConversationOwnerId?.(null);
       // new load token for this route switch
       routeLoadTokenRef.current += 1;
       // reset signature guard so new convo can commit even if structurally similar
@@ -98,6 +102,15 @@ export function useLandingConversationLoader({
         if (cancelled) return;
         if (inFlightRef.current.seq !== seq || inFlightRef.current.id !== id)
           return;
+
+        // Conversation owner (needed to decide readOnly on /admin/conversations/:id)
+        const ownerId =
+          data?.conversation?.user_id ??
+          data?.conversation?.userId ??
+          data?.user_id ??
+          data?.userId ??
+          null;
+        setConversationOwnerId?.(ownerId != null ? Number(ownerId) : null);
 
         setConversationTitle?.(
           String(data?.title || data?.conversation?.title || ""),
@@ -224,8 +237,10 @@ export function useLandingConversationLoader({
     authFetchRef?.current,
     setMessages,
     setConversationTitle,
+    setConversationOwnerId,
     showToast,
     t,
+    mode,
   ]);
 
   return { isLoadingConversation };
