@@ -214,7 +214,7 @@ function NavBar({
                 const showSync = healthOnline === true;
 
                 const isSynced =
-                  typeof syncLag === "number" ? syncLag <= 3 : syncPct >= 100;
+                  typeof syncLag === "number" ? syncLag <= 50 : syncPct >= 100;
                 const state = showOffline
                   ? "offline"
                   : showChecking
