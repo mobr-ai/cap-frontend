@@ -27,15 +27,17 @@ export function useLandingAutoScroll({
     (messageId, behavior = "auto") => {
       if (!messageId) return false;
 
-      const el = messageElsRef?.current?.get(messageId);
+      const raw = String(messageId);
+      const el =
+        messageElsRef?.current?.get(raw) ||
+        messageElsRef?.current?.get(`conv_${raw}`) ||
+        (raw.startsWith("conv_")
+          ? messageElsRef?.current?.get(raw.replace(/^conv_/, ""))
+          : null);
+
       if (!el) return false;
 
-      el.scrollIntoView({
-        behavior,
-        block: "start",
-        inline: "nearest",
-      });
-
+      el.scrollIntoView({ behavior, block: "start", inline: "nearest" });
       return true;
     },
     [messageElsRef],

@@ -600,9 +600,16 @@ export default function LandingPage() {
                   key={m.id}
                   ref={(el) => {
                     if (!messageElsRef.current) return;
-                    const key = String(m.id);
-                    if (el) messageElsRef.current.set(key, el);
-                    else messageElsRef.current.delete(key);
+
+                    const keys = [];
+                    if (m?.id != null) keys.push(String(m.id));
+                    if (m?.conv_message_id != null)
+                      keys.push(String(m.conv_message_id));
+
+                    for (const k of keys) {
+                      if (el) messageElsRef.current.set(k, el);
+                      else messageElsRef.current.delete(k);
+                    }
                   }}
                   data-msgid={m.id}
                 >

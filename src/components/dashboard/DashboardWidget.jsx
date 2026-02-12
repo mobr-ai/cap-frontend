@@ -168,11 +168,18 @@ export default function DashboardWidget({
     stop(e);
 
     if (onGoToConversation) {
-      onGoToConversation(item.conversation_id);
+      onGoToConversation(item.conversation_id, item.conversation_message_id);
       return;
     }
     if (item.conversation_id) {
-      navigate(`/conversations/${item.conversation_id}`);
+      navigate(`/conversations/${item.conversation_id}`, {
+        state: {
+          initialScrollMessageId:
+            item.conversation_message_id != null
+              ? String(item.conversation_message_id)
+              : null,
+        },
+      });
     }
   };
 

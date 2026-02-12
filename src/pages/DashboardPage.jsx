@@ -52,7 +52,7 @@ export default function DashboardPage() {
   const [sharePayload, setSharePayload] = useState(null);
 
   const [sortOrder, setSortOrder] = useState(
-    () => localStorage.getItem("cap.dashboard.sort") || "position"
+    () => localStorage.getItem("cap.dashboard.sort") || "position",
   );
 
   const handleChangeSort = useCallback((next) => {
@@ -80,13 +80,13 @@ export default function DashboardPage() {
 
   const dashboards = useMemo(
     () => (Array.isArray(dashboardsRaw) ? dashboardsRaw : []),
-    [dashboardsRaw]
+    [dashboardsRaw],
   );
 
   // Keep null/undefined while loading so hooks/loader can behave correctly.
   const defaultItems = useMemo(
     () => (Array.isArray(defaultItemsRaw) ? defaultItemsRaw : null),
-    [defaultItemsRaw]
+    [defaultItemsRaw],
   );
 
   // View-level state: which dashboard is active and which items to show
@@ -123,7 +123,7 @@ export default function DashboardPage() {
     setRenderItems((prev) => {
       if (!Array.isArray(prev)) return prev;
       const next = prev.map((it) =>
-        it?.id === updatedItem.id ? { ...it, ...updatedItem } : it
+        it?.id === updatedItem.id ? { ...it, ...updatedItem } : it,
       );
       return applyOverridesToList(next, overridesRef.current);
     });
@@ -256,7 +256,7 @@ export default function DashboardPage() {
       refresh,
       showToast,
       t,
-    ]
+    ],
   );
 
   // Keep old API used by current widgets (rename-only modal inside DashboardWidget.jsx)
@@ -264,7 +264,7 @@ export default function DashboardPage() {
     async (id, nextTitle) => {
       return await handleUpdateItem(id, nextTitle);
     },
-    [handleUpdateItem]
+    [handleUpdateItem],
   );
 
   const handleDeleteItem = useCallback(
@@ -280,7 +280,7 @@ export default function DashboardPage() {
         // Drop any override, update UI immediately, then refresh
         overridesRef.current.delete(id);
         setRenderItems((prev) =>
-          Array.isArray(prev) ? prev.filter((x) => x?.id !== id) : prev
+          Array.isArray(prev) ? prev.filter((x) => x?.id !== id) : prev,
         );
         setExpandedItem((prev) => (prev?.id === id ? null : prev));
 
@@ -289,15 +289,20 @@ export default function DashboardPage() {
         showToast?.(t("dashboard.widgetDeleteFailed"), "danger");
       }
     },
-    [authFetch, refresh, showToast, t]
+    [authFetch, refresh, showToast, t],
   );
 
   const handleGoToConversation = useCallback(
-    (conversationId) => {
+    (conversationId, messageId = null) => {
       if (!conversationId) return;
-      navigate(`/conversations/${conversationId}`);
+
+      navigate(`/conversations/${conversationId}`, {
+        state: {
+          initialScrollMessageId: messageId != null ? String(messageId) : null,
+        },
+      });
     },
-    [navigate]
+    [navigate],
   );
 
   const handleShareItem = useCallback(
@@ -309,7 +314,7 @@ export default function DashboardPage() {
       setSharePayload(payload);
       setShareOpen(true);
     },
-    [showToast, t]
+    [showToast, t],
   );
 
   const nudgeResize = useCallback(() => {

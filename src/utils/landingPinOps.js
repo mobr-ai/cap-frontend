@@ -10,14 +10,35 @@ function findSourceQuery(messages, messageId) {
   return "";
 }
 
+// Deterministic: conversation_message_id is the nearest preceding "conv_<id>" message
+function findNearestConvMessageId(messages, messageId) {
+  const idx = (messages || []).findIndex((m) => m?.id === messageId);
+  if (idx < 0) return null;
+
+  for (let i = idx - 1; i >= 0; i -= 1) {
+    const id = messages[i]?.id;
+
+    if (typeof id === "string" && id.startsWith("conv_")) {
+      const n = Number(id.slice("conv_".length));
+      return Number.isFinite(n) ? n : null;
+    }
+
+    const n2 = messages[i]?.conv_message_id;
+    if (n2 != null) {
+      const n = Number(n2);
+      return Number.isFinite(n) ? n : null;
+    }
+  }
+
+  return null;
+}
+
 function buildPinTitle({ message, sourceQuery }) {
   const artifactType = message?.type === "table" ? "table" : "chart";
   const titleBase = artifactType === "table" ? "Table" : "Chart";
 
   if (message?.title) return message.title;
-
   if (sourceQuery) return `${titleBase}: ${String(sourceQuery).slice(0, 80)}`;
-
   return `${titleBase} ${new Date().toLocaleTimeString()}`;
 }
 
@@ -28,10 +49,6 @@ function buildPinConfig(message) {
   return { vegaSpec: message.vegaSpec, kvType: message.kvType };
 }
 
-/**
- * Pins a chart/table artifact to the dashboard.
- * Throws on failure.
- */
 export async function pinLandingArtifact({
   fetchFn,
   message,
@@ -46,6 +63,11 @@ export async function pinLandingArtifact({
   const title = buildPinTitle({ message, sourceQuery });
   const config = buildPinConfig(message);
 
+  const conversation_message_id = findNearestConvMessageId(
+    messages || [],
+    message.id,
+  );
+
   const res = await fetchFn("/api/v1/dashboard/pin", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -55,6 +77,7 @@ export async function pinLandingArtifact({
       source_query: sourceQuery,
       config,
       conversation_id: conversationId || null,
+      conversation_message_id, // added
     }),
   });
 
