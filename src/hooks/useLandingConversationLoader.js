@@ -104,12 +104,7 @@ export function useLandingConversationLoader({
           return;
 
         // Conversation owner (needed to decide readOnly on /admin/conversations/:id)
-        const ownerId =
-          data?.conversation?.user_id ??
-          data?.conversation?.userId ??
-          data?.user_id ??
-          data?.userId ??
-          null;
+        const ownerId = mode === "admin" ? (data?.user_id ?? null) : null;
         setConversationOwnerId?.(ownerId != null ? Number(ownerId) : null);
 
         setConversationTitle?.(

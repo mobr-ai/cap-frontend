@@ -102,8 +102,7 @@ export default function LandingPage() {
 
   // Admin route is read-only only when viewing someone else's conversation.
   // If owner is unknown, stay conservative (read-only) to avoid privilege bugs.
-  const readOnly =
-    !!isAdminReadonlyRoute && conversationOwnerId != null && !isOwner;
+  const readOnly = !!isAdminReadonlyRoute && !isOwner;
 
   const sendBlockedReason = isSyncOffline
     ? t(
