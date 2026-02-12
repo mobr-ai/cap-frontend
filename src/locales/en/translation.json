@@ -469,7 +469,11 @@
       "temporal": "Temporal",
       "offchainMetadata": "Off-chain metadata",
       "aggregation": "Aggregation",
-      "multiRel": "Multi-relationship"
+      "multiRel": "Multi-relationship",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copySparql": "Copy SPARQL to clipboard",
+      "copyNl": "Copy query to clipboard"
     }
   },
   "common": {

@@ -92,8 +92,74 @@ export default function QueryDetailsModal({
     load();
   }, [queryId, initialData, load]);
 
+  const nlQuery = useMemo(() => String(data?.nl_query || "").trim(), [data]);
   const sparql = useMemo(() => normalizeSparql(data?.sparql_query), [data]);
   const canOpenConversation = !!data?.conversation_id;
+
+  // Copy behavior: copies active tab (NL or SPARQL), with dynamic tooltip + "Copied" feedback.
+  const [copied, setCopied] = useState(false);
+  const copyResetTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimerRef.current) {
+        window.clearTimeout(copyResetTimerRef.current);
+        copyResetTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const copyText = useMemo(() => {
+    return tab === "sparql" ? sparql : nlQuery;
+  }, [tab, sparql, nlQuery]);
+
+  const copyTooltip = useMemo(() => {
+    return tab === "sparql"
+      ? t("admin.queryDetails.copySparql")
+      : t("admin.queryDetails.copyNl");
+  }, [tab, t]);
+
+  const doCopy = useCallback(async () => {
+    const text = copyText || "";
+    if (!text.trim()) return;
+
+    const setCopiedNow = () => {
+      setCopied(true);
+      if (copyResetTimerRef.current) {
+        window.clearTimeout(copyResetTimerRef.current);
+      }
+      copyResetTimerRef.current = window.setTimeout(() => {
+        setCopied(false);
+        copyResetTimerRef.current = null;
+      }, 1400);
+    };
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        setCopiedNow();
+        return;
+      }
+    } catch (e) {
+      // Fall back below.
+    }
+
+    try {
+      const el = document.createElement("textarea");
+      el.value = text;
+      el.setAttribute("readonly", "");
+      el.style.position = "absolute";
+      el.style.left = "-9999px";
+      el.style.top = "0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopiedNow();
+    } catch (e) {
+      // Silent fail.
+    }
+  }, [copyText]);
 
   const openConversation = () => {
     if (!canOpenConversation) return;
@@ -171,6 +237,18 @@ export default function QueryDetailsModal({
             >
               {t("admin.queryDetails.openConversation")}
             </button>
+
+            <button
+              type="button"
+              className="btn btn-outline-light btn-sm uq-copy-btn"
+              onClick={doCopy}
+              disabled={!copyText?.trim()}
+              title={copyTooltip}
+            >
+              {copied
+                ? t("admin.queryDetails.copied")
+                : t("admin.queryDetails.copy")}
+            </button>
           </div>
 
           <div className="uq-tabpanel">
@@ -188,14 +266,16 @@ export default function QueryDetailsModal({
             {!loading && tab === "nl" && (
               <section className="uq-modal-section">
                 <label>{t("admin.queryDetails.query")}</label>
-                <pre className="uq-modal-query">{data?.nl_query || "—"}</pre>
+                <pre className="uq-modal-query uq-tight-scroll">
+                  {nlQuery || "—"}
+                </pre>
               </section>
             )}
 
             {!loading && tab === "sparql" && (
               <section className="uq-modal-section">
                 <label>{t("admin.queryDetails.sparql")}</label>
-                <pre className="uq-modal-code">
+                <pre className="uq-modal-code uq-tight-scroll">
                   <code>{sparql || "—"}</code>
                 </pre>
               </section>
@@ -291,6 +371,7 @@ export default function QueryDetailsModal({
             </div>
           </section>
         )}
+
         {!loading && data?.error_message ? (
           <div className="uq-modal-error" style={{ marginTop: "0.75rem" }}>
             {data.error_message}

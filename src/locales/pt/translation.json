@@ -473,7 +473,11 @@
       "temporal": "Temporal",
       "offchainMetadata": "Metadados off-chain",
       "aggregation": "Agregação",
-      "multiRel": "Multi-relacionamento"
+      "multiRel": "Multi-relacionamento",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "copySparql": "Copiar SPARQL para a área de transferência",
+      "copyNl": "Copiar consulta para a área de transferência"
     }
   },
   "common": {

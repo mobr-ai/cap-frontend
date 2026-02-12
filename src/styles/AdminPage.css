@@ -631,3 +631,51 @@
   background: rgba(255, 255, 255, 0.14);
   border-color: rgba(255, 255, 255, 0.26);
 }
+
+/*
+  Tight, "floating thumb" scrollbar used by widgets (Artifacts.css)
+  Reused here for QueryDetailsModal text areas.
+*/
+.uq-tight-scroll {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+}
+
+.uq-tight-scroll::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.uq-tight-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.uq-tight-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  transition:
+    background-color 0.2s ease,
+    opacity 0.2s ease;
+  opacity: 0;
+}
+
+.uq-tight-scroll:hover::-webkit-scrollbar-thumb {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.45);
+}
+
+.uq-tight-scroll::-webkit-scrollbar-thumb:active {
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+/* QueryDetailsModal helpers */
+.uq-modal-sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.uq-copy-btn {
+  white-space: nowrap;
+}
