@@ -1,5 +1,22 @@
 import i18n from "../i18n";
 
+export function getSessionUserId(session) {
+  if (!session || typeof session !== "object") return null;
+
+  // Common flat shapes
+  const direct =
+    session.user_id ?? session.userId ?? session.id ?? session.uid ?? null;
+  if (direct != null) return direct;
+
+  // Common nested shapes: { user: { id/user_id/... } }
+  const u = session.user;
+  if (u && typeof u === "object") {
+    return u.user_id ?? u.userId ?? u.id ?? u.uid ?? null;
+  }
+
+  return null;
+}
+
 export function isValidEmail(s) {
   if (typeof s !== "string") return false;
   const v = s.trim();

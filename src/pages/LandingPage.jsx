@@ -40,7 +40,7 @@ import LandingEmptyState from "@/components/landing/LandingEmptyState";
 
 import ShareModal from "@/components/ShareModal";
 import { createSharePayloadForArtifact } from "@/utils/landingShareOps";
-
+import { getSessionUserId } from "@/utils/authUtils";
 import "@/styles/LandingPage.css";
 
 export default function LandingPage() {
@@ -93,8 +93,7 @@ export default function LandingPage() {
   const isAdminReadonlyRoute = location.pathname.startsWith(
     "/admin/conversations/",
   );
-  const sessionUserId =
-    session?.user_id ?? session?.userId ?? session?.id ?? null;
+  const sessionUserId = getSessionUserId(session);
 
   const isOwner =
     sessionUserId != null &&
@@ -103,7 +102,8 @@ export default function LandingPage() {
 
   // Admin route is read-only only when viewing someone else's conversation.
   // If owner is unknown, stay conservative (read-only) to avoid privilege bugs.
-  const readOnly = !!isAdminReadonlyRoute && !isOwner;
+  const readOnly =
+    !!isAdminReadonlyRoute && conversationOwnerId != null && !isOwner;
 
   const sendBlockedReason = isSyncOffline
     ? t(
