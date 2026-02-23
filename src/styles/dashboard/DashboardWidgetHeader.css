@@ -11,8 +11,12 @@
   justify-content: flex-start !important;
   gap: 6px !important;
 
-  /* prevent header from expanding and pushing grid sizing weirdly */
-  overflow: hidden;
+  /* IMPORTANT: avoid clipping line-clamped text + toolbar transforms */
+  overflow: visible !important;
+
+  /* make sure header spans the full card width */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .dashboard-widget-headerRow {
@@ -20,30 +24,46 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
+
+  /* IMPORTANT: fill available width so title isn't formatted narrow */
+  width: 100%;
   min-width: 0;
+  box-sizing: border-box;
 }
 
 .dashboard-widget-titleBlock {
+  /* IMPORTANT: allow the title area to expand and use all space */
+  flex: 1 1 auto;
   min-width: 0;
+  width: 100%;
 }
 
 .widget-title {
   font-size: 1.03rem;
   font-weight: 700;
-  line-height: 1.15;
+
+  /* a bit more breathing room helps avoid descender clipping */
+  line-height: 1.2;
+
   color: rgba(255, 255, 255, 0.95);
 
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+
   overflow: hidden;
+
+  /* ensure clamping uses full available width */
+  max-width: 100%;
 }
 
 .widget-subtitle {
   font-size: 0.85rem;
-  line-height: 1.2;
+  line-height: 1.25;
   margin-top: 2px;
+
   min-width: 0;
+  max-width: 100%;
 }
 
 .widget-subtitle-row {
@@ -51,6 +71,7 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+  max-width: 100%;
 }
 
 .widget-subtitle-link {
@@ -88,6 +109,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+
+  /* avoid shrink weirdness */
+  flex: 0 0 auto;
 }
 
 .widget-subtitle-iconBtn:hover {
@@ -105,10 +129,15 @@
   align-items: center;
   gap: 0.35rem;
 
+  /* never let toolbar steal width from title block */
+  flex: 0 0 auto;
+
   /* by default hidden on hover-capable devices */
   opacity: 0;
   transform: translateY(-2px);
-  transition: opacity 0.14s ease, transform 0.14s ease;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
 }
 
 /* show on hover */
@@ -125,7 +154,7 @@
   }
 }
 
-/* The actual buttons (your screenshot shows these styles were missing) */
+/* Buttons */
 .dashboard-widget-toolBtn {
   appearance: none;
   border: 1px solid var(--dash-btn-border);
@@ -143,8 +172,11 @@
   cursor: pointer;
   user-select: none;
 
-  transition: transform 120ms ease, background 120ms ease,
-    border-color 120ms ease, color 120ms ease;
+  transition:
+    transform 120ms ease,
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
 }
 
 .dashboard-widget-toolBtn:hover {
@@ -157,7 +189,6 @@
   transform: translateY(0px);
 }
 
-/* Make sure FontAwesome inside buttons is centered and consistent */
 .dashboard-widget-toolBtn svg {
   width: 14px;
   height: 14px;
