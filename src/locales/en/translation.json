@@ -116,7 +116,7 @@
       "pillars": {
         "title": "Our Roadmap: The Three Pillars of Innovation",
         "llm": {
-          "title": "Fine-Tuned Cardano LLM",
+          "title": "Cardano-tailored LLM Pipeline",
           "desc": "A specialized AI reasoning engine trained to understand Cardano’s domain-specific data structures, ontologies, and governance mechanics."
         },
         "kg": {

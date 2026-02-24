@@ -112,7 +112,7 @@
       "pillars": {
         "title": "Nosso roadmap: Os Três Pilares da Inovação",
         "llm": {
-          "title": "LLM Customizado para Cardano",
+          "title": "Pipeline LLM Customizada para Cardano",
           "desc": "Um mecanismo de raciocínio em IA especializado para compreender estruturas de dados, ontologias e governança específicas da Cardano."
         },
         "kg": {
