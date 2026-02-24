@@ -1,4 +1,6 @@
 {
+  "welcomeTitle": "Bem-vindo",
+  "welcomeSubtitle": "Entre para acessar seu workspace, dashboards e análises.",
   "loginMsg": "Entrar na sua conta CAP",
   "signUpMsg": "Cadastre-se na CAP",
   "mailPlaceholder": "Digite seu e-mail",
@@ -63,14 +65,12 @@
   "walletNotFound": "Nenhuma carteira Cardano detectada. Instale <nami>Nami</nami>, <lace>Lace</lace>, <flint>Flint</flint> ou <eternl>Eternl</eternl> e recarregue a página.",
   "walletLoginSuccess": "Login com carteira realizado com sucesso",
   "loginError": "Falha no login. Por favor, tente novamente.",
-
   "tooltipAvatar": "Alterar seu avatar",
   "tooltipDisplayName": "Nome de exibição: aparece primeiro publicamente (header e perfil).",
   "tooltipUsername": "Nome de usuário: identificador único usado em links e menções.",
   "invalidDisplayName": "Nome de exibição inválido. Use de 2 a 30 caracteres e evite caracteres de controle.",
   "usernameSuggested": "Esse nome de usuário não está disponível. Sugestão: {{name}}",
   "accountDeletionFailed": "Falha ao excluir a conta. Tente novamente.",
-
   "settings": "Configurações",
   "languageConf": "Idioma",
   "referralLink": "Link de indicação",
@@ -97,6 +97,90 @@
   "shareTo": "Compartilhar em",
   "language": "Idioma",
   "learnMore": "Saiba mais",
+  "welcome": {
+    "cap": {
+      "scrollHint": "Descubra o CAP",
+      "headline": "Bem-vindo ao CAP: Analytics da Cardano com IA",
+      "lead": "Simplificando a exploração de dados da blockchain Cardano por meio de linguagem natural, conectando dados on-chain complexos a insights acessíveis com um LLM ajustado e um Grafo de Conhecimento Semântico.",
+      "cta": {
+        "primary": "Explorar CAP",
+        "button": "Entrar na Lista de Espera",
+        "title": "Pronto para explorar os dados da Cardano em modo turbo?",
+        "description": "Faça login acima para acessar seu espaço de trabalho e começar a salvar suas análises."
+      },
+
+      "pillars": {
+        "title": "Nosso roadmap: Os Três Pilares da Inovação",
+        "llm": {
+          "title": "LLM Customizado para Cardano",
+          "desc": "Um mecanismo de raciocínio em IA especializado para compreender estruturas de dados, ontologias e governança específicas da Cardano."
+        },
+        "kg": {
+          "title": "Grafo de Conhecimento Cardano",
+          "desc": "Uma fonte semântica de verdade que conecta atividades on-chain com metadados off-chain para uma análise contextual e holística."
+        },
+        "dashboards": {
+          "title": "Dashboards Inteligentes Centrados no Usuário",
+          "desc": "Workspaces interativos e personalizáveis onde usuários fixam gráficos e tabelas gerados por IA para monitoramento em tempo real."
+        }
+      },
+
+      "flow": {
+        "title": "Da Pergunta ao Insight",
+        "step1": {
+          "title": "Pergunte em Linguagem Natural",
+          "desc": "Usuários podem consultar dados da blockchain usando linguagem comum — sem necessidade de SQL ou SPARQL."
+        },
+        "step2": {
+          "title": "Tradução Semântica",
+          "desc": "A IA do CAP converte sua pergunta em consultas SPARQL precisas e executáveis sobre o grafo de conhecimento da Cardano."
+        },
+        "step3": {
+          "title": "Resultados Visuais Instantâneos",
+          "desc": "Os resultados são automaticamente renderizados em gráficos interativos Vega-Lite ou tabelas estruturadas."
+        }
+      },
+
+      "kpis": {
+        "ask": { "title": "Perguntas", "subtitle": "em linguagem simples" },
+        "federate": {
+          "title": "Federação (planejado)",
+          "subtitle": "on-chain + off-chain"
+        },
+        "visualize": {
+          "title": "Visualização",
+          "subtitle": "simples e instantânea"
+        }
+      },
+
+      "examples": {
+        "body": "O roadmap da plataforma prevê queries federadas.",
+        "colQuery": "Exemplo de pergunta do usuário",
+        "colSources": "Fontes de Dados Combinadas",
+        "title": "Nosso Alvo: Consultas Complexas e Avançadas de Forma Fácil.",
+        "items": [
+          {
+            "query": "Liste os 5 principais meme tokens por volume",
+            "sources": "Transações on-chain + Descrições off-chain"
+          },
+          {
+            "query": "Compare a participação de votos por rótulo de proposta",
+            "sources": "Ações de governança + Âncoras de metadados"
+          },
+          {
+            "query": "Mostrar pools com discrepâncias de metadados",
+            "sources": "Certificados de registro + Registro off-chain"
+          }
+        ]
+      }
+    },
+
+    "footer": {
+      "tagline": "Construindo infraestrutura avançada de dados e IA para ecossistemas descentralizados.",
+      "followUs": "Siga-nos",
+      "allRights": "Todos os direitos reservados."
+    }
+  },
   "nav": {
     "sidebarAriaLabel": "Navegação principal",
     "home": "Início",

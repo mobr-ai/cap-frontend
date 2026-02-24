@@ -1,4 +1,6 @@
 {
+  "welcomeTitle": "Welcome",
+  "welcomeSubtitle": "Sign in to access your workspace, dashboards, and analytics.",
   "loginMsg": "Log in to your CAP account",
   "signUpMsg": "Sign up for CAP",
   "mailPlaceholder": "Enter your email",
@@ -95,6 +97,91 @@
   "shareTo": "Share to",
   "language": "Language",
   "learnMore": "Learn more",
+  "welcome": {
+    "cap": {
+      "scrollHint": "Discover CAP",
+
+      "headline": "Welcome to CAP: Cardano Analytics Powered by AI",
+
+      "lead": "Simplifying Cardano blockchain data exploration through natural language, bridging complex on-chain data with user-friendly insights via a custom LLM and a Semantic Knowledge Graph.",
+
+      "cta": {
+        "primary": "Explore CAP",
+        "secondary": "Join the Waitlist",
+        "button": "Get Early Access",
+        "title": "Ready to explore Cardano data the fast way?",
+        "description": "Sign in above to access your workspace and start pinning insights."
+      },
+
+      "pillars": {
+        "title": "Our Roadmap: The Three Pillars of Innovation",
+        "llm": {
+          "title": "Fine-Tuned Cardano LLM",
+          "desc": "A specialized AI reasoning engine trained to understand Cardano’s domain-specific data structures, ontologies, and governance mechanics."
+        },
+        "kg": {
+          "title": "Cardano Knowledge Graph",
+          "desc": "A semantic source of truth linking on-chain activity with off-chain metadata for holistic, contextual blockchain analysis."
+        },
+        "dashboards": {
+          "title": "User-Centric Smart Dashboards",
+          "desc": "Interactive, customizable workspaces where users pin AI-generated charts and tables for real-time monitoring and exploration."
+        }
+      },
+
+      "flow": {
+        "title": "From Question to Insight",
+        "step1": {
+          "title": "Ask in Natural Language",
+          "desc": "Users can input blockchain queries using everyday language — no SQL or SPARQL required."
+        },
+        "step2": {
+          "title": "Semantic Translation",
+          "desc": "CAP’s AI translates your human question into precise, executable SPARQL queries over the Cardano knowledge graph."
+        },
+        "step3": {
+          "title": "Instant Visual Results",
+          "desc": "Results are automatically rendered into interactive Vega-Lite charts or structured tables."
+        }
+      },
+
+      "kpis": {
+        "ask": { "title": "Ask", "subtitle": "in plain language" },
+        "federate": {
+          "title": "Federate (planned)",
+          "subtitle": "on-chain + off-chain"
+        },
+        "visualize": { "title": "Visualize", "subtitle": "instantly" }
+      },
+
+      "examples": {
+        "body": "Examples of advanced queries the platform we are targeting.",
+        "colQuery": "User Query Example",
+        "colSources": "Data Sources Combined",
+        "title": "Our Target: Complex and Advanced Queries Made Easy",
+        "items": [
+          {
+            "query": "List top 5 meme tokens by volume",
+            "sources": "On-chain transactions + Off-chain token descriptions"
+          },
+          {
+            "query": "Compare voter turnout by proposal label",
+            "sources": "Governance actions + Metadata anchors"
+          },
+          {
+            "query": "Show pools with metadata discrepancies",
+            "sources": "Registration certificates + Off-chain registry"
+          }
+        ]
+      }
+    },
+
+    "footer": {
+      "tagline": "Building advanced data and AI infrastructure for decentralized ecosystems.",
+      "followUs": "Follow Us",
+      "allRights": "All rights reserved."
+    }
+  },
   "nav": {
     "sidebarAriaLabel": "Main navigation",
     "home": "Home",

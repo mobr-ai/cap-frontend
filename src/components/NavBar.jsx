@@ -5,7 +5,7 @@ import Image from "react-bootstrap/Image";
 import Nav from "react-bootstrap/Nav";
 import Navbar from "react-bootstrap/Navbar";
 import NavDropdown from "react-bootstrap/NavDropdown";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import i18n from "./../i18n";
 import { useTranslation } from "react-i18next";
 
@@ -25,6 +25,9 @@ function NavBar({
   const [brand, setBrand] = useState("");
   const brandRef = useRef("");
   const navigate = useNavigate();
+  const location = useLocation();
+  const hideLoginLink =
+    location?.pathname === "/login" || location?.pathname === "/welcome";
   const { t } = useTranslation();
   const brandRanRef = useRef(false);
 
@@ -338,7 +341,7 @@ function NavBar({
                 ))}
               </NavDropdown>
 
-              {!userData && (
+              {!userData && !hideLoginLink && (
                 <Nav.Link
                   className="nav-text"
                   onClick={() => {

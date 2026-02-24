@@ -30,6 +30,7 @@ import AdminPage from "./pages/AdminPage";
 import AnalysesPage from "./pages/AnalysesPage";
 import UserQueryMetricsPage from "./pages/UserQueryMetricsPage";
 import LoadingPage from "./pages/LoadingPage";
+import WelcomePage from "./pages/WelcomePage";
 
 // Hooks
 import { useAuthRequest } from "./hooks/useAuthRequest";
@@ -166,13 +167,24 @@ function Layout() {
 
   // --- Enforce allowed routes when not logged in ---------------------------
   useEffect(() => {
-    const allowlist = new Set(["/login", "/signup"]);
+    const allowlist = new Set(["/login", "/signup", "/welcome"]);
     if (!session && !allowlist.has(location.pathname)) {
       setSidebarOpen(false);
       navigate("/login", {
         replace: true,
         state: { from: location.pathname },
       });
+    }
+  }, [session, location.pathname, navigate]);
+
+  // --- Prevent logged-in users from visiting auth pages ---------------------
+  useEffect(() => {
+    if (!session) return;
+
+    const authPages = new Set(["/login", "/signup", "/welcome"]);
+    if (authPages.has(location.pathname)) {
+      setSidebarOpen(false);
+      navigate("/", { replace: true });
     }
   }, [session, location.pathname, navigate]);
 
@@ -257,7 +269,9 @@ function AppRouter() {
               element={<LandingPage />}
             />
 
-            <Route path="/login" element={<AuthPage type="login" />} />
+            {/* <Route path="/login" element={<AuthPage type="login" />} /> */}
+            <Route path="/login" element={<WelcomePage type="login" />} />
+            <Route path="/welcome" element={<WelcomePage type="login" />} />
             <Route path="/signup" element={<WaitingListPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFound />} />
