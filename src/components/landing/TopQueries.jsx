@@ -7,6 +7,10 @@ export default function TopQueries({
   isProcessing = false,
   onSelectQuery,
 }) {
+  function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  }
+
   return (
     <>
       <div className="empty-state-examples-title">{title}</div>
@@ -16,12 +20,12 @@ export default function TopQueries({
           <button
             key={`${q.query}-${i}`}
             className={`example-chip ${isProcessing ? "disabled" : ""}`}
-            title={q.frequency ? `Asked ${q.frequency} times` : undefined}
+            // title={q.frequency ? `Asked ${q.frequency} times` : undefined}
             onClick={() => {
               if (!isProcessing) onSelectQuery?.(q);
             }}
           >
-            {q.query}
+            {capitalizeFirstLetter(q.query)}
           </button>
         ))}
       </div>

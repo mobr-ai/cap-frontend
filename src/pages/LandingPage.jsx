@@ -446,7 +446,7 @@ export default function LandingPage() {
           },
           {
             query:
-              "How many blocks were produced by this SPO pool18rjrygm3knlt67n3r3prlhnzcjxun7wa8d3l8w9nmlpasquv4au in the current epoch?",
+              "how many blocks were produced by this SPO pool18rjrygm3knlt67n3r3prlhnzcjxun7wa8d3l8w9nmlpasquv4au in the current epoch?",
           },
         ]
       : undefined,
