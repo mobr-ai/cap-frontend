@@ -109,6 +109,7 @@
 @media (max-width: 768px) {
   .cap-root .container {
     padding: 0rem;
+    max-width: 99vw;
   }
 
   .cap-root .chat-container {
