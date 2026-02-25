@@ -29,7 +29,6 @@
 }
 
 /* Tabs */
-
 .admin-tabs {
   position: relative;
   display: inline-flex;
@@ -45,14 +44,43 @@
   border: 1px solid rgba(55, 65, 81, 0.8);
   margin-bottom: 1.25rem;
 
-  /* Needed for pill animation + mobile scroll */
+  /*
+    IMPORTANT:
+    With the new AdminTabs.jsx structure, the OUTER .admin-tabs is the "shell"
+    (non-scrolling) and the INNER .admin-tabs-scroller does the scrolling.
+  */
   overflow: hidden;
-  touch-action: pan-y; /* allow vertical scroll; we still track horizontal swipe in JS */
+  touch-action: pan-x pan-y;
 }
 
+/* Ensure buttons sit above the indicator pill */
 .admin-tabs--animated .admin-tab {
   position: relative;
   z-index: 2; /* above the indicator pill */
+}
+
+/* Inner scroll row (buttons) */
+.admin-tabs-scroller {
+  display: flex;
+  gap: 0.5rem;
+
+  /* Scrolling happens here (not on .admin-tabs shell) */
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+
+  /* Stabilize sizing so scroll math/indicator stays consistent */
+  max-width: 100%;
+  min-width: 0;
+
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-tabs-scroller::-webkit-scrollbar {
+  display: none;
 }
 
 /* Sliding indicator pill (rendered by AdminTabs.jsx) */
@@ -65,8 +93,13 @@
   background: linear-gradient(135deg, #1a231d, #2189bd);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
   z-index: 1;
-  transition: transform 200ms ease, width 200ms ease;
+  transition:
+    transform 200ms ease,
+    width 200ms ease;
   will-change: transform, width;
+
+  /* Avoid selection / accidental hit testing on mobile */
+  pointer-events: none;
 }
 
 .admin-tab {
@@ -78,16 +111,32 @@
   color: #9ca3af;
   background: transparent;
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
   white-space: nowrap;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Hover style for non-active tabs */
-.admin-tab:hover {
-  color: #e5e7eb;
-  background: rgba(31, 41, 55, 0.8);
+/* Hover styles only on devices that truly support hover (desktop mouse/trackpad) */
+@media (hover: hover) and (pointer: fine) {
+  .admin-tab:hover {
+    color: #e5e7eb;
+    background: rgba(31, 41, 55, 0.8);
+  }
+}
+
+/* On touch devices, prevent sticky hover artifacts */
+@media (hover: none) and (pointer: coarse) {
+  .admin-tab:hover {
+    color: #9ca3af;
+    background: transparent;
+  }
+
+  .admin-tab:active {
+    background: rgba(31, 41, 55, 0.35);
+  }
 }
 
 /*
@@ -361,7 +410,9 @@
 /* User rows */
 
 .admin-user-row td {
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .admin-user-row:hover td {
@@ -467,17 +518,28 @@
 
   /*
     On mobile, keep tabs in one line and allow horizontal scroll.
-    This pairs well with swipe switching.
+    The shell stays fixed; the inner scroller scrolls.
   */
   .admin-tabs {
     display: flex;
+    width: 100%;
     max-width: 100%;
+    min-width: 0;
+  }
+
+  .admin-tabs-scroller {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     white-space: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    gap: 0.5rem;
-    border-radius: 9999px;
+
+    /* keep scrollbar hidden on mobile too */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .admin-tabs-scroller::-webkit-scrollbar {
+    display: none;
   }
 
   .admin-tab {
@@ -504,4 +566,173 @@
 
 .admin-stat-card--waitlistLang {
   border-color: rgba(252, 211, 77, 0.45); /* amber */
+}
+
+/* Clickable Recent Queries rows (Admin Metrics) */
+.admin-recentq-row {
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+/* Desktop hover only (avoid sticky hover on touch devices) */
+@media (hover: hover) and (pointer: fine) {
+  .admin-recentq-row:hover td {
+    background-color: rgba(31, 41, 55, 0.85);
+  }
+}
+
+/* Subtle press feedback */
+.admin-recentq-row:active td {
+  background-color: rgba(31, 41, 55, 0.95);
+}
+
+/* Tab container for Query Details */
+.uq-tabcard {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-top: 0.25rem;
+  background: rgba(2, 6, 23, 0.65);
+}
+
+.uq-tabbar {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(2, 6, 23, 0.85);
+}
+
+.uq-tabpanel {
+  padding: 0.75rem 0.75rem 0.25rem 0.75rem;
+}
+
+/* Tabs: more tab-ish */
+.uq-tab {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.88);
+  border-radius: 10px;
+  padding: 0.32rem 0.6rem;
+  font-size: 0.82rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .uq-tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.uq-tab.active {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.26);
+}
+
+/*
+  Tight, "floating thumb" scrollbar used by widgets (Artifacts.css)
+  Reused here for QueryDetailsModal text areas.
+*/
+.uq-tight-scroll {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+}
+
+.uq-tight-scroll::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.uq-tight-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.uq-tight-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  transition:
+    background-color 0.2s ease,
+    opacity 0.2s ease;
+  opacity: 0;
+}
+
+.uq-tight-scroll:hover::-webkit-scrollbar-thumb {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.45);
+}
+
+.uq-tight-scroll::-webkit-scrollbar-thumb:active {
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+/* QueryDetailsModal helpers */
+.uq-modal-sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.uq-copy-btn {
+  white-space: nowrap;
+}
+
+/* =========================================================
+   Global Admin Scrollbar Style (match Artifacts.css)
+   ========================================================= */
+
+/* Apply to all admin scroll containers */
+.AdminPage .admin-table-wrapper,
+.AdminPage .admin-tabs-scroller,
+.AdminPage .admin-section--table,
+.AdminPage .admin-stat-grid,
+.AdminPage .uq-tabpanel,
+.AdminPage .admin-notify-card,
+.AdminPage .admin-table-wrapper * {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+}
+
+/* WebKit */
+.AdminPage .admin-table-wrapper::-webkit-scrollbar,
+.AdminPage .admin-tabs-scroller::-webkit-scrollbar,
+.AdminPage .uq-tabpanel::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.AdminPage .admin-table-wrapper::-webkit-scrollbar-track,
+.AdminPage .admin-tabs-scroller::-webkit-scrollbar-track,
+.AdminPage .uq-tabpanel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Floating thumb */
+.AdminPage .admin-table-wrapper::-webkit-scrollbar-thumb,
+.AdminPage .admin-tabs-scroller::-webkit-scrollbar-thumb,
+.AdminPage .uq-tabpanel::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  opacity: 0;
+  transition:
+    background-color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+/* Reveal on hover */
+.AdminPage .admin-table-wrapper:hover::-webkit-scrollbar-thumb,
+.AdminPage .admin-tabs-scroller:hover::-webkit-scrollbar-thumb,
+.AdminPage .uq-tabpanel:hover::-webkit-scrollbar-thumb {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.45);
+}
+
+/* Active drag */
+.AdminPage .admin-table-wrapper::-webkit-scrollbar-thumb:active,
+.AdminPage .admin-tabs-scroller::-webkit-scrollbar-thumb:active,
+.AdminPage .uq-tabpanel::-webkit-scrollbar-thumb:active {
+  background-color: rgba(255, 255, 255, 0.6);
 }

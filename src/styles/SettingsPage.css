@@ -1,3 +1,4 @@
+/* src/styles/SettingsPage.css */
 .Settings-body {
   background-color: #2b303a;
   color: #fff;
@@ -52,6 +53,41 @@
   margin-right: 0.5rem;
 }
 
+/* New: display name / username rows */
+.Settings-name-row,
+.Settings-handle-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.Settings-editable-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.Settings-primary-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.Settings-secondary-handle {
+  opacity: 0.9;
+}
+
+.Settings-inline-input {
+  width: 100%;
+  max-width: 260px;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #6c757d;
+  background: #2f353b;
+  color: #fff;
+  outline: none;
+}
+
 /* Ensure avatar and info stack on small screens */
 @media (max-width: 768px) {
   .Settings-user-box .row {
@@ -97,25 +133,17 @@
   cursor: pointer;
 }
 
-.Settings-username-wrapper {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.Settings-username-wrapper:hover .Settings-username-icon {
-  color: lightseagreen;
-}
-
 .Settings-username-icon {
   color: gray;
   margin-left: 0.5rem;
   font-size: 0.85rem;
 }
 
+.Settings-editable-line:hover .Settings-username-icon {
+  color: lightseagreen;
+}
+
 .Settings-danger-zone {
-  border-top: 2px dashed #ff4d4f;
-  padding-top: 1rem;
-  margin-top: 2rem;
-  text-align: center;
+  background-color: #59454d;
+  border-radius: 6px;
 }

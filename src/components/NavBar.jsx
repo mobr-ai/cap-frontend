@@ -5,7 +5,7 @@ import Image from "react-bootstrap/Image";
 import Nav from "react-bootstrap/Nav";
 import Navbar from "react-bootstrap/Navbar";
 import NavDropdown from "react-bootstrap/NavDropdown";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import i18n from "./../i18n";
 import { useTranslation } from "react-i18next";
 
@@ -17,16 +17,24 @@ function NavBar({
   capBlock,
   cardanoBlock,
   syncStatus,
+  syncLag,
+  syncPct,
   healthOnline,
 }) {
   const [expanded, setExpanded] = useState(false);
   const [brand, setBrand] = useState("");
   const brandRef = useRef("");
   const navigate = useNavigate();
+  const location = useLocation();
+  const hideLoginLink =
+    location?.pathname === "/login" || location?.pathname === "/welcome";
   const { t } = useTranslation();
+  const brandRanRef = useRef(false);
 
   // Typing → pause → shrink animation
   useEffect(() => {
+    if (brandRanRef.current) return;
+    brandRanRef.current = true;
     const FULL = "Cardano Analytics Platform";
     const TARGET = "CAP";
     const TYPE_MS = 40,
@@ -77,12 +85,11 @@ function NavBar({
     navigate(0);
   };
 
-  // Status indicators
-  const showChecking = healthOnline === null;
-  const showOffline = healthOnline === false;
-  const showSync = healthOnline === true;
-
-  const displayName = String(userData?.username || "Account").trim();
+  const displayName =
+    userData?.display_name ||
+    userData?.username ||
+    userData?.email ||
+    "Account";
   const shortName =
     displayName.length > 20 ? displayName.slice(0, 17) + "…" : displayName;
 
@@ -107,7 +114,7 @@ function NavBar({
       { code: "pt", label: "🇧🇷 Português (BR)" },
       { code: "en", label: "🇺🇸 English (US)" },
     ],
-    []
+    [],
   );
   const currentLang = (i18n.language || "en").split("-")[0];
   const langMenuTitle = (
@@ -118,6 +125,64 @@ function NavBar({
       </span>
     </span>
   );
+
+  function SyncRadial({ pct, state, tooltip }) {
+    const size = 26;
+    const stroke = 3.2;
+
+    const r = (size - stroke) / 2;
+    const c = 2 * Math.PI * r;
+
+    const hasPct = typeof pct === "number" && Number.isFinite(pct);
+    const clamped = hasPct ? Math.max(0, Math.min(100, pct)) : 0;
+    const dash = (clamped / 100) * c;
+
+    return (
+      <span className="cap-sync" data-state={state}>
+        <span className="cap-sync-label">SYNC</span>
+
+        <span className="cap-sync-ring" aria-label={tooltip}>
+          <svg
+            className="cap-sync-svg"
+            width={size}
+            height={size}
+            viewBox={`0 0 ${size} ${size}`}
+            aria-hidden="true"
+          >
+            <circle
+              className="cap-sync-track"
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+            />
+            <circle
+              className="cap-sync-progress"
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              strokeDasharray={`${dash} ${c - dash}`}
+            />
+            <path
+              className="cap-sync-slash"
+              d={`M${size * 0.28} ${size * 0.72} L${size * 0.72} ${
+                size * 0.28
+              }`}
+            />
+          </svg>
+
+          {hasPct && clamped < 100 ? (
+            <span className="cap-sync-ring-text">{clamped.toFixed(1)}</span>
+          ) : null}
+        </span>
+
+        {/* <span className="cap-sync-pct">{hasPct ? `${clamped}%` : "—"}</span> */}
+
+        <span className="cap-sync-tooltip" role="tooltip">
+          {tooltip}
+        </span>
+      </span>
+    );
+  }
 
   return (
     <>
@@ -140,54 +205,74 @@ function NavBar({
             to="/"
             className="Navbar-brand-container nav-text"
           >
-            {/* <img
-              alt="CAP"
-              src="/icons/logo.png"
-              width="32"
-              height="32"
-              className="d-inline-block align-top Navbar-brand-img"
-            /> */}
             <span className="Navbar-brand-slot">{brand || "CAP"}</span>
           </Navbar.Brand>
 
           {/* Status line (hidden on very small screens via CSS) */}
           {userData && (
             <div className="navbar-status-bar">
-              <div className="status-item w-140 nav-text">
-                <span className="label">CAP:</span>
-                <span className="value">
-                  {capBlock == null ? "—" : capBlock.toLocaleString()}
-                </span>
-              </div>
-              <div className="status-item w-160 nav-text">
-                <span className="label">Cardano:</span>
-                <span className="value">
-                  {cardanoBlock == null ? "—" : cardanoBlock.toLocaleString()}
-                </span>
-              </div>
+              {(() => {
+                const showChecking = healthOnline === null;
+                const showOffline = healthOnline === false;
+                const showSync = healthOnline === true;
 
-              {showSync && (
-                <div
-                  className={`status-item w-160 sync ${
-                    syncStatus?.cls || ""
-                  } nav-text`}
-                >
-                  <span className="dot" />
-                  <span className="value">{syncStatus?.text || "—"}</span>
-                </div>
-              )}
-              {showChecking && (
-                <div className="status-item w-120 checking nav-text">
-                  <span className="dot amber" />
-                  <span className="value">Checking…</span>
-                </div>
-              )}
-              {showOffline && (
-                <div className="status-item w-120 offline nav-text">
-                  <span className="dot red" />
-                  <span className="value">Offline</span>
-                </div>
-              )}
+                const isSynced =
+                  typeof syncLag === "number" ? syncLag <= 50 : syncPct >= 100;
+                const state = showOffline
+                  ? "offline"
+                  : showChecking
+                    ? "checking"
+                    : isSynced
+                      ? "synced"
+                      : "syncing";
+
+                const pct = showSync ? syncPct : null;
+
+                const statusCode = String(syncStatus?.code || "unknown");
+                const isUnknown =
+                  statusCode === "unknown" || statusCode === "checking";
+                const isBlocked =
+                  showOffline || isUnknown || healthOnline == null;
+
+                const tooltip = isBlocked ? (
+                  <div className="cap-sync-tooltip-blocked">
+                    <span className="cap-tip-icon" aria-hidden="true">
+                      !
+                    </span>
+                    <div className="cap-sync-tooltip-text">
+                      <div className="cap-sync-tooltip-title">
+                        {t("sync.tooltip.blockedTitle")}
+                      </div>
+                      <div className="cap-sync-tooltip-body">
+                        {showOffline
+                          ? t("sync.tooltip.offlineBody")
+                          : t("sync.tooltip.unknownBody")}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  [
+                    `${t("sync.tooltip.statusLabel")}: ${t(
+                      `sync.status.${statusCode}`,
+                    )}`,
+                    `${t("sync.tooltip.capLabel")}: ${
+                      capBlock == null ? "—" : capBlock.toLocaleString()
+                    }`,
+                    `${t("sync.tooltip.cardanoLabel")}: ${
+                      cardanoBlock == null ? "—" : cardanoBlock.toLocaleString()
+                    }`,
+                    `${t("sync.tooltip.lagLabel")}: ${
+                      syncLag == null ? "—" : syncLag.toLocaleString()
+                    } ${t("sync.tooltip.blocksSuffix")}`,
+                  ].join("\n")
+                );
+
+                return (
+                  <div className="status-item nav-text">
+                    <SyncRadial pct={pct} state={state} tooltip={tooltip} />
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -222,9 +307,9 @@ function NavBar({
                 className="nav-text"
                 onClick={() => {
                   window.open(
-                    "https://mobr.ai",
+                    "https://www.youtube.com/watch?v=nRsa_qiGhN0",
                     "_blank",
-                    "noopener,noreferrer"
+                    "noopener,noreferrer",
                   );
                   setExpanded(false);
                 }}
@@ -256,7 +341,7 @@ function NavBar({
                 ))}
               </NavDropdown>
 
-              {!userData && (
+              {!userData && !hideLoginLink && (
                 <Nav.Link
                   className="nav-text"
                   onClick={() => {

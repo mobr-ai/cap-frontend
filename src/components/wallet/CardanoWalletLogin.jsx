@@ -130,8 +130,29 @@ export default function CardanoWalletLogin({ onLogin, showToast }) {
       }
 
       const data = await res.json();
-      onLogin?.({ ...data, wallet_info: walletInfo });
-      showToast?.(t("walletLoginSuccess"), "success");
+      if (data?.access_token) {
+        onLogin?.({ ...data, wallet_info: walletInfo });
+        showToast?.(t("walletLoginSuccess"), "success");
+        return;
+      }
+
+      if (data?.status === "pending_confirmation") {
+        const uid = data?.id;
+        const wallet = data?.wallet_address;
+
+        if (uid && wallet) {
+          window.location.href =
+            `/signup?state=wallet` +
+            `&uid=${encodeURIComponent(uid)}` +
+            `&wallet=${encodeURIComponent(wallet)}`;
+          return;
+        }
+
+        showToast?.(t("walletPendingApproval"), "secondary");
+        return;
+      }
+
+      showToast?.(t("loginError"), "danger");
     } catch (err) {
       console.error("Cardano Auth Error:", err);
       showToast?.(t("loginError"), "danger");

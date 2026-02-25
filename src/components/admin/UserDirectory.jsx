@@ -1,11 +1,13 @@
 // src/components/admin/UserDirectory.jsx
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUserShield,
   faUserCheck,
   faTrashAlt,
   faUserSlash,
+  faChartLine,
 } from "@fortawesome/free-solid-svg-icons";
 
 export function UserDirectory({
@@ -23,6 +25,7 @@ export function UserDirectory({
   deleteUser,
   isUserAnonymized,
 }) {
+  const navigate = useNavigate();
   const onSearchChange = (e) => setSearch(e.target.value);
 
   const renderSortIcon = (field) => {
@@ -165,6 +168,16 @@ export function UserDirectory({
                         </button>
                         <button
                           type="button"
+                          className="btn btn-sm btn-outline-secondary admin-user-action-btn"
+                          title={t("admin.userActions.viewQueries")}
+                          onClick={() =>
+                            navigate(`/admin/users/${u.user_id}/queries`)
+                          }
+                        >
+                          <FontAwesomeIcon icon={faChartLine} />
+                        </button>
+                        <button
+                          type="button"
                           className="btn btn-sm btn-outline-danger admin-user-action-btn"
                           title={
                             anonymized
@@ -176,7 +189,7 @@ export function UserDirectory({
                           <FontAwesomeIcon
                             icon={anonymized ? faUserSlash : faTrashAlt}
                           />
-                        </button>
+                        </button>{" "}
                       </div>
                     </td>
                     <td>{u.user_id}</td>

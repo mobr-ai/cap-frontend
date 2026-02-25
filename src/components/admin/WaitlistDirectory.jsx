@@ -108,33 +108,35 @@ export function WaitlistDirectory({
 
                 return (
                   <tr key={email}>
-                    <td className="admin-actions">
-                      <button
-                        className="btn btn-sm btn-outline-secondary admin-user-action-btn"
-                        title={t("admin.createUser")}
-                        disabled={isProcessing}
-                        onClick={() => handleCreateUser(email, false)}
-                      >
-                        <FontAwesomeIcon icon={faUserPlus} />
-                      </button>
+                    <td className="admin-users-actions-col admin-users-actions-cell">
+                      <div className="admin-user-actions">
+                        <button
+                          className="btn btn-sm btn-outline-secondary admin-user-action-btn"
+                          title={t("admin.createUser")}
+                          disabled={isProcessing}
+                          onClick={() => handleCreateUser(email, false)}
+                        >
+                          <FontAwesomeIcon icon={faUserPlus} />
+                        </button>
 
-                      <button
-                        className="btn btn-sm btn-outline-secondary admin-user-action-btn"
-                        title={t("admin.createAndConfirmUser")}
-                        disabled={isProcessing}
-                        onClick={() => handleCreateUser(email, true)}
-                      >
-                        <FontAwesomeIcon icon={faUserCheck} />
-                      </button>
+                        <button
+                          className="btn btn-sm btn-outline-secondary admin-user-action-btn"
+                          title={t("admin.createAndConfirmUser")}
+                          disabled={isProcessing}
+                          onClick={() => handleCreateUser(email, true)}
+                        >
+                          <FontAwesomeIcon icon={faUserCheck} />
+                        </button>
 
-                      <button
-                        className="btn btn-sm btn-outline-danger admin-user-action-btn"
-                        title={t("admin.deleteWaitlistEntry")}
-                        disabled={isProcessing}
-                        onClick={() => handleDelete(email)}
-                      >
-                        <FontAwesomeIcon icon={faTrash} />
-                      </button>
+                        <button
+                          className="btn btn-sm btn-outline-danger admin-user-action-btn"
+                          title={t("admin.deleteWaitlistEntry")}
+                          disabled={isProcessing}
+                          onClick={() => handleDelete(email)}
+                        >
+                          <FontAwesomeIcon icon={faTrash} />
+                        </button>
+                      </div>
                     </td>
 
                     <td className="mono">{email}</td>

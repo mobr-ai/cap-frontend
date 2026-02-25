@@ -1,0 +1,953 @@
+/* src/styles/WelcomePage.css */
+
+.WelcomePage {
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      1200px 700px at 18% 24%,
+      rgba(60, 140, 210, 0.14),
+      transparent 62%
+    ),
+    radial-gradient(
+      1000px 700px at 82% 22%,
+      rgba(30, 90, 140, 0.18),
+      transparent 60%
+    ),
+    radial-gradient(
+      900px 700px at 70% 70%,
+      rgba(10, 40, 60, 0.35),
+      transparent 65%
+    ),
+    linear-gradient(180deg, #07131c 0%, #060b12 100%);
+}
+
+.WelcomePage-hero {
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Smooth anchor jumps without forcing the whole app */
+.WelcomePage {
+  scroll-behavior: smooth;
+}
+
+/* Center the whole composition like Claude */
+.WelcomePage-content {
+  min-height: 100vh;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 2.25rem;
+
+  display: grid;
+  grid-template-columns: minmax(380px, 520px) minmax(420px, 1fr);
+  align-items: center;
+  column-gap: 2rem;
+}
+
+/* Scroll hint */
+.WelcomePage-scrollHint {
+  position: absolute;
+  left: 50%;
+  bottom: 1.2rem;
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: auto;
+  cursor: pointer;
+
+  transition:
+    transform 220ms ease,
+    opacity 220ms ease;
+}
+
+.WelcomePage-scrollHint:hover {
+  transform: translateX(-50%) translateY(-3px);
+}
+
+.WelcomePage-scrollHint:active {
+  transform: translateX(-50%) translateY(-1px);
+}
+
+/* Glow goes on the pill instead (box-shadow is stable in Firefox) */
+.WelcomePage-scrollHintPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(6px);
+
+  transition:
+    background 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.WelcomePage-scrollHint:hover .WelcomePage-scrollHintPill {
+  background: rgba(90, 200, 255, 0.08);
+  box-shadow:
+    0 0 0 1px rgba(90, 200, 255, 0.22),
+    0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
+.WelcomePage-scrollHintText {
+  font-size: 0.84rem;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.WelcomePage-scrollHintDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(140, 220, 255, 0.85);
+  box-shadow:
+    0 0 0 2px rgba(140, 220, 255, 0.14),
+    0 0 28px rgba(140, 220, 255, 0.35);
+  animation: WelcomeDotPulse 1.25s ease-in-out infinite;
+}
+
+@keyframes WelcomeDotPulse {
+  0%,
+  100% {
+    transform: translateY(0) scale(0.95);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translateY(2px) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Left side should feel centered in its column, not glued to the viewport edge */
+.WelcomePage-left {
+  width: 100%;
+  max-width: 520px;
+  justify-self: center;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.15rem;
+
+  z-index: 2;
+}
+
+.WelcomePage-heading {
+  width: 100%;
+  max-width: 520px;
+}
+
+.WelcomePage-title {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 3.15rem;
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.WelcomePage-subtitle {
+  margin: 0.85rem 0 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+
+.WelcomePage-auth {
+  width: 100%;
+}
+
+/* Right side video panel */
+.WelcomePage-right {
+  width: 100%;
+  justify-self: center;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+/*
+  Your video is 800x800. Make the container square to avoid letterboxing.
+  Then use cover to fill without black bars.
+*/
+.WelcomePage-videoCard {
+  position: relative;
+
+  /* keep it big but not absurd */
+  width: min(820px, 100%);
+  aspect-ratio: 1 / 1; /* matches 800x800 */
+  max-height: calc(100vh - 5.25rem);
+
+  border-radius: 22px;
+  overflow: hidden;
+
+  /* subtle depth; no border */
+  box-shadow:
+    0 40px 110px rgba(0, 0, 0, 0.55),
+    0 12px 30px rgba(0, 0, 0, 0.35);
+
+  /* avoids any “flash” if video hasn’t painted yet */
+  background: #070a10;
+}
+
+.WelcomePage-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* fills container: no black bars */
+  display: block;
+  transform: none;
+  filter: saturate(0.95) contrast(1.05) brightness(0.92);
+}
+
+/* keep shade tasteful (not too heavy, so video edges don’t feel “cropped”) */
+.WelcomePage-videoShade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.38) 0%,
+      rgba(0, 0, 0, 0.12) 45%,
+      rgba(0, 0, 0, 0.16) 100%
+    ),
+    radial-gradient(
+      700px 420px at 20% 55%,
+      rgba(0, 0, 0, 0.22),
+      transparent 65%
+    );
+  pointer-events: none;
+}
+
+/* Entrance animation (starts only after videoReady flips true) */
+.WelcomePage-videoCard {
+  opacity: 0;
+  transform: translate3d(var(--enter-x, 0), var(--enter-y, 0), 0)
+    rotate(var(--enter-r, 0)) scale(var(--enter-s, 1));
+  will-change: transform, opacity;
+}
+
+.WelcomePage-videoCard.is-loading {
+  opacity: 0;
+}
+
+.WelcomePage-videoCard.is-ready {
+  animation: WelcomeVideoEnter 720ms cubic-bezier(0.2, 0.9, 0.2, 1)
+    var(--enter-delay, 0s) both;
+}
+
+@keyframes WelcomeVideoEnter {
+  from {
+    opacity: 0;
+    transform: translate3d(var(--enter-x, 0), var(--enter-y, 0), 0)
+      rotate(var(--enter-r, 0)) scale(var(--enter-s, 1));
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0) scale(1);
+  }
+}
+
+/* Subtle skeleton while video loads */
+.WelcomePage-videoSkeleton {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      900px 650px at 30% 30%,
+      rgba(255, 255, 255, 0.06),
+      transparent 62%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0.08) 35%,
+      rgba(255, 255, 255, 0.04) 70%
+    );
+  background-size:
+    100% 100%,
+    220% 100%;
+  animation: WelcomeSkeletonShimmer 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes WelcomeSkeletonShimmer {
+  0% {
+    background-position:
+      0 0,
+      0 0;
+  }
+  100% {
+    background-position:
+      0 0,
+      -120% 0;
+  }
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  .WelcomePage-videoCard,
+  .WelcomePage-videoCard.is-ready,
+  .WelcomePage-videoSkeleton {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* =========================
+   AuthShell styling (scoped)
+   ========================= */
+
+.WelcomePage .Auth-body-wrapper {
+  background: transparent;
+  height: auto;
+}
+
+.WelcomePage .Auth-container-wrapper {
+  max-width: none;
+  width: 100%;
+  align-items: stretch;
+  font-family: inherit;
+  color: gray;
+}
+
+/* You said you made it a bit gray: make it lighter and more readable */
+.WelcomePage .Auth-container {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 18px;
+  padding: 1.25rem;
+
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  backdrop-filter: blur(10px);
+}
+
+.WelcomePage .Auth-title {
+  color: rgba(255, 255, 255, 0.92);
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+
+.WelcomePage .Auth-divider:before,
+.WelcomePage .Auth-divider:after {
+  border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+
+.WelcomePage .Auth-divider-or {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* confirm box */
+.WelcomePage .confirm-message-box {
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+}
+
+.WelcomePage .Auth-confirm-text {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* =========================
+   Responsive
+   ========================= */
+
+@media (max-width: 1100px) {
+  .WelcomePage-content {
+    column-gap: 1.5rem;
+    padding: 2rem;
+  }
+
+  .WelcomePage-title {
+    font-size: 2.7rem;
+  }
+
+  .WelcomePage-videoCard {
+    width: min(720px, 100%);
+  }
+}
+
+@media (max-width: 900px) {
+  .WelcomePage-content {
+    grid-template-columns: 1fr;
+    row-gap: 1.25rem;
+    padding: 1.35rem;
+  }
+
+  .WelcomePage-left {
+    max-width: 560px;
+  }
+
+  .WelcomePage-right {
+    width: 100%;
+  }
+
+  /* On mobile, keep the video big but not taller than the screen */
+  .WelcomePage-videoCard {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-height: 55vh;
+    margin-bottom: 1rem;
+    margin-top: 1rem;
+  }
+
+  .WelcomePage-scrollHint {
+    bottom: 0.85rem;
+    position: relative;
+    text-align-last: center;
+  }
+  .WelcomePage-showcase {
+    padding: 0 !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .WelcomePage-title {
+    font-size: 2.25rem;
+  }
+
+  .WelcomePage-subtitle {
+    font-size: 0.98rem;
+  }
+
+  .WelcomePage-content {
+    padding: 1.1rem;
+  }
+}
+
+/* =====================================
+   CAP showcase (scrolling feature page)
+   ===================================== */
+
+.WelcomePage-showcase {
+  position: relative;
+  padding: 2.25rem 0 0;
+}
+
+.WelcomePage-showcase:before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.12),
+    transparent
+  );
+  opacity: 0.65;
+}
+
+.CapSection {
+  padding: 2.25rem 0;
+}
+
+.CapSection--intro {
+  padding-top: 2.75rem;
+}
+
+.CapSection-inner {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2.25rem;
+}
+
+.CapEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(210, 240, 255, 0.9);
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+}
+
+.CapH2 {
+  margin: 0.75rem 0 0;
+  color: rgba(255, 255, 255, 0.93);
+  font-size: clamp(1.9rem, 2.6vw, 2.5rem);
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+}
+
+.CapLead {
+  margin: 0.85rem 0 0;
+  max-width: 66ch;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+.CapH3 {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+}
+
+.CapBody {
+  margin: 0.6rem 0 0;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.55;
+}
+
+.CapIcon {
+  width: 22px;
+  height: 22px;
+  color: rgba(165, 235, 255, 0.88);
+}
+
+.CapKpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 1.25rem;
+}
+
+.CapKpi {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 22px 70px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.CapKpiText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.CapKpiTop {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.CapKpiBottom {
+  margin-top: 0.12rem;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.88rem;
+}
+
+.CapSectionGrid {
+  display: grid;
+  grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
+  gap: 1.6rem;
+  align-items: start;
+}
+
+.CapCardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.CapCard {
+  border-radius: 18px;
+  padding: 0.95rem 0.95rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  display: flex;
+  gap: 0.75rem;
+  min-height: 132px;
+}
+
+.CapCardIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(140, 220, 255, 0.08);
+  border: 1px solid rgba(140, 220, 255, 0.14);
+  flex: 0 0 auto;
+}
+
+.CapCardTitle {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.CapCardDesc {
+  margin-top: 0.35rem;
+  color: rgba(255, 255, 255, 0.68);
+  line-height: 1.45;
+  font-size: 0.95rem;
+}
+
+.CapSection--steps {
+  position: relative;
+}
+
+.CapSteps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-top: 1.1rem;
+}
+
+.CapStep {
+  border-radius: 18px;
+  padding: 1rem 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.CapStepHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+}
+
+.CapStepNum {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+  color: rgba(165, 235, 255, 0.9);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.CapStepTitle {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.CapStepDesc {
+  margin-top: 0.45rem;
+  color: rgba(255, 255, 255, 0.68);
+  line-height: 1.45;
+}
+
+.CapExamplesHeader {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.CapTable {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 26px 90px rgba(0, 0, 0, 0.42);
+}
+
+.CapTableRow {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+}
+
+.CapTableRow--head {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.CapTableCell {
+  padding: 0.95rem 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.CapTableRow--head .CapTableCell {
+  border-top: none;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 650;
+}
+
+.CapTableBody .CapTableRow:nth-child(2n) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.CapMono {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  color: rgba(220, 245, 255, 0.9);
+}
+
+.CapCTA {
+  margin-top: 1.15rem;
+}
+
+.CapCTA-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.05rem 1.15rem;
+  border-radius: 18px;
+  background: rgba(140, 220, 255, 0.07);
+  border: 1px solid rgba(140, 220, 255, 0.16);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 26px 90px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.CapCTATitle {
+  color: rgba(255, 255, 255, 0.93);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.CapCTADesc {
+  margin-top: 0.25rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.CapCTAButton {
+  border: none;
+  border-radius: 14px;
+  padding: 0.7rem 0.9rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  box-shadow:
+    0 18px 60px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition:
+    transform 140ms ease,
+    background 140ms ease;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.CapCTAButton:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.CapCTAButton:active {
+  transform: translateY(0);
+}
+
+.CapFooter {
+  padding: 2rem 0 2.75rem;
+}
+
+.CapFooter-inner {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.15rem 2.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: grid;
+  gap: 0.9rem;
+}
+
+.CapFooterBrand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.CapFooterLogo {
+  width: min(360px, 70vw);
+  height: auto;
+  opacity: 0.86;
+  filter: saturate(0.95) contrast(1.02) brightness(0.98);
+}
+
+.CapFooterTagline {
+  color: rgba(255, 255, 255, 0.62);
+  line-height: 1.35;
+  max-width: 44ch;
+}
+
+.CapFooterLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.CapFooterLink {
+  color: rgba(210, 240, 255, 0.85);
+  text-decoration: none;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.CapFooterLink:hover {
+  text-decoration: underline;
+}
+
+.CapFooterFineprint {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.CapFooterSep {
+  opacity: 0.6;
+}
+
+/* Reveal animation */
+[data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 14px, 0) scale(0.99);
+  transition:
+    opacity 560ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    transform 560ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  will-change: opacity, transform;
+}
+
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .WelcomePage-scrollHintDot {
+    animation: none;
+  }
+
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .CapCardGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .CapSection-inner {
+    padding: 0 1.35rem;
+  }
+
+  .CapKpis {
+    grid-template-columns: 1fr;
+  }
+
+  .CapSectionGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .CapSteps {
+    grid-template-columns: 1fr;
+  }
+
+  .CapTableRow {
+    grid-template-columns: 1fr;
+  }
+
+  .CapCTA-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .CapCTAButton {
+    width: 100%;
+  }
+
+  .CapFooter-inner {
+    padding: 1.1rem 1.35rem;
+  }
+
+  .CapFooterBrand {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* 1) Give the whole hero more room on large displays */
+.WelcomePage-content {
+  /* was 1320px */
+  max-width: 1520px;
+  /* optional: a bit more breathing room */
+  padding: 2.5rem;
+}
+
+/* 2) Let the right side claim more of the width */
+.WelcomePage-content {
+  /* was: minmax(380px, 520px) minmax(420px, 1fr) */
+  /* grid-template-columns: minmax(360px, 520px) minmax(520px, 1fr); */
+}
+
+/* 3) Make the video panel “sit” more like Claude (toward the right) */
+.WelcomePage-right {
+  justify-self: end; /* instead of center */
+}
+
+/* 4) Let the card scale up when space exists */
+.WelcomePage-videoCard {
+  /* replace width: min(820px, 100%); */
+  width: clamp(560px, 44vw, 980px);
+
+  /* keep it from becoming taller than the viewport */
+  max-height: calc(100vh - 5.25rem);
+}
+
+/* 5) Extra boost on ultra-wide screens (optional but matches Claude feel) */
+@media (min-width: 1500px) {
+  .WelcomePage-content {
+    max-width: 1680px;
+    column-gap: 2.5rem;
+  }
+
+  .WelcomePage-videoCard {
+    width: clamp(640px, 46vw, 1100px);
+  }
+}
+
+/* If you want it bigger on tall screens, allow a bit more width */
+@media (min-height: 900px) {
+  .WelcomePage-videoCard {
+    width: min(1200px, 100%);
+    max-height: calc(100vh - 160px);
+  }
+}
+
+/* Optional: on ultrawide specifically, be stricter on max-height */
+@media (min-aspect-ratio: 21/9) {
+  .WelcomePage-videoCard {
+    max-height: calc(100vh - 15rem);
+    max-width: calc(100vh - 15rem);
+  }
+}
+
+@media (max-width: 1024px) {
+  .WelcomePage-content {
+    padding: 1rem !important;
+  }
+}

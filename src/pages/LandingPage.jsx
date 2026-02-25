@@ -1,215 +1,53 @@
 // src/pages/LandingPage.jsx
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useOutletContext, useNavigate, useParams } from "react-router-dom";
+import {
+  useOutletContext,
+  useNavigate,
+  useParams,
+  useLocation,
+} from "react-router-dom";
+
 import { useTranslation } from "react-i18next";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import rehypeHighlight from "rehype-highlight";
+
 import "katex/dist/katex.min.css";
 import "highlight.js/styles/github-dark.css";
 
+import ArtifactToolButton from "@/components/landing/ArtifactToolButton";
+
+import {
+  mergeById,
+  injectArtifactsAfterMessage,
+  normalizeKvResultType,
+} from "@/utils/landingMessageOps";
+
 import { useAuthRequest } from "@/hooks/useAuthRequest";
 import { useLLMStream } from "@/hooks/useLLMStream";
-import { sanitizeChunk, finalizeForRender } from "@/utils/streamSanitizers";
+import { useLandingMessages } from "@/hooks/useLandingMessages";
+import { useLandingTopQueries } from "@/hooks/useLandingTopQueries";
+import { useLandingAutoScroll } from "@/hooks/useLandingAutoScroll";
+import { useLandingConversationLoader } from "@/hooks/useLandingConversationLoader";
+
+import { sanitizeChunk } from "@/utils/streamSanitizers";
 import { kvToChartSpec } from "@/utils/kvCharts";
-import VegaChart from "@/components/artifacts/VegaChart";
-import KVTable, { isValidKVTable } from "@/components/artifacts/KVTable";
 
+import { isValidKVTable } from "@/components/artifacts/KVTable";
+import { pinLandingArtifact } from "@/utils/landingPinOps";
+import ChatMessage from "@/components/landing/ChatMessage";
+import ArtifactMessage from "@/components/landing/ArtifactMessage";
+import TopQueries from "@/components/landing/TopQueries";
+import ChatInput from "@/components/landing/ChatInput";
+import LandingEmptyState from "@/components/landing/LandingEmptyState";
+
+import ShareModal from "@/components/ShareModal";
+import { createSharePayloadForArtifact } from "@/utils/landingShareOps";
+import { getSessionUserId } from "@/utils/authUtils";
 import "@/styles/LandingPage.css";
-
-function artifactToMessage(a) {
-  if (!a || !a.id || !a.artifact_type || !a.config) return null;
-
-  const id = `artifact_${a.id}`;
-
-  if (a.artifact_type === "table") {
-    const kv = a.config?.kv;
-    if (!kv) return null;
-    return { id, type: "table", content: "", kv, persisted: true };
-  }
-
-  if (a.artifact_type === "chart") {
-    // backend can store either vegaSpec or kv (depending on your persistence impl)
-    const vegaSpec = a.config?.vegaSpec;
-    const kvType = a.config?.kvType || a.kv_type || null;
-
-    if (vegaSpec) {
-      return {
-        id,
-        type: "chart",
-        content: "",
-        vegaSpec,
-        kvType,
-        persisted: true,
-      };
-    }
-
-    // If you ever store chart as kv instead of vegaSpec, you can re-hydrate spec:
-    const kv = a.config?.kv;
-    if (kv) {
-      const spec = kvToChartSpec(kv);
-      if (!spec) return null;
-      return {
-        id,
-        type: "chart",
-        content: "",
-        vegaSpec: spec,
-        kvType: kvType || kv.result_type,
-        persisted: true,
-      };
-    }
-
-    return null;
-  }
-
-  return null;
-}
-
-function mergeById(prev, next) {
-  const map = new Map();
-  (prev || []).forEach((m) => map.set(m.id, m));
-  (next || []).forEach((m) => map.set(m.id, m));
-  return Array.from(map.values());
-}
-
-function injectArtifactsAfterMessage(restoredMsgs, artifacts) {
-  const msgs = Array.isArray(restoredMsgs) ? restoredMsgs.slice() : [];
-  const arts = Array.isArray(artifacts) ? artifacts : [];
-  if (!arts.length) return msgs;
-
-  // Convert artifacts to message objects
-  const artifactMsgs = arts
-    .map((a) => ({ raw: a, msg: artifactToMessage(a) }))
-    .filter((x) => x.msg);
-
-  if (!artifactMsgs.length) return msgs;
-
-  // Build quick lookup: conversation_message_id -> artifacts[]
-  const byMsgId = new Map();
-  for (const { raw, msg } of artifactMsgs) {
-    const key = raw.conversation_message_id || null;
-    if (!byMsgId.has(key)) byMsgId.set(key, []);
-    byMsgId.get(key).push(msg);
-  }
-
-  // Insert right after the linked message; if not found, append at end.
-  const out = [];
-  const inserted = new Set();
-
-  for (const m of msgs) {
-    out.push(m);
-
-    // restored message ids are conv_<id>
-    const convMsgId =
-      typeof m.id === "string" && m.id.startsWith("conv_")
-        ? Number(m.id.slice(5))
-        : null;
-
-    if (convMsgId && byMsgId.has(convMsgId)) {
-      for (const am of byMsgId.get(convMsgId)) {
-        out.push(am);
-        inserted.add(am.id);
-      }
-    }
-  }
-
-  // Append any remaining artifacts that weren’t inserted
-  for (const { msg } of artifactMsgs) {
-    if (!inserted.has(msg.id)) out.push(msg);
-  }
-
-  return out;
-}
-
-function appendChunkSmart(prev, chunk) {
-  if (!chunk) return prev || "";
-  if (!prev) return chunk;
-
-  const lastChar = prev[prev.length - 1];
-  const firstChar = chunk[0];
-
-  const isWS = (ch) => /\s/.test(ch || "");
-  const isAlphaNum = (ch) => /[A-Za-z0-9]/.test(ch || "");
-  const isLetter = (ch) => /[A-Za-z]/.test(ch || "");
-  const isDigit = (ch) => /[0-9]/.test(ch || "");
-
-  // If chunk already starts with whitespace, keep it (rare with your current stream parser)
-  if (/^\s/.test(chunk)) return prev + chunk;
-  if (isWS(lastChar)) return prev + chunk;
-
-  // If chunk starts with punctuation that should hug the previous token, don't add space
-  if (/^[,.;:!?)\]}%]/.test(firstChar)) return prev + chunk;
-
-  // If previous ends with punctuation that should be followed by a space, add one
-  if (/[,.!?;:]/.test(lastChar) && isLetter(firstChar)) {
-    return prev + " " + chunk;
-  }
-
-  // Join very short lowercase fragments (common tokenization like "mi" + "nt" + "ed")
-  // Only triggers for tiny pieces, so it won't eat normal spaces like "The data".
-  const lastWordMatch = prev.match(/([A-Za-z]+)$/);
-  const lastWord = lastWordMatch ? lastWordMatch[1] : "";
-  if (
-    lastWord &&
-    lastWord.length <= 3 &&
-    /^[a-z]{1,3}$/.test(lastWord) &&
-    /^[a-z]{1,3}$/.test(chunk)
-  ) {
-    return prev + chunk;
-  }
-
-  // Avoid spacing before common suffixes (mint + ed, token + s, 11 + th, etc.)
-  if (isLetter(lastChar) && /^[A-Za-z]+$/.test(chunk)) {
-    const lower = chunk.toLowerCase();
-    if (["ed", "ing", "ly", "er", "ers", "est", "s", "es"].includes(lower)) {
-      return prev + chunk;
-    }
-  }
-  if (isDigit(lastChar) && /^[A-Za-z]+$/.test(chunk)) {
-    const lower = chunk.toLowerCase();
-    if (["st", "nd", "rd", "th"].includes(lower)) {
-      return prev + chunk;
-    }
-  }
-
-  // Default: if we have alnum touching alnum, insert a space
-  if (isAlphaNum(lastChar) && isAlphaNum(firstChar)) {
-    // Special-case: addresses / ids where you really don't want spaces
-    const tail = prev.slice(-8).toLowerCase();
-    if (
-      tail.endsWith("addr") ||
-      tail.endsWith("stake") ||
-      tail.endsWith("pool")
-    ) {
-      return prev + chunk;
-    }
-    return prev + " " + chunk;
-  }
-
-  return prev + chunk;
-}
-
-function normalizeKvResultType(rt) {
-  const s = String(rt || "")
-    .trim()
-    .toLowerCase();
-  if (!s) return s;
-
-  if (s === "pie_chart") return "pie";
-  if (s === "bar_chart") return "bar";
-  if (s === "line_chart") return "line";
-
-  return s.replace(/_chart$/, "");
-}
 
 export default function LandingPage() {
   const NL_ENDPOINT = import.meta.env.VITE_NL_ENDPOINT || "/api/v1/nl/query";
 
   const outlet = useOutletContext() || {};
-  const { session, showToast } = outlet;
-
+  const { session, showToast, healthOnline, syncStatus } = outlet;
   const { authFetch } = useAuthRequest({ session, showToast });
   const authFetchRef = useRef(null);
 
@@ -221,12 +59,111 @@ export default function LandingPage() {
   const { conversationId: routeConversationId } = useParams();
   const { t } = useTranslation();
 
-  const [messages, setMessages] = useState([]);
-  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [query, setQuery] = useState("");
   const [charCount, setCharCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
-  const streamingAssistantIdRef = useRef(null);
+  const [conversationOwnerId, setConversationOwnerId] = useState(null);
+
+  // Block queries if sync service is Offline or Unknown
+  const statusCode = String(syncStatus?.code || "unknown");
+  const isSyncUnknown = statusCode === "unknown" || statusCode === "checking";
+  const isSyncOffline = healthOnline === false;
+  const isSyncBlocked = isSyncOffline || isSyncUnknown || healthOnline == null;
+
+  const location = useLocation();
+
+  // Prefer location.state (internal navigation), fallback to URL (?mid=123)
+  const initialScrollMessageId = React.useMemo(() => {
+    const st = location?.state || {};
+    const v =
+      st.initialScrollMessageId ??
+      st.focusMessageId ??
+      st.conversation_message_id ??
+      st.conversationMessageId ??
+      null;
+
+    if (v != null) return String(v);
+
+    // Optional fallback: /admin/conversations/123?mid=456
+    const params = new URLSearchParams(location?.search || "");
+    const mid = params.get("mid") || params.get("messageId") || null;
+    return mid ? String(mid) : null;
+  }, [location?.state, location?.search]);
+
+  const isAdminReadonlyRoute = location.pathname.startsWith(
+    "/admin/conversations/",
+  );
+  const sessionUserId = getSessionUserId(session);
+
+  const isOwner =
+    sessionUserId != null &&
+    conversationOwnerId != null &&
+    String(sessionUserId) === String(conversationOwnerId);
+
+  // Admin route is read-only only when viewing someone else's conversation.
+  // If owner is unknown, stay conservative (read-only) to avoid privilege bugs.
+  const readOnly = !!isAdminReadonlyRoute && !isOwner;
+
+  const sendBlockedReason = isSyncOffline
+    ? t(
+        "landing.syncBlockedOffline",
+        "Sync service is offline. Try again soon.",
+      )
+    : t(
+        "landing.syncBlockedUnknown",
+        "Sync service status is unknown. Please wait a moment and retry.",
+      );
+
+  const {
+    messages,
+    setMessages,
+    addMessage,
+    upsertStatus,
+    appendAssistantChunk,
+    finalizeStreamingAssistant,
+    clearStatus,
+    dropAllStreamingAssistants,
+    resetStreamRefs,
+    ensureStreamingAssistant,
+  } = useLandingMessages();
+
+  const messagesRef = useRef(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  // Share modal (same behavior as DashboardPage)
+  const [shareOpen, setShareOpen] = useState(false);
+  const [sharePayload, setSharePayload] = useState(null);
+  const [conversationTitle, setConversationTitle] = useState("");
+
+  const { isLoadingConversation } = useLandingConversationLoader({
+    routeConversationId,
+    authFetchRef,
+    setMessages,
+    setConversationTitle,
+    setConversationOwnerId,
+    showToast,
+    t,
+    mode: isAdminReadonlyRoute ? "admin" : "user",
+  });
+
+  // Per-artifact refs for exporting images
+  const chartViewByMsgIdRef = useRef(new Map()); // Map<msgId, vegaView>
+  const tableElByMsgIdRef = useRef(new Map()); // Map<msgId, HTMLElement>
+  const chartElByMsgIdRef = useRef(new Map()); // Map<msgId, HTMLElement>
+
+  const handleSharePayload = useCallback(
+    (payload) => {
+      if (payload?.error === "share_failed") {
+        showToast?.(t("dashboard.widgetShareFailed"), "danger");
+        return;
+      }
+      setSharePayload(payload);
+      setShareOpen(true);
+    },
+    [showToast, t],
+  );
 
   const conversationMetaRef = useRef({
     conversationId: routeConversationId ? Number(routeConversationId) : null,
@@ -234,142 +171,25 @@ export default function LandingPage() {
     emittedCreatedEvent: false,
   });
 
-  const lastLoadedConversationIdRef = useRef(null);
-
-  const [topQueries, setTopQueries] = useState([
-    { query: "Markdown formatting test" },
-    { query: "Current trends" },
-    { query: "List the latest 5 blocks" },
-    { query: "Show the last 5 proposals" },
-    { query: "Plot a bar chart showing monthly multi assets created in 2021" },
-    {
-      query:
-        "Plot a line chart showing monthly number of transactions and outputs",
-    },
-    {
-      query:
-        "Plot a pie chart to show how much the top 1% ADA holders represent from the total supply on the Cardano network",
-    },
-  ]);
-
   const messagesEndRef = useRef(null);
-  const statusMsgIdRef = useRef(null);
+  const hasBackendStatusRef = useRef(false);
+  const messageElsRef = useRef(new Map()); // Map<messageId, HTMLElement>
 
-  const scrollToBottom = (behavior = "smooth") => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior,
-      block: "end",
-    });
-  };
-
-  // Scroll to bottom when a conversation finishes loading
-  useEffect(() => {
-    if (!isLoadingConversation && messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({
-        behavior: "auto", // instant jump on convo switch
-        block: "end",
-      });
-    }
-  }, [routeConversationId, isLoadingConversation]);
-
-  const lastMsgCountRef = useRef(0);
-
-  useEffect(() => {
-    // Only scroll if a message was appended (not just updated)
-    if (messages.length > lastMsgCountRef.current) {
-      scrollToBottom("smooth");
-    }
-
-    lastMsgCountRef.current = messages.length;
-  }, [messages]);
+  // Auto scroll behavior
+  const { scrollToBottom, scrollToMessageId } = useLandingAutoScroll({
+    messages,
+    isLoadingConversation,
+    routeConversationId,
+    messagesEndRef,
+    messageElsRef,
+    initialScrollMessageId,
+  });
 
   // Keep ref in sync with route
   useEffect(() => {
     const id = routeConversationId;
     conversationMetaRef.current.conversationId = id ? Number(id) : null;
   }, [routeConversationId]);
-
-  // Load conversation (IMPORTANT: do NOT depend on authFetch directly)
-  useEffect(() => {
-    const id = routeConversationId ? Number(routeConversationId) : null;
-    const fetchFn = authFetchRef.current;
-
-    if (!id || !fetchFn) {
-      setMessages([]);
-      setIsLoadingConversation(false);
-      lastLoadedConversationIdRef.current = null;
-      return;
-    }
-
-    let cancelled = false;
-    const controller = new AbortController();
-
-    setIsLoadingConversation(true);
-
-    (async () => {
-      try {
-        const res = await fetchFn(`/api/v1/conversations/${id}`, {
-          signal: controller.signal,
-        });
-        if (!res?.ok) throw new Error("Failed to load conversation");
-
-        const data = await res.json();
-        if (cancelled) return;
-
-        const restoredMsgsRaw = (data?.messages || []).map((m) => ({
-          id: `conv_${m.id}`,
-          type: m.role === "user" ? "user" : "assistant",
-          content:
-            m.role === "assistant"
-              ? finalizeForRender(m.content || "")
-              : m.content || "",
-        }));
-
-        // Replay typing for the LAST assistant message only (nice UX, avoids huge replays)
-        let replayId = null;
-        for (let i = restoredMsgsRaw.length - 1; i >= 0; i--) {
-          if (restoredMsgsRaw[i].type === "assistant") {
-            replayId = restoredMsgsRaw[i].id;
-            break;
-          }
-        }
-
-        const restoredMsgs = restoredMsgsRaw.map((m) =>
-          m.id === replayId ? { ...m, replayTyping: true } : m
-        );
-
-        const restoredWithArtifacts = injectArtifactsAfterMessage(
-          restoredMsgs,
-          data?.artifacts || []
-        );
-
-        const prevLoadedId = lastLoadedConversationIdRef.current;
-        const isNewConversationRoute = prevLoadedId !== id;
-
-        if (isNewConversationRoute) {
-          // KEY: replace to avoid duplicates of live-streamed ephemeral messages
-          setMessages(restoredWithArtifacts);
-          lastLoadedConversationIdRef.current = id;
-        } else {
-          // if same route refresh, merge is fine
-          setMessages((prev) => mergeById(prev, restoredWithArtifacts));
-        }
-      } catch (err) {
-        if (cancelled) return;
-        if (err?.name === "AbortError") return;
-
-        console.error("Error loading conversation", err);
-        showToast?.(t("landing.loadConversationError"), "danger");
-      } finally {
-        if (!cancelled) setIsLoadingConversation(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [routeConversationId, showToast, t]);
 
   // Stream session binding (prevents chunks being rendered into the wrong convo)
   const activeStreamRef = useRef({
@@ -384,26 +204,19 @@ export default function LandingPage() {
     const routeId = routeConversationId ? Number(routeConversationId) : null;
     const s = activeStreamRef.current;
 
-    // If stream hasn’t resolved conv id yet, bind to the route where it started.
+    // NEW CHAT ROUTE ("/")
+    // Always accept status/chunks for the active stream
+    if (!routeId) return true;
+
+    // CONVERSATION ROUTE
     const targetId =
       typeof s.resolvedConversationId === "number" &&
       !Number.isNaN(s.resolvedConversationId)
         ? s.resolvedConversationId
         : s.startedRouteConversationId;
 
-    // “New conversation” route: allow updates only while user is still on "/"
-    if (!routeId && !targetId) return true;
-
-    return !!routeId && !!targetId && routeId === targetId;
+    return !!targetId && routeId === targetId;
   }, [routeConversationId]);
-
-  // Auto scroll
-  // useEffect(() => {
-  //   messagesEndRef.current?.scrollIntoView({
-  //     behavior: "smooth",
-  //     block: "end",
-  //   });
-  // }, [messages]);
 
   const emitStreamEvent = useCallback((type, detail) => {
     try {
@@ -413,36 +226,21 @@ export default function LandingPage() {
     }
   }, []);
 
-  const addMessage = useCallback((type, content, extra = {}) => {
-    const id =
-      extra.id ||
-      `${type}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    setMessages((prev) => [...prev, { id, type, content, ...extra }]);
-    return id;
-  }, []);
-
-  const updateMessage = useCallback((id, patch) => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, ...patch } : m))
-    );
-  }, []);
-
-  const removeMessage = useCallback((id) => {
-    setMessages((prev) => prev.filter((m) => m.id !== id));
-  }, []);
-
   const handleStatus = useCallback(
     (text) => {
-      if (!text) return;
-      if (!isViewingStreamConversation()) return;
+      console.log("[SSE status]", text);
 
-      if (!statusMsgIdRef.current) {
-        statusMsgIdRef.current = addMessage("status", text);
-      } else {
-        updateMessage(statusMsgIdRef.current, { content: text });
-      }
+      if (!text) return;
+
+      // Backend status is always relevant to the active stream UI
+      hasBackendStatusRef.current = true;
+      upsertStatus(text);
+
+      setTimeout(() => {
+        console.log("[messages tail]", messagesRef.current.slice(-3));
+      }, 0);
     },
-    [isViewingStreamConversation, addMessage, updateMessage]
+    [upsertStatus],
   );
 
   const handleChunk = useCallback(
@@ -450,66 +248,25 @@ export default function LandingPage() {
       const chunk = sanitizeChunk(raw);
       if (!chunk) return;
       if (!isViewingStreamConversation()) return;
-
-      setMessages((prev) => {
-        const next = [...prev];
-        const last = next[next.length - 1];
-
-        if (last && last.type === "assistant" && last.streaming) {
-          next[next.length - 1] = {
-            ...last,
-            content: (last.content || "") + chunk, // <- no heuristics
-          };
-        } else {
-          const id = `assistant_${Date.now()}_${Math.random()
-            .toString(36)
-            .slice(2, 6)}`;
-          streamingAssistantIdRef.current = id;
-
-          next.push({
-            id,
-            type: "assistant",
-            content: chunk,
-            streaming: true,
-          });
-        }
-        return next;
-      });
+      appendAssistantChunk(chunk);
     },
-    [isViewingStreamConversation]
+    [isViewingStreamConversation, appendAssistantChunk],
   );
 
   const handleDone = useCallback(() => {
-    // Always end processing globally so UI doesn’t get stuck,
-    // but only finalize/remove status in the convo that owns the stream.
-    const shouldMutate = isViewingStreamConversation();
+    hasBackendStatusRef.current = false;
 
-    if (shouldMutate) {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === streamingAssistantIdRef.current && m.streaming
-            ? {
-                ...m,
-                streaming: false,
-                content: finalizeForRender(m.content || ""),
-              }
-            : m
-        )
-      );
+    // ALWAYS stop animations / typing-mode for the current UI state
+    clearStatus();
+    finalizeStreamingAssistant();
 
-      streamingAssistantIdRef.current = null;
-
-      if (statusMsgIdRef.current) {
-        removeMessage(statusMsgIdRef.current);
-        statusMsgIdRef.current = null;
-      }
-    } else {
-      // If user navigated away, just clear the status ref to avoid leaks
-      statusMsgIdRef.current = null;
+    // If we are no longer viewing the stream’s conversation, also cleanup leftovers
+    if (!isViewingStreamConversation()) {
+      dropAllStreamingAssistants();
+      resetStreamRefs();
     }
 
     setIsProcessing(false);
-    streamingAssistantIdRef.current = null;
 
     const cid =
       activeStreamRef.current.resolvedConversationId ||
@@ -517,17 +274,31 @@ export default function LandingPage() {
       null;
 
     if (cid) emitStreamEvent("cap:stream-end", { conversationId: cid });
-  }, [isViewingStreamConversation, removeMessage, emitStreamEvent]);
+  }, [
+    isViewingStreamConversation,
+    finalizeStreamingAssistant,
+    clearStatus,
+    dropAllStreamingAssistants,
+    resetStreamRefs,
+    emitStreamEvent,
+  ]);
 
   const handleError = useCallback(
     (err) => {
-      // Always unblock processing
+      hasBackendStatusRef.current = false;
+
+      const shouldMutate = isViewingStreamConversation();
+
+      if (shouldMutate) {
+        clearStatus();
+        const msg = err?.message || t("landing.unexpectedError");
+        addMessage("error", msg);
+      } else {
+        dropAllStreamingAssistants();
+        resetStreamRefs();
+      }
+
       setIsProcessing(false);
-
-      if (!isViewingStreamConversation()) return;
-
-      const msg = err?.message || t("landing.unexpectedError");
-      addMessage("error", msg);
 
       const cid =
         activeStreamRef.current.resolvedConversationId ||
@@ -536,7 +307,15 @@ export default function LandingPage() {
 
       if (cid) emitStreamEvent("cap:stream-end", { conversationId: cid });
     },
-    [isViewingStreamConversation, addMessage, t]
+    [
+      isViewingStreamConversation,
+      clearStatus,
+      addMessage,
+      t,
+      dropAllStreamingAssistants,
+      resetStreamRefs,
+      emitStreamEvent,
+    ],
   );
 
   const handleKVResults = useCallback(
@@ -546,7 +325,7 @@ export default function LandingPage() {
 
       if (kv.result_type === "table") {
         if (!isValidKVTable(kv)) return;
-        addMessage("table", "", { kv });
+        addMessage("table", "", { kv, insertBeforeStreamingAssistant: true });
         return;
       }
 
@@ -565,9 +344,61 @@ export default function LandingPage() {
         vegaSpec: spec,
         kvType: normalizeKvResultType(kv.result_type),
         isKV: true,
+        insertBeforeStreamingAssistant: true,
       });
     },
-    [addMessage, isViewingStreamConversation]
+    [addMessage, isViewingStreamConversation],
+  );
+
+  const handleOnMetadata = useCallback(
+    (meta) => {
+      if (!meta) return;
+
+      const rawCid = meta.conversationId;
+      const rawUserMsgId = meta.userMessageId;
+
+      const cid =
+        typeof rawCid === "number" && Number.isFinite(rawCid) ? rawCid : null;
+
+      const userMessageId =
+        typeof rawUserMsgId === "number" && Number.isFinite(rawUserMsgId)
+          ? rawUserMsgId
+          : null;
+
+      // Nothing useful
+      if (!cid && !userMessageId) return;
+
+      // Bind stream refs so status/chunks keep flowing correctly even on "/"
+      // (Important: resolvedConversationId can appear BEFORE we navigate to /conversations/:id)
+      activeStreamRef.current = {
+        ...activeStreamRef.current,
+        resolvedConversationId:
+          cid || activeStreamRef.current.resolvedConversationId,
+        // Keep startedRouteConversationId intact if already set elsewhere
+        startedRouteConversationId:
+          activeStreamRef.current.startedRouteConversationId ?? null,
+      };
+
+      // Bind conversationMetaRef too (used by done/navigation / other logic)
+      conversationMetaRef.current = {
+        ...conversationMetaRef.current,
+        conversationId: cid || conversationMetaRef.current.conversationId,
+        userMessageId:
+          userMessageId || conversationMetaRef.current.userMessageId,
+      };
+
+      // Emit stream-start only once per stream
+      if (cid && !activeStreamRef.current._streamStartEmitted) {
+        activeStreamRef.current._streamStartEmitted = true;
+        emitStreamEvent("cap:stream-start", { conversationId: cid });
+      }
+    },
+    [emitStreamEvent],
+  );
+
+  const isDev = import.meta.env.DEV === true;
+  const isDemoEndpoint = String(NL_ENDPOINT || "").includes(
+    "/api/v1/demo/nl/query",
   );
 
   const { start, stop } = useLLMStream({
@@ -576,23 +407,8 @@ export default function LandingPage() {
     onChunk: handleChunk,
     onKVResults: handleKVResults,
     onError: handleError,
-    onMetadata: (meta) => {
-      conversationMetaRef.current = { ...conversationMetaRef.current, ...meta };
-
-      const cidRaw = meta?.conversationId;
-      const cid = cidRaw ? Number(cidRaw) : null;
-
-      if (cid && !Number.isNaN(cid)) {
-        // bind stream to real conversation id (needed for correct routing + UI)
-        activeStreamRef.current = {
-          ...activeStreamRef.current,
-          resolvedConversationId: cid,
-        };
-
-        // notify sidebar which convo is generating
-        emitStreamEvent("cap:stream-start", { conversationId: cid });
-      }
-    },
+    onMetadata: handleOnMetadata,
+    acceptBareStatusLines: isDev && isDemoEndpoint,
 
     onDone: () => {
       handleDone();
@@ -604,49 +420,54 @@ export default function LandingPage() {
     },
   });
 
-  // Top queries refresher (safe: uses authFetchRef)
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadTop() {
-      const fetchFn = authFetchRef.current;
-      if (!fetchFn || cancelled) return;
-
-      try {
-        const res = await fetchFn("/api/v1/nl/queries/top?limit=5");
-        if (!res?.ok || cancelled) return;
-
-        const data = await res.json();
-        if (cancelled) return;
-
-        const list = data?.top_queries || data?.topQueries || data || [];
-        if (Array.isArray(list) && list.length && !cancelled) {
-          const normalized = list.map((item) =>
-            typeof item === "string" ? { query: item } : item
-          );
-          setTopQueries(normalized);
-        }
-      } catch {
-        // silent
-      }
-    }
-
-    loadTop();
-    const intervalId = setInterval(loadTop, 5 * 60 * 1000);
-    return () => {
-      cancelled = true;
-      clearInterval(intervalId);
-    };
-  }, []);
+  const { topQueries } = useLandingTopQueries({
+    authFetchRef,
+    initialTopQueries: isDev
+      ? [
+          { query: "Heatmap of transaction activity by day and hour" },
+          { query: "Treemap breaking down NFT mints by policy ID" },
+          { query: "Transaction fee vs transaction value" },
+          { query: "Bubble chart representing governance proposals" },
+          { query: "Markdown formatting test" },
+          { query: "Current trends" },
+          { query: "List the latest 5 blocks" },
+          { query: "Show the last 5 proposals" },
+          {
+            query:
+              "Plot a bar chart showing monthly multi assets created in 2021",
+          },
+          {
+            query:
+              "Plot a line chart showing monthly number of transactions and outputs",
+          },
+          {
+            query:
+              "Plot a pie chart to show how much the top 1% ADA holders represent from the total supply on the Cardano network",
+          },
+          {
+            query:
+              "How many blocks were produced by this SPO pool18rjrygm3knlt67n3r3prlhnzcjxun7wa8d3l8w9nmlpasquv4au in the current epoch?",
+          },
+        ]
+      : undefined,
+    limit: 5,
+    refreshMs: 5 * 60 * 1000,
+  });
 
   const sendQuery = useCallback(() => {
+    if (readOnly) {
+      showToast?.(t("admin.queryDetails.readOnlyConversation"), "secondary");
+      return;
+    }
+
     const trimmed = (query || "").trim();
     const fetchFn = authFetchRef.current;
 
-    if (!trimmed || isProcessing || !fetchFn) return;
+    if (!trimmed || isProcessing || !fetchFn || isSyncBlocked) return;
 
-    streamingAssistantIdRef.current = null;
-    statusMsgIdRef.current = null;
+    resetStreamRefs();
+    hasBackendStatusRef.current = false;
+
     conversationMetaRef.current.emittedCreatedEvent = false;
 
     addMessage("user", trimmed);
@@ -654,11 +475,28 @@ export default function LandingPage() {
     setCharCount(0);
     setIsProcessing(true);
 
-    statusMsgIdRef.current = addMessage("status", t("landing.statusPlanning"));
+    ensureStreamingAssistant();
+
+    // Fallback only; backend status will replace it as soon as the first status arrives
+    if (
+      !hasBackendStatusRef.current &&
+      !activeStreamRef.current._fallbackStatusWritten
+    ) {
+      activeStreamRef.current._fallbackStatusWritten = true;
+      upsertStatus(t("landing.statusPlanning"));
+    }
+
+    const demoDelayMs = Number(import.meta.env.VITE_DEMO_STREAM_DELAY_MS || 0);
+    const shouldDelay =
+      isDev &&
+      isDemoEndpoint &&
+      Number.isFinite(demoDelayMs) &&
+      demoDelayMs > 0;
 
     const body = {
       query: trimmed,
       conversation_id: routeConversationId ? Number(routeConversationId) : null,
+      ...(shouldDelay ? { delay_ms: demoDelayMs } : {}),
     };
 
     const requestId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -683,7 +521,10 @@ export default function LandingPage() {
   }, [
     query,
     isProcessing,
+    isSyncBlocked,
     addMessage,
+    upsertStatus,
+    resetStreamRefs,
     start,
     NL_ENDPOINT,
     routeConversationId,
@@ -705,45 +546,16 @@ export default function LandingPage() {
           }
         }
 
-        const idx = messages.findIndex((m) => m.id === message.id);
-        let sourceQuery;
-        if (idx > 0) {
-          for (let i = idx - 1; i >= 0; i--) {
-            if (messages[i].type === "user") {
-              sourceQuery = messages[i].content;
-              break;
-            }
-          }
-        }
+        const conversationId =
+          conversationMetaRef.current.conversationId ||
+          (routeConversationId ? Number(routeConversationId) : null);
 
-        const artifact_type = message.type === "table" ? "table" : "chart";
-        const titleBase = artifact_type === "table" ? "Table" : "Chart";
-        const title =
-          message.title ||
-          (sourceQuery
-            ? `${titleBase}: ${sourceQuery.slice(0, 80)}`
-            : `${titleBase} ${new Date().toLocaleTimeString()}`);
-
-        const config =
-          artifact_type === "table"
-            ? { kv: message.kv }
-            : { vegaSpec: message.vegaSpec, kvType: message.kvType };
-
-        const res = await fetchFn("/api/v1/dashboard/pin", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            artifact_type,
-            title,
-            source_query: sourceQuery,
-            config,
-          }),
+        await pinLandingArtifact({
+          fetchFn,
+          message,
+          messages,
+          conversationId,
         });
-
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || "Failed to pin artifact");
-        }
 
         showToast?.(t("landing.pinSuccess"), "success", {
           onClick: () => navigate("/dashboard"),
@@ -753,392 +565,136 @@ export default function LandingPage() {
         showToast?.(t("landing.pinError"), "danger");
       }
     },
-    [messages, showToast, navigate, t]
+    [messages, showToast, navigate, t, routeConversationId],
   );
+
+  const shareArtifact = useCallback(
+    async (message) => {
+      const payload = await createSharePayloadForArtifact({
+        message,
+        messages,
+        conversationTitle,
+        tableElByMsgIdRef,
+      });
+
+      handleSharePayload(payload);
+    },
+    [messages, conversationTitle, tableElByMsgIdRef, handleSharePayload],
+  );
+
+  const isEmptyState = messages.length === 0 && !isLoadingConversation;
 
   return (
     <div className="cap-root">
       <div className="container">
-        <div className="chat-container">
+        <div className={`chat-container ${isEmptyState ? "is-empty" : ""}`}>
           <div className="messages">
-            {isLoadingConversation && (
-              <div className="message status">
-                <div className="message-avatar">…</div>
-                <div className="message-content">
-                  <div className="message-bubble">
-                    <span>{t("landing.loadingConversation")}</span>
-                    <span className="thinking-animation">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {!isLoadingConversation && messages.length === 0 && (
-              <div className="empty-state">
-                <div className="empty-state-icon">🤖</div>
-                <h2>{t("landing.emptyTitle")}</h2>
-                <p>{t("landing.emptySubtitle")}</p>
-              </div>
-            )}
-
-            {messages.map((m) =>
-              m.type === "chart" && m.vegaSpec ? (
-                <div key={m.id} className="message assistant">
-                  <div className="message-avatar">🤖</div>
-                  <div className="message-content">
-                    <div className="message-bubble markdown-body">
-                      <VegaChart spec={m.vegaSpec} />
-                      <div className="artifact-actions">
-                        <button
-                          className="artifact-pin-button"
-                          onClick={() => pinArtifact(m)}
-                        >
-                          {t("landing.pinButton", "Pin to dashboard")}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : m.type === "table" && m.kv && isValidKVTable(m.kv) ? (
-                <div key={m.id} className="message assistant kv-message">
-                  <div className="message-avatar">🤖</div>
-                  <div className="message-content">
-                    <div className="message-bubble markdown-body kv-bubble">
-                      <KVTable kv={m.kv} />
-                      <div className="artifact-actions">
-                        <button
-                          className="artifact-pin-button"
-                          onClick={() => pinArtifact(m)}
-                        >
-                          {t("landing.pinButton", "Pin to dashboard")}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <Message
+            {isEmptyState ? (
+              <LandingEmptyState
+                t={t}
+                topQueries={topQueries}
+                isProcessing={isProcessing}
+                typingMsPerChar={18}
+                pauseAfterTypedMs={2800}
+                fadeMs={200}
+              />
+            ) : (
+              messages.map((m) => (
+                <div
                   key={m.id}
-                  type={m.type}
-                  content={m.content}
-                  streaming={!!m.streaming}
-                  replayTyping={!!m.replayTyping}
-                />
-              )
+                  ref={(el) => {
+                    if (!messageElsRef.current) return;
+
+                    const keys = [];
+                    if (m?.id != null) keys.push(String(m.id));
+                    if (m?.conv_message_id != null)
+                      keys.push(String(m.conv_message_id));
+
+                    for (const k of keys) {
+                      if (el) messageElsRef.current.set(k, el);
+                      else messageElsRef.current.delete(k);
+                    }
+                  }}
+                  data-msgid={m.id}
+                >
+                  {(m.type === "chart" && m.vegaSpec) ||
+                  (m.type === "table" && m.kv) ? (
+                    <ArtifactMessage
+                      message={m}
+                      pinArtifact={pinArtifact}
+                      shareArtifact={shareArtifact}
+                      chartElByMsgIdRef={chartElByMsgIdRef}
+                      chartViewByMsgIdRef={chartViewByMsgIdRef}
+                      tableElByMsgIdRef={tableElByMsgIdRef}
+                      ArtifactToolBtn={ArtifactToolButton}
+                    />
+                  ) : (
+                    <ChatMessage
+                      id={m.id}
+                      type={m.type}
+                      content={m.content}
+                      statusText={m.statusText}
+                      streaming={!!m.streaming}
+                      replayTyping={!!m.replayTyping}
+                      replayKey={m.replayKey ?? null}
+                    />
+                  )}
+                </div>
+              ))
             )}
           </div>
 
           <div className="input-container">
-            <div className="empty-state-left">
-              {t("landing.topQueriesTitle")}
-            </div>
-
-            <div className="examples">
-              {topQueries.map((q, i) => (
-                <button
-                  key={`${q.query}-${i}`}
-                  className={`example-chip ${isProcessing ? "disabled" : ""}`}
-                  title={q.frequency ? `Asked ${q.frequency} times` : undefined}
-                  onClick={() => {
-                    if (!isProcessing) {
-                      setQuery(q.query);
-                      setCharCount(q.query.length);
-                    }
-                  }}
-                >
-                  {q.query}
-                </button>
-              ))}
-            </div>
-
-            <div className="input-wrapper">
-              <div className="input-field">
-                <textarea
-                  value={query}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setQuery(value);
-                    setCharCount(value.length);
-                    e.target.style.height = "auto";
-                    e.target.style.height =
-                      Math.min(e.target.scrollHeight, 200) + "px";
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      if (!isProcessing && query.trim()) sendQuery();
-                    }
-                  }}
-                  placeholder={t("landing.inputPlaceholder")}
-                  rows={2}
-                  maxLength={1000}
-                  disabled={isProcessing}
-                />
-                <div className="char-count">
-                  <span>
-                    {t("landing.charCount", { count: charCount, max: 1000 })}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                className={`send-button ${isProcessing ? "processing" : ""}`}
-                disabled={isProcessing || !query.trim()}
-                onClick={() => !isProcessing && query.trim() && sendQuery()}
-              >
-                <span>
-                  {isProcessing ? t("landing.processing") : t("landing.send")}
-                </span>
-                <span>
-                  {isProcessing ? <div className="button-spinner" /> : "→"}
-                </span>
-              </button>
-            </div>
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ReplayTyping({ text, speedMs = 12, onDone }) {
-  const FULL = String(text || "");
-  const [shown, setShown] = useState("");
-  const timerRef = useRef(null);
-
-  useEffect(() => {
-    setShown("");
-    if (!FULL) {
-      onDone?.();
-      return;
-    }
-
-    let i = 0;
-    let cancelled = false;
-
-    const tick = () => {
-      if (cancelled) return;
-      i += 1;
-      setShown(FULL.slice(0, i));
-
-      if (i < FULL.length) {
-        timerRef.current = window.setTimeout(tick, speedMs);
-      } else {
-        timerRef.current = null;
-        onDone?.();
-      }
-    };
-
-    timerRef.current = window.setTimeout(tick, speedMs);
-
-    return () => {
-      cancelled = true;
-      if (timerRef.current) window.clearTimeout(timerRef.current);
-      timerRef.current = null;
-    };
-  }, [FULL, speedMs, onDone]);
-
-  return <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{shown}</pre>;
-}
-
-function StreamingTypingText({ text, isTyping, speedMs = 25, className = "" }) {
-  const [shown, setShown] = useState(isTyping ? "" : String(text || ""));
-
-  const typingRef = useRef(false);
-  const timerRef = useRef(null);
-  const iRef = useRef(0);
-  const targetRef = useRef(String(text || ""));
-
-  // Always keep the target up to date (it grows as chunks arrive)
-  useEffect(() => {
-    targetRef.current = String(text || "");
-
-    // If we're NOT typing, keep shown fully in sync
-    if (!isTyping) {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      typingRef.current = false;
-      iRef.current = targetRef.current.length;
-      setShown(targetRef.current);
-    }
-  }, [text, isTyping]);
-
-  useEffect(() => {
-    // start/continue typing loop only while isTyping
-    if (!isTyping) return;
-
-    if (typingRef.current) return; // already running
-    typingRef.current = true;
-
-    // if we already had some content, continue from there
-    const currentShownLen = (shown || "").length;
-    if (iRef.current < currentShownLen) iRef.current = currentShownLen;
-
-    const tick = () => {
-      const target = targetRef.current;
-
-      if (iRef.current < target.length) {
-        iRef.current += 1;
-        setShown(target.slice(0, iRef.current));
-        timerRef.current = window.setTimeout(tick, speedMs);
-        return;
-      }
-
-      // If target grows later, we'll keep the loop alive by checking again
-      // but we don't want a hot loop; just poll lightly while streaming.
-      timerRef.current = window.setTimeout(tick, Math.max(40, speedMs));
-    };
-
-    timerRef.current = window.setTimeout(tick, speedMs);
-
-    return () => {
-      typingRef.current = false;
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-    // Intentionally do NOT depend on `text` here; we read it via targetRef.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isTyping, speedMs]);
-
-  return <div className={className}>{shown}</div>;
-}
-
-function Message({ type, content, streaming = false, replayTyping = false }) {
-  const [replayDone, setReplayDone] = useState(false);
-
-  useEffect(() => {
-    // reset when message changes
-    setReplayDone(false);
-  }, [replayTyping, content]);
-
-  const { t } = useTranslation();
-  if (type === "status" && !String(content || "").trim()) return null;
-
-  if (type === "status") {
-    return (
-      <div className="message status">
-        <div className="message-avatar">…</div>
-        <div className="message-content">
-          <div className="message-bubble">
-            <span>{content || t("landing.defaultStatus")}</span>
-            <span className="thinking-animation">
-              <span></span>
-              <span></span>
-              <span></span>
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (type === "error") {
-    return <div className="error-message">{content}</div>;
-  }
-
-  const isUser = type === "user";
-  console.log(content);
-  return (
-    <div className={`message ${isUser ? "user" : "assistant"}`}>
-      <div className="message-avatar">{isUser ? "🧑" : "🤖"}</div>
-      <div className="message-content">
-        <div className="message-bubble markdown-body">
-          {isUser ? (
-            <div className="fade-in">
-              <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{content}</pre>
-            </div>
-          ) : (
             <div
-              className={`rm-chat ${
-                streaming || replayTyping ? "typing-mode" : "fade-in"
+              className={`top-queries-wrap ${
+                isEmptyState ? "is-visible" : "is-hidden"
               }`}
+              aria-hidden={!isEmptyState}
             >
-              {streaming ? (
-                <StreamingTypingText
-                  text={content || ""}
-                  isTyping={true}
-                  speedMs={3}
-                />
-              ) : replayTyping && !replayDone ? (
-                <ReplayTyping
-                  text={content || ""}
-                  speedMs={3}
-                  onDone={() => setReplayDone(true)}
-                />
-              ) : (
-                <ReactMarkdown
-                  remarkPlugins={[
-                    remarkGfm,
-                    [remarkMath, { singleDollarTextMath: true, strict: false }],
-                  ]}
-                  rehypePlugins={[
-                    rehypeKatex,
-                    [rehypeHighlight, { ignoreMissing: true }],
-                  ]}
-                  components={{
-                    h1: ({ node, ...props }) => <h3 {...props} />,
-                    h2: ({ node, ...props }) => <h4 {...props} />,
-                    h3: ({ node, ...props }) => <h5 {...props} />,
-                    h4: ({ node, ...props }) => <h6 {...props} />,
-                    p: ({ node, ...props }) => <p {...props} />,
-                    ul: ({ node, ...props }) => <ul {...props} />,
-                    ol: ({ node, ...props }) => <ol {...props} />,
-                    li: ({ node, ...props }) => <li {...props} />,
-                    a({ node, href, children, ...props }) {
-                      const isExternal =
-                        typeof href === "string" && /^https?:\/\//i.test(href);
-                      return (
-                        <a
-                          href={href}
-                          {...props}
-                          target={isExternal ? "_blank" : undefined}
-                          rel={isExternal ? "noreferrer" : undefined}
-                        >
-                          {children}
-                        </a>
-                      );
-                    },
-                    code({ node, inline, className, children, ...props }) {
-                      return (
-                        <code className={className} {...props}>
-                          {children}
-                        </code>
-                      );
-                    },
-                    pre({ node, children, ...props }) {
-                      return (
-                        <pre {...props} className="rm-pre">
-                          {children}
-                        </pre>
-                      );
-                    },
-                    blockquote({ node, ...props }) {
-                      return <blockquote className="rm-quote" {...props} />;
-                    },
-                    table({ node, ...props }) {
-                      return (
-                        <div className="rm-table-wrap">
-                          <table {...props} />
-                        </div>
-                      );
-                    },
-                  }}
-                >
-                  {content || ""}
-                </ReactMarkdown>
-              )}
+              <TopQueries
+                title={t("landing.topQueriesTitle")}
+                topQueries={topQueries}
+                isProcessing={isProcessing}
+                onSelectQuery={(q) => {
+                  setQuery(q.query);
+                  setCharCount(q.query.length);
+                  scrollToBottom("smooth");
+                }}
+              />
             </div>
-          )}
+
+            <ChatInput
+              readOnly={readOnly}
+              readOnlyReason={t("admin.queryDetails.readOnlyConversation")}
+              query={query}
+              setQuery={setQuery}
+              charCount={charCount}
+              setCharCount={setCharCount}
+              isProcessing={isProcessing}
+              isSyncBlocked={isSyncBlocked}
+              syncBlockedReason={sendBlockedReason}
+              maxLength={1000}
+              placeholder={t("landing.inputPlaceholder")}
+              charCountText={t("landing.charCount", {
+                count: charCount,
+                max: 1000,
+              })}
+              processingLabel={t("landing.processing")}
+              sendLabel={t("landing.send")}
+              onSend={sendQuery}
+            />
+          </div>
+          <div ref={messagesEndRef} />
         </div>
+        <ShareModal
+          show={shareOpen}
+          onHide={() => setShareOpen(false)}
+          title={sharePayload?.title || "CAP"}
+          hashtags={sharePayload?.hashtags || ["CAP"]}
+          link={null}
+          message={sharePayload?.message || ""}
+          imageDataUrl={sharePayload?.imageDataUrl || null}
+        />
       </div>
     </div>
   );

@@ -28,7 +28,9 @@ import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/DashboardPage";
 import AdminPage from "./pages/AdminPage";
 import AnalysesPage from "./pages/AnalysesPage";
+import UserQueryMetricsPage from "./pages/UserQueryMetricsPage";
 import LoadingPage from "./pages/LoadingPage";
+import WelcomePage from "./pages/WelcomePage";
 
 // Hooks
 import { useAuthRequest } from "./hooks/useAuthRequest";
@@ -89,7 +91,7 @@ function Layout() {
         onClick: options.onClick || null,
       });
     },
-    []
+    [],
   );
 
   // --- Auth & Session -------------------------------------------------------
@@ -102,7 +104,7 @@ function Layout() {
       const from = (location.state && location.state.from) || "/";
       navigate(from, { replace: true });
     },
-    [location.state, navigate]
+    [location.state, navigate],
   );
 
   const handleLogout = useCallback(() => {
@@ -114,37 +116,75 @@ function Layout() {
     navigate("/login", { replace: true });
   }, [navigate]);
 
-  const outletContext = useMemo(
-    () => ({
-      session,
-      user: session,
-      setUser: setSession,
-      handleLogout,
-      handleLogin,
-      setLoading,
-      loading,
-      showToast,
-    }),
-    [session, showToast, handleLogout, handleLogin, loading]
-  );
-
   // --- Authenticated fetch wrapper -----------------------------------------
   const { authFetch } = useAuthRequest({ session, showToast, handleLogout });
 
   // --- CAP status polling (health + sync)
-  const { healthOnline, capBlock, cardanoBlock, syncStatus } = useSyncStatus(
-    session ? authFetch : null
+  const { healthOnline, capBlock, cardanoBlock, syncStatus, syncPct, syncLag } =
+    useSyncStatus(session ? authFetch : null);
+
+  const setUser = useCallback((next) => {
+    setSession((prev) => {
+      const resolved = typeof next === "function" ? next(prev) : next;
+      try {
+        localStorage.setItem("cap_user_session", JSON.stringify(resolved));
+      } catch {}
+      return resolved;
+    });
+  }, []);
+
+  const outletContext = useMemo(
+    () => ({
+      session,
+      user: session,
+      setUser: setUser,
+      handleLogout,
+      handleLogin,
+      showToast,
+      setLoading,
+      loading,
+      healthOnline,
+      capBlock,
+      cardanoBlock,
+      syncStatus,
+      syncPct,
+      syncLag,
+    }),
+    [
+      session,
+      showToast,
+      handleLogout,
+      handleLogin,
+      loading,
+      healthOnline,
+      capBlock,
+      cardanoBlock,
+      syncStatus,
+      syncPct,
+      syncLag,
+    ],
   );
 
   // --- Enforce allowed routes when not logged in ---------------------------
   useEffect(() => {
-    const allowlist = new Set(["/login", "/signup"]);
+    const allowlist = new Set(["/login", "/signup", "/welcome"]);
     if (!session && !allowlist.has(location.pathname)) {
       setSidebarOpen(false);
       navigate("/login", {
         replace: true,
         state: { from: location.pathname },
       });
+    }
+  }, [session, location.pathname, navigate]);
+
+  // --- Prevent logged-in users from visiting auth pages ---------------------
+  useEffect(() => {
+    if (!session) return;
+
+    const authPages = new Set(["/login", "/signup", "/welcome"]);
+    if (authPages.has(location.pathname)) {
+      setSidebarOpen(false);
+      navigate("/", { replace: true });
     }
   }, [session, location.pathname, navigate]);
 
@@ -158,6 +198,8 @@ function Layout() {
           capBlock={capBlock}
           cardanoBlock={cardanoBlock}
           syncStatus={syncStatus}
+          syncLag={syncLag}
+          syncPct={syncPct}
           healthOnline={healthOnline}
           sidebarIsOpen={sidebarIsOpen}
           setSidebarOpen={setSidebarOpen}
@@ -217,8 +259,19 @@ function AppRouter() {
             />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/admin" element={<AdminPage />} />
-            + <Route path="/analyses" element={<AnalysesPage />} />
-            <Route path="/login" element={<AuthPage type="login" />} />
+            <Route path="/analyses" element={<AnalysesPage />} />
+            <Route
+              path="/admin/users/:userId/queries"
+              element={<UserQueryMetricsPage />}
+            />
+            <Route
+              path="/admin/conversations/:conversationId"
+              element={<LandingPage />}
+            />
+
+            {/* <Route path="/login" element={<AuthPage type="login" />} /> */}
+            <Route path="/login" element={<WelcomePage type="login" />} />
+            <Route path="/welcome" element={<WelcomePage type="login" />} />
             <Route path="/signup" element={<WaitingListPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFound />} />

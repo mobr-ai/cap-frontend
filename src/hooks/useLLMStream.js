@@ -11,9 +11,13 @@ export function useLLMStream({
   onDone,
   onError,
   onMetadata,
+  // NEW: demo-only support for lines like: "status: Planning..."
+  // Keep false by default to avoid interpreting real model text as protocol.
+  acceptBareStatusLines = false,
 } = {}) {
   let lastWasText = false;
   const abortRef = useRef(null);
+  const stripTrailingDataPrefix = (s) => s.replace(/data\s*:\s*$/i, "");
 
   const start = useCallback(
     async ({
@@ -65,7 +69,7 @@ export function useLLMStream({
                 _localUpdatedAt: Date.now(),
               },
             },
-          })
+          }),
         );
       };
 
@@ -80,17 +84,35 @@ export function useLLMStream({
                 id: convId,
                 updated_at: new Date().toISOString(),
                 _localUpdatedAt: Date.now(),
-                // if we have a title candidate, include it to help sidebar display
                 title: makeTitleCandidate(),
               },
             },
-          })
+          }),
         );
       };
 
       const completeOnce = () => {
         emitTouched();
         onDone?.({ ...streamMeta });
+      };
+
+      const hardStopStream = (reader) => {
+        try {
+          reader?.cancel();
+        } catch {}
+        try {
+          abortRef.current?.abort();
+        } catch {}
+      };
+
+      const tryHandleStatusLine = (line) => {
+        if (!line) return false;
+        const s = String(line).trimStart();
+        if (!s.toLowerCase().startsWith("status:")) return false;
+        const status = s.slice("status:".length).trim();
+        if (status) onStatus?.(status);
+        lastWasText = false;
+        return true;
       };
 
       // SSE rule: payload for "data:" lines must preserve spacing.
@@ -103,10 +125,37 @@ export function useLLMStream({
         return payload;
       };
 
-      const isDoneLine = (trimmed) =>
-        trimmed === "[DONE]" ||
-        trimmed === "data:[DONE]" ||
-        trimmed === "data: [DONE]";
+      const isDoneLine = (line) =>
+        line === "[DONE]" || line === "data:[DONE]" || line === "data: [DONE]";
+
+      let doneCarry = "";
+
+      const emitText = (text) => {
+        if (!text) return;
+
+        let combined = doneCarry + text;
+        doneCarry = "";
+
+        const idx = combined.indexOf("[DONE]");
+        if (idx !== -1) {
+          const before = stripTrailingDataPrefix(combined.slice(0, idx));
+          if (before) onChunk?.(before);
+          return { hitDone: true };
+        }
+
+        const holdCandidates = ["[", "[D", "[DO", "[DON", "[DONE"];
+        for (const c of holdCandidates) {
+          if (combined.endsWith(c)) {
+            doneCarry = c;
+            const safe = combined.slice(0, -c.length);
+            if (safe) onChunk?.(safe);
+            return { hitDone: false };
+          }
+        }
+
+        onChunk?.(combined);
+        return { hitDone: false };
+      };
 
       try {
         const response = await fetcher(url, {
@@ -118,7 +167,7 @@ export function useLLMStream({
 
         if (!response.ok) {
           const err = new Error(
-            `Streaming request failed: ${response.status} ${response.statusText}`
+            `Streaming request failed: ${response.status} ${response.statusText}`,
           );
           onError?.(err);
           return;
@@ -148,15 +197,18 @@ export function useLLMStream({
         } catch (metaErr) {
           console.warn(
             "useLLMStream: failed to read metadata headers",
-            metaErr
+            metaErr,
           );
         }
         // -----------------------------------
 
-        // Non-streaming fallback
         if (!response.body || !response.body.getReader) {
           const text = await response.text();
-          if (text) onChunk?.(text);
+          if (text) emitText(text);
+          if (doneCarry) {
+            onChunk?.(doneCarry);
+            doneCarry = "";
+          }
           completeOnce();
           return;
         }
@@ -207,42 +259,96 @@ export function useLLMStream({
             if (rawLine.endsWith("\r")) rawLine = rawLine.slice(0, -1);
 
             const trimmed = rawLine.replace(/\r$/, "");
+            const proto = trimmed.trimStart();
+
+            // HARD STOP: DONE marker may be concatenated
+            const donePos = proto.indexOf("[DONE]");
+            if (donePos !== -1) {
+              let before = trimmed.slice(0, donePos);
+              before = stripTrailingDataPrefix(before);
+
+              if (before) {
+                if (before.trimStart().startsWith("data:")) {
+                  const payloadBeforeDone = extractDataPayload(
+                    before.trimStart(),
+                  );
+                  if (payloadBeforeDone) {
+                    const r = emitText(payloadBeforeDone);
+                    if (r.hitDone) {
+                      if (inKVBlock) {
+                        inKVBlock = false;
+                        flushKVResults();
+                      }
+                      lastWasText = false;
+                      queueMicrotask(() => completeOnce());
+                      hardStopStream(reader);
+                      return;
+                    }
+                  }
+                } else {
+                  const r = emitText(before);
+                  if (r.hitDone) {
+                    if (inKVBlock) {
+                      inKVBlock = false;
+                      flushKVResults();
+                    }
+                    lastWasText = false;
+                    queueMicrotask(() => completeOnce());
+                    hardStopStream(reader);
+                    return;
+                  }
+                }
+              }
+
+              if (inKVBlock) {
+                inKVBlock = false;
+                flushKVResults();
+              }
+
+              lastWasText = false;
+              queueMicrotask(() => completeOnce());
+              hardStopStream(reader);
+              return;
+            }
+
+            // Bare SSE prefix split from payload
+            if (/^data\s*:\s*$/.test(proto) || /^data\s*$/.test(proto)) {
+              continue;
+            }
 
             // keep-alive / blank line
-            if (!trimmed) {
+            if (!proto) {
               if (inKVBlock) {
                 kvBuffer += "\n";
               } else if (lastWasText) {
-                // IMPORTANT: do NOT emit "\n" (sanitizeChunk drops it)
                 onChunk?.(NL_TOKEN);
               }
               continue;
             }
 
-            if (isDoneLine(trimmed)) {
+            if (isDoneLine(proto)) {
               if (inKVBlock) {
                 inKVBlock = false;
                 flushKVResults();
               }
               lastWasText = false;
               queueMicrotask(() => completeOnce());
+              hardStopStream(reader);
               return;
             }
 
-            if (trimmed.startsWith("status:")) {
-              const status = trimmed.slice("status:".length).trim();
-              if (status) onStatus?.(status);
-              lastWasText = false;
-              continue;
+            // demo-only: bare status protocol line
+            if (acceptBareStatusLines && !inKVBlock) {
+              if (tryHandleStatusLine(proto)) continue;
             }
 
-            if (trimmed.startsWith("kv_results:")) {
+            if (proto.startsWith("kv_results:")) {
               inKVBlock = true;
               kvBuffer = "";
               lastWasText = false;
 
-              const idx = rawLine.indexOf("kv_results:") + "kv_results:".length;
-              const rest = rawLine.slice(idx);
+              const idx = proto.indexOf("kv_results:") + "kv_results:".length;
+              const rest = proto.slice(idx);
               const restTrimmed = rest.trim();
 
               if (restTrimmed && !restTrimmed.startsWith("_kv_results_end_")) {
@@ -252,39 +358,93 @@ export function useLLMStream({
             }
 
             if (inKVBlock) {
-              if (trimmed.includes("_kv_results_end_")) {
+              if (proto.includes("_kv_results_end_")) {
                 inKVBlock = false;
                 flushKVResults();
               } else {
-                kvBuffer += rawLine + "\n";
+                kvBuffer += trimmed + "\n";
               }
               lastWasText = false;
               continue;
             }
 
             // SSE data line
-            if (trimmed.startsWith("data:")) {
-              const payload = extractDataPayload(rawLine);
-
+            if (proto.startsWith("data:")) {
+              const payload = extractDataPayload(proto);
               if (payload == null) continue;
 
-              // Empty data line => newline sentinel
+              if (tryHandleStatusLine(payload)) continue;
+
               if (payload === "") {
                 onChunk?.(NL_TOKEN);
                 lastWasText = true;
                 continue;
               }
 
-              if (payload === "[DONE]") continue;
+              if (payload === "[DONE]") {
+                if (inKVBlock) {
+                  inKVBlock = false;
+                  flushKVResults();
+                }
+                lastWasText = false;
+                queueMicrotask(() => completeOnce());
+                hardStopStream(reader);
+                return;
+              }
 
-              onChunk?.(payload);
+              const doneIdx = payload.indexOf("[DONE]");
+              if (doneIdx !== -1) {
+                let before = payload.slice(0, doneIdx);
+                before = stripTrailingDataPrefix(before);
+
+                if (before) emitText(before);
+
+                if (inKVBlock) {
+                  inKVBlock = false;
+                  flushKVResults();
+                }
+                lastWasText = false;
+                queueMicrotask(() => completeOnce());
+                hardStopStream(reader);
+                return;
+              }
+
+              const r = emitText(payload);
+              if (r.hitDone) {
+                if (inKVBlock) {
+                  inKVBlock = false;
+                  flushKVResults();
+                }
+                lastWasText = false;
+                queueMicrotask(() => completeOnce());
+                hardStopStream(reader);
+                return;
+              }
+
               lastWasText = true;
               continue;
             }
 
-            // Raw text lines fallback
-            onChunk?.(rawLine);
-            lastWasText = true;
+            // Raw text fallback
+            {
+              // Deterministic: never treat protocol status lines as content
+              if (!inKVBlock && tryHandleStatusLine(trimmed)) {
+                continue;
+              }
+
+              const r = emitText(trimmed);
+              if (r.hitDone) {
+                if (inKVBlock) {
+                  inKVBlock = false;
+                  flushKVResults();
+                }
+                lastWasText = false;
+                queueMicrotask(() => completeOnce());
+                hardStopStream(reader);
+                return;
+              }
+              lastWasText = true;
+            }
           }
         }
 
@@ -293,13 +453,28 @@ export function useLLMStream({
           flushKVResults();
         }
 
+        if (doneCarry) {
+          onChunk?.(doneCarry);
+          doneCarry = "";
+        }
+
         completeOnce();
+        hardStopStream(reader);
       } catch (err) {
         if (abortRef.current?.signal?.aborted) return;
         onError?.(err);
       }
     },
-    [fetcher, onStatus, onChunk, onKVResults, onDone, onError, onMetadata]
+    [
+      fetcher,
+      onStatus,
+      onChunk,
+      onKVResults,
+      onDone,
+      onError,
+      onMetadata,
+      acceptBareStatusLines,
+    ],
   );
 
   const stop = useCallback(() => {

@@ -1,4 +1,38 @@
-import React from "react";
+// src/components/admin/WaitlistAlertsPanel.jsx
+import React, { useMemo, useState, useId } from "react";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+
+function normalizeEmail(s) {
+  return String(s || "")
+    .trim()
+    .toLowerCase();
+}
+
+function uniq(list) {
+  const out = [];
+  const seen = new Set();
+  for (const x of list || []) {
+    const v = normalizeEmail(x);
+    if (!v || seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+  }
+  return out;
+}
+
+function parseRecipients(text) {
+  return uniq(
+    String(text || "")
+      .split(/\r?\n/g)
+      .map((x) => normalizeEmail(x))
+      .filter(Boolean),
+  );
+}
+
+function formatRecipients(list) {
+  return uniq(list).join("\n");
+}
 
 export function WaitlistAlertsPanel({
   t,
@@ -12,14 +46,56 @@ export function WaitlistAlertsPanel({
   setNotifyText,
   saveNotify,
   testNotify,
+
+  // NEW: shared pool
+  recipientPool,
+  setRecipientPool,
 }) {
-  const handleToggle = (e) => {
-    setNotifyEnabled(e.target.checked);
+  const uid = typeof useId === "function" ? useId() : "waitlist-alerts";
+  const enabledId = `adminWaitlistNotifyEnabled-${uid}`;
+
+  const busy = !!(notifyLoading || notifySaving);
+
+  const selected = useMemo(
+    () => parseRecipients(notifyRecipientsText),
+    [notifyRecipientsText],
+  );
+
+  const pool = useMemo(() => uniq(recipientPool || []), [recipientPool]);
+
+  const [addEmail, setAddEmail] = useState("");
+
+  const handleToggle = (e) => setNotifyEnabled(e.target.checked);
+
+  const toggleRecipient = (email) => {
+    const v = normalizeEmail(email);
+    const has = selected.includes(v);
+    const next = has ? selected.filter((x) => x !== v) : uniq([...selected, v]);
+    setNotifyText(formatRecipients(next));
   };
 
-  const handleChangeText = (e) => {
-    setNotifyText(e.target.value);
+  const addToPoolAndSelect = () => {
+    const email = normalizeEmail(addEmail);
+    if (!email || !EMAIL_RE.test(email)) return;
+
+    const nextPool = uniq([...pool, email]);
+    setRecipientPool(nextPool);
+
+    const nextSelected = uniq([...selected, email]);
+    setNotifyText(formatRecipients(nextSelected));
+    setAddEmail("");
   };
+
+  const onAddKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addToPoolAndSelect();
+    }
+  };
+
+  const invalidSelectedCount = useMemo(() => {
+    return selected.filter((e) => !EMAIL_RE.test(e)).length;
+  }, [selected]);
 
   return (
     <section className="admin-section">
@@ -38,34 +114,88 @@ export function WaitlistAlertsPanel({
             <input
               className="form-check-input"
               type="checkbox"
-              id="adminWaitlistNotifyEnabled"
-              checked={notifyConfig.enabled}
+              id={enabledId}
+              checked={!!notifyConfig?.enabled}
               onChange={handleToggle}
-              disabled={notifyLoading || notifySaving}
+              disabled={busy}
             />
-            <label
-              className="form-check-label"
-              htmlFor="adminWaitlistNotifyEnabled"
-            >
+            <label className="form-check-label" htmlFor={enabledId}>
               {t("admin.waitlistNotifyToggleLabel")}
             </label>
           </div>
         </div>
 
         <div className="admin-notify-row admin-notify-row--textarea">
-          <label htmlFor="adminWaitlistNotifyRecipients" className="form-label">
+          <label className="form-label">
             {t("admin.notifyRecipientsLabel")}
           </label>
-          <textarea
-            id="adminWaitlistNotifyRecipients"
-            className="form-control admin-notify-textarea"
-            rows={3}
-            placeholder={t("admin.notifyRecipientsPlaceholder")}
-            value={notifyRecipientsText}
-            onChange={handleChangeText}
-            disabled={notifyLoading || notifySaving}
-          />
-          <small>{t("admin.waitlistNotifyRecipientsHelp")}</small>
+
+          {/* Add to pool */}
+          <div className="d-flex gap-2 align-items-center">
+            <input
+              type="email"
+              className="form-control"
+              placeholder={t("admin.alertRecipientsPoolPlaceholder")}
+              value={addEmail}
+              onChange={(e) => setAddEmail(e.target.value)}
+              onKeyDown={onAddKeyDown}
+              disabled={busy}
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary"
+              onClick={addToPoolAndSelect}
+              disabled={busy || !EMAIL_RE.test(normalizeEmail(addEmail))}
+            >
+              {t("admin.add")}
+            </button>
+          </div>
+
+          {/* Multi-select list (pool) */}
+          <div className="mt-3">
+            {pool.length === 0 ? (
+              <small className="d-block">
+                {t("admin.alertRecipientsPoolEmpty")}
+              </small>
+            ) : (
+              <div className="d-flex flex-column gap-2">
+                {pool.map((email) => {
+                  const checked = selected.includes(email);
+                  return (
+                    <label
+                      key={email}
+                      className="d-flex align-items-center gap-2"
+                      style={{ userSelect: "none" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleRecipient(email)}
+                        disabled={busy}
+                      />
+                      <span style={{ color: "#e5e7eb" }}>{email}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <small className="d-block mt-2">
+            {t("admin.waitlistNotifyRecipientsHelp")}
+          </small>
+
+          {invalidSelectedCount > 0 && (
+            <p
+              className="admin-status-text admin-status-text--error"
+              style={{ marginTop: "0.5rem", marginBottom: 0 }}
+            >
+              {t("admin.notifyRecipientsInvalid", {
+                count: invalidSelectedCount,
+              })}
+            </p>
+          )}
         </div>
 
         {notifyError && (
@@ -78,17 +208,19 @@ export function WaitlistAlertsPanel({
           <button
             className="btn btn-sm btn-outline-secondary"
             onClick={testNotify}
-            disabled={notifyLoading || notifySaving || notificationsTesting}
+            disabled={busy || notificationsTesting}
+            type="button"
           >
             {notificationsTesting
               ? t("admin.notificationsTesting")
               : t("admin.notificationsSendTest")}
           </button>
+
           <button
             type="button"
             className="btn btn-sm btn-primary"
             onClick={saveNotify}
-            disabled={notifyLoading || notifySaving}
+            disabled={busy}
           >
             {notifySaving
               ? t("admin.notifySaving")
