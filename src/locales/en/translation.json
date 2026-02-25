@@ -155,7 +155,7 @@
       },
 
       "examples": {
-        "body": "Examples of advanced queries the platform we are targeting.",
+        "body": "Examples of advanced queries the platform targets",
         "colQuery": "User Query Example",
         "colSources": "Data Sources Combined",
         "title": "Our Target: Complex and Advanced Queries Made Easy",

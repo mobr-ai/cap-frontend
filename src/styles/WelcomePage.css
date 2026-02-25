@@ -49,23 +49,47 @@
 .WelcomePage-scrollHint {
   position: absolute;
   left: 50%;
-  bottom: 1.1rem;
+  bottom: 1.2rem;
   transform: translateX(-50%);
-  z-index: 3;
-  pointer-events: none;
-  opacity: 0.9;
+  z-index: 10;
+  pointer-events: auto;
+  cursor: pointer;
+
+  transition:
+    transform 220ms ease,
+    opacity 220ms ease;
 }
 
+.WelcomePage-scrollHint:hover {
+  transform: translateX(-50%) translateY(-3px);
+}
+
+.WelcomePage-scrollHint:active {
+  transform: translateX(-50%) translateY(-1px);
+}
+
+/* Glow goes on the pill instead (box-shadow is stable in Firefox) */
 .WelcomePage-scrollHintPill {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.45rem 0.75rem;
+  gap: 0.5rem;
+
+  padding: 0.45rem 0.9rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.35);
+
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(6px);
+
+  transition:
+    background 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.WelcomePage-scrollHint:hover .WelcomePage-scrollHintPill {
+  background: rgba(90, 200, 255, 0.08);
+  box-shadow:
+    0 0 0 1px rgba(90, 200, 255, 0.22),
+    0 10px 22px rgba(0, 0, 0, 0.35);
 }
 
 .WelcomePage-scrollHintText {

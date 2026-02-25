@@ -61,6 +61,16 @@ export default function WelcomePage(props) {
 
   const googleHandledHashRef = useRef(false);
   const setpassInputRef = useRef(null);
+  const showcaseRef = useRef(null);
+
+  const handleScrollToShowcase = () => {
+    const yOffset = +20; // navbar height
+    const element = showcaseRef.current;
+    const y =
+      element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+
+    window.scrollTo({ top: y, behavior: "smooth" });
+  };
 
   useEffect(() => {
     const st = (searchParams.get("state") || "").trim().toLowerCase();
@@ -572,7 +582,11 @@ export default function WelcomePage(props) {
           </div>
         </div>
 
-        <div className="WelcomePage-scrollHint" aria-hidden="true">
+        <div
+          className="WelcomePage-scrollHint"
+          aria-hidden="true"
+          onClick={handleScrollToShowcase}
+        >
           <div className="WelcomePage-scrollHintPill">
             <span className="WelcomePage-scrollHintText">
               {t("welcome.cap.scrollHint", "Discover CAP")}
@@ -582,7 +596,7 @@ export default function WelcomePage(props) {
         </div>
       </section>
 
-      <WelcomeShowcase t={t} />
+      <WelcomeShowcase t={t} showcaseRef={showcaseRef} />
     </div>
   );
 }

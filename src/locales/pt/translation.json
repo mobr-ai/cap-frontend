@@ -99,8 +99,8 @@
   "learnMore": "Saiba mais",
   "welcome": {
     "cap": {
-      "scrollHint": "Descubra o CAP",
-      "headline": "Bem-vindo ao CAP: Analytics da Cardano com IA",
+      "scrollHint": "Descubra a CAP",
+      "headline": "Bem-vindo a CAP: Analytics da Cardano com IA",
       "lead": "Simplificando a exploração de dados da blockchain Cardano por meio de linguagem natural, conectando dados on-chain complexos a insights acessíveis com um LLM ajustado e um Grafo de Conhecimento Semântico.",
       "cta": {
         "primary": "Explorar CAP",

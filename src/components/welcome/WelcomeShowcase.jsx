@@ -2,7 +2,7 @@
 import React, { useMemo } from "react";
 import CapIcon from "./CapIcon";
 
-export default function WelcomeShowcase({ t }) {
+export default function WelcomeShowcase({ t, showcaseRef }) {
   const pillars = useMemo(
     () => [
       {
@@ -111,7 +111,7 @@ export default function WelcomeShowcase({ t }) {
   }, [t]);
 
   return (
-    <main className="WelcomePage-showcase">
+    <main className="WelcomePage-showcase" ref={showcaseRef}>
       <section className="CapSection CapSection--intro" data-reveal>
         <div className="CapSection-inner">
           <div className="CapEyebrow">{t("capEyebrow", "CAP")}</div>
@@ -124,7 +124,7 @@ export default function WelcomeShowcase({ t }) {
           <p className="CapLead">
             {t(
               "welcome.cap.lead",
-              "Simplifying Cardano blockchain data exploration through natural language, bridging complex on-chain data with user-friendly insights via a fine-tuned LLM and a Semantic Knowledge Graph.",
+              "Simplifying Cardano blockchain data exploration through natural language, bridging complex on-chain data with user-friendly insights via a Cardano-tailored LLM pipeline and a Semantic Knowledge Graph.",
             )}
           </p>
 
@@ -236,12 +236,7 @@ export default function WelcomeShowcase({ t }) {
                 "Examples of Complex Federated Queries",
               )}
             </h3>
-            <p className="CapBody">
-              {t(
-                "welcome.cap.examples.body",
-                "Examples of complex federated queries the platform handles.",
-              )}
-            </p>
+            <p className="CapBody">{t("welcome.cap.examples.body")}</p>
           </div>
 
           <div
