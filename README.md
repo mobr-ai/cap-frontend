@@ -1,7 +1,17 @@
 # CAP Frontend
 
+
+<p align="center">
+  <img src="./public/icons/logo.svg" width="180" />
+</p>
+
+<p align="center">
+  <b>Cardano Analytics Platform Powered by LLM</b><br/>
+  Semantic Knowledge Graph • Natural Language → SPARQL • Real-Time On-Chain Data
+</p>
+
 **cap-frontend** is the **React/Vite single-page application (SPA)** for the
-**[Cardano Analytics Platform (CAP)](https://github.com/mobr-ai/cap)** — an AI-powered blockchain analytics environment backed by
+**[Cardano Analytics Platform (CAP)](https://github.com/mobr-ai/cap)**, an AI-powered blockchain analytics environment backed by
 a semantic knowledge graph (RDF + SPARQL) and real-time Cardano data pipelines.
 
 CAP Frontend provides the entire end-user interface for natural-language analytics, dashboards, interactive charts, Cardano wallet integrations, and multi-language UX.
