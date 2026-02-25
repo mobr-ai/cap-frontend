@@ -858,3 +858,59 @@
     align-items: flex-start;
   }
 }
+
+/* 1) Give the whole hero more room on large displays */
+.WelcomePage-content {
+  /* was 1320px */
+  max-width: 1520px;
+  /* optional: a bit more breathing room */
+  padding: 2.5rem;
+}
+
+/* 2) Let the right side claim more of the width */
+.WelcomePage-content {
+  /* was: minmax(380px, 520px) minmax(420px, 1fr) */
+  /* grid-template-columns: minmax(360px, 520px) minmax(520px, 1fr); */
+}
+
+/* 3) Make the video panel “sit” more like Claude (toward the right) */
+.WelcomePage-right {
+  justify-self: end; /* instead of center */
+}
+
+/* 4) Let the card scale up when space exists */
+.WelcomePage-videoCard {
+  /* replace width: min(820px, 100%); */
+  width: clamp(560px, 44vw, 980px);
+
+  /* keep it from becoming taller than the viewport */
+  max-height: calc(100vh - 5.25rem);
+}
+
+/* 5) Extra boost on ultra-wide screens (optional but matches Claude feel) */
+@media (min-width: 1500px) {
+  .WelcomePage-content {
+    max-width: 1680px;
+    column-gap: 2.5rem;
+  }
+
+  .WelcomePage-videoCard {
+    width: clamp(640px, 46vw, 1100px);
+  }
+}
+
+/* If you want it bigger on tall screens, allow a bit more width */
+@media (min-height: 900px) {
+  .WelcomePage-videoCard {
+    width: min(1200px, 100%);
+    max-height: calc(100vh - 160px);
+  }
+}
+
+/* Optional: on ultrawide specifically, be stricter on max-height */
+@media (min-aspect-ratio: 21/9) {
+  .WelcomePage-videoCard {
+    max-height: calc(100vh - 15rem);
+    max-width: calc(100vh - 15rem);
+  }
+}
