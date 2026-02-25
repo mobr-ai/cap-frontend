@@ -394,6 +394,7 @@
     display: grid;
     grid-template-rows: 1fr auto;
     min-height: 0;
+    justify-content: center;
   }
 
   .cap-root .chat-container.is-empty .input-container {
@@ -413,5 +414,7 @@
     overflow: hidden;
     max-height: 15%;
     height: 15%;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 }
