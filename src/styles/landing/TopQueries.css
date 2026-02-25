@@ -48,6 +48,18 @@
 
   cursor: pointer;
   transition: all 0.2s;
+
+  /* prevent horizontal overflow on long queries */
+  max-width: 100%;
+  white-space: normal; /* allow multi-line */
+  overflow-wrap: anywhere; /* break long ids */
+  word-break: break-word; /* fallback */
+  hyphens: auto; /* nicer breaks when possible */
+  text-align: left;
+  line-height: 1.25;
+
+  /* make sure flexbox allows shrinking */
+  min-width: 0;
 }
 
 .cap-root .example-chip:hover:not(.disabled) {
@@ -81,8 +93,12 @@
   opacity: 1;
   transform: scaleY(1);
 
-  transition: max-height 280ms ease, opacity 200ms ease, transform 280ms ease,
-    margin 280ms ease, padding 280ms ease;
+  transition:
+    max-height 280ms ease,
+    opacity 200ms ease,
+    transform 280ms ease,
+    margin 280ms ease,
+    padding 280ms ease;
 }
 
 .cap-root .top-queries-wrap.is-hidden {
@@ -100,7 +116,11 @@
 @media (max-width: 768px) {
   .cap-root .top-queries-wrap {
     /* max-height: 220px; */
-    transition: max-height 240ms ease, opacity 180ms ease, transform 240ms ease,
-      margin 240ms ease, padding 240ms ease;
+    transition:
+      max-height 240ms ease,
+      opacity 180ms ease,
+      transform 240ms ease,
+      margin 240ms ease,
+      padding 240ms ease;
   }
 }

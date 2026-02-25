@@ -444,6 +444,10 @@ export default function LandingPage() {
             query:
               "Plot a pie chart to show how much the top 1% ADA holders represent from the total supply on the Cardano network",
           },
+          {
+            query:
+              "How many blocks were produced by this SPO pool18rjrygm3knlt67n3r3prlhnzcjxun7wa8d3l8w9nmlpasquv4au in the current epoch?",
+          },
         ]
       : undefined,
     limit: 5,

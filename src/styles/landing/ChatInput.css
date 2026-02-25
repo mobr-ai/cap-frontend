@@ -131,6 +131,7 @@
 
   .cap-root .input-container {
     padding: 1rem;
+    max-width: 100vw;
   }
 }
 
