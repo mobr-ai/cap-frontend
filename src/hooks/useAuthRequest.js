@@ -1,6 +1,8 @@
 // src/hooks/useAuthRequest.js
 import { useCallback, useMemo } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+
 import request from "superagent";
 
 const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/+$/, "");
@@ -16,6 +18,7 @@ const withBase = (url) => {
 const shouldUnauthorized = (s) => s === 401 || s === 403;
 
 export function useAuthRequest(overrides = {}) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const outlet = useOutletContext() || {};
 
@@ -47,7 +50,10 @@ export function useAuthRequest(overrides = {}) {
       window.location.pathname.startsWith("/login");
 
     if (showToast && !onLogin) {
-      showToast("Session expired. Please sign in again.", "secondary");
+      showToast(
+        t("sessionExpired", "Session expired. Please sign in again."),
+        "secondary",
+      );
     }
     if (handleLogout) handleLogout();
     if (!onLogin) navigate("/login?sessionExpired=1", { replace: true });
