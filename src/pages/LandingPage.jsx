@@ -14,11 +14,7 @@ import "highlight.js/styles/github-dark.css";
 
 import ArtifactToolButton from "@/components/landing/ArtifactToolButton";
 
-import {
-  mergeById,
-  injectArtifactsAfterMessage,
-  normalizeKvResultType,
-} from "@/utils/landingMessageOps";
+import { normalizeKvResultType } from "@/utils/landingMessageOps";
 
 import { useAuthRequest } from "@/hooks/useAuthRequest";
 import { useLLMStream } from "@/hooks/useLLMStream";
@@ -61,7 +57,7 @@ export default function LandingPage() {
 
   const [query, setQuery] = useState("");
   const [charCount, setCharCount] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingByKey, setProcessingByKey] = useState({});
   const [conversationOwnerId, setConversationOwnerId] = useState(null);
 
   // Block queries if sync service is Offline or Unknown
@@ -71,6 +67,40 @@ export default function LandingPage() {
   const isSyncBlocked = isSyncOffline || isSyncUnknown || healthOnline == null;
 
   const location = useLocation();
+
+  const routeConvoKey = routeConversationId
+    ? `conv:${Number(routeConversationId)}`
+    : "root";
+
+  const isProcessing = !!processingByKey?.[routeConvoKey]?.isProcessing;
+
+  const setProcessingForKey = useCallback((key, isProc, extra = {}) => {
+    if (!key) return;
+    setProcessingByKey((prev) => {
+      const next = { ...(prev || {}) };
+      const existing = next[key] || {};
+      next[key] = {
+        ...existing,
+        ...extra,
+        isProcessing: !!isProc,
+      };
+      return next;
+    });
+  }, []);
+
+  const migrateProcessingKey = useCallback((fromKey, toKey) => {
+    if (!fromKey || !toKey || fromKey === toKey) return;
+    setProcessingByKey((prev) => {
+      const p = prev || {};
+      const from = p[fromKey];
+      if (!from?.isProcessing) return prev;
+
+      const next = { ...p };
+      delete next[fromKey];
+      next[toKey] = { ...(next[toKey] || {}), ...from, isProcessing: true };
+      return next;
+    });
+  }, []);
 
   // Prefer location.state (internal navigation), fallback to URL (?mid=123)
   const initialScrollMessageId = React.useMemo(() => {
@@ -84,7 +114,6 @@ export default function LandingPage() {
 
     if (v != null) return String(v);
 
-    // Optional fallback: /admin/conversations/123?mid=456
     const params = new URLSearchParams(location?.search || "");
     const mid = params.get("mid") || params.get("messageId") || null;
     return mid ? String(mid) : null;
@@ -100,8 +129,6 @@ export default function LandingPage() {
     conversationOwnerId != null &&
     String(sessionUserId) === String(conversationOwnerId);
 
-  // Admin route is read-only only when viewing someone else's conversation.
-  // If owner is unknown, stay conservative (read-only) to avoid privilege bugs.
   const readOnly = !!isAdminReadonlyRoute && !isOwner;
 
   const sendBlockedReason = isSyncOffline
@@ -125,6 +152,7 @@ export default function LandingPage() {
     dropAllStreamingAssistants,
     resetStreamRefs,
     ensureStreamingAssistant,
+    bindStreamScope,
   } = useLandingMessages();
 
   const messagesRef = useRef(messages);
@@ -132,7 +160,6 @@ export default function LandingPage() {
     messagesRef.current = messages;
   }, [messages]);
 
-  // Share modal (same behavior as DashboardPage)
   const [shareOpen, setShareOpen] = useState(false);
   const [sharePayload, setSharePayload] = useState(null);
   const [conversationTitle, setConversationTitle] = useState("");
@@ -148,10 +175,9 @@ export default function LandingPage() {
     mode: isAdminReadonlyRoute ? "admin" : "user",
   });
 
-  // Per-artifact refs for exporting images
-  const chartViewByMsgIdRef = useRef(new Map()); // Map<msgId, vegaView>
-  const tableElByMsgIdRef = useRef(new Map()); // Map<msgId, HTMLElement>
-  const chartElByMsgIdRef = useRef(new Map()); // Map<msgId, HTMLElement>
+  const chartViewByMsgIdRef = useRef(new Map());
+  const tableElByMsgIdRef = useRef(new Map());
+  const chartElByMsgIdRef = useRef(new Map());
 
   const handleSharePayload = useCallback(
     (payload) => {
@@ -173,10 +199,9 @@ export default function LandingPage() {
 
   const messagesEndRef = useRef(null);
   const hasBackendStatusRef = useRef(false);
-  const messageElsRef = useRef(new Map()); // Map<messageId, HTMLElement>
+  const messageElsRef = useRef(new Map());
 
-  // Auto scroll behavior
-  const { scrollToBottom, scrollToMessageId } = useLandingAutoScroll({
+  const { scrollToBottom } = useLandingAutoScroll({
     messages,
     isLoadingConversation,
     routeConversationId,
@@ -185,30 +210,27 @@ export default function LandingPage() {
     initialScrollMessageId,
   });
 
-  // Keep ref in sync with route
   useEffect(() => {
     const id = routeConversationId;
     conversationMetaRef.current.conversationId = id ? Number(id) : null;
   }, [routeConversationId]);
 
-  // Stream session binding (prevents chunks being rendered into the wrong convo)
   const activeStreamRef = useRef({
     requestId: null,
     startedRouteConversationId: routeConversationId
       ? Number(routeConversationId)
       : null,
-    resolvedConversationId: null, // set once we get x-conversation-id
+    resolvedConversationId: null,
   });
 
   const isViewingStreamConversation = useCallback(() => {
     const routeId = routeConversationId ? Number(routeConversationId) : null;
     const s = activeStreamRef.current;
 
-    // NEW CHAT ROUTE ("/")
-    // Always accept status/chunks for the active stream
-    if (!routeId) return true;
+    if (!routeId) {
+      return s.startedRouteConversationId == null;
+    }
 
-    // CONVERSATION ROUTE
     const targetId =
       typeof s.resolvedConversationId === "number" &&
       !Number.isNaN(s.resolvedConversationId)
@@ -217,6 +239,19 @@ export default function LandingPage() {
 
     return !!targetId && routeId === targetId;
   }, [routeConversationId]);
+
+  const streamConvoKey = useCallback(() => {
+    const s = activeStreamRef.current;
+    const resolved = s?.resolvedConversationId;
+    const started = s?.startedRouteConversationId;
+    const cid =
+      typeof resolved === "number" && Number.isFinite(resolved)
+        ? resolved
+        : typeof started === "number" && Number.isFinite(started)
+          ? started
+          : null;
+    return cid != null ? `conv:${cid}` : "root";
+  }, []);
 
   const emitStreamEvent = useCallback((type, detail) => {
     try {
@@ -228,11 +263,9 @@ export default function LandingPage() {
 
   const handleStatus = useCallback(
     (text) => {
-      console.log("[SSE status]", text);
-
       if (!text) return;
+      if (!isViewingStreamConversation()) return;
 
-      // Backend status is always relevant to the active stream UI
       hasBackendStatusRef.current = true;
       upsertStatus(text);
 
@@ -240,7 +273,7 @@ export default function LandingPage() {
         console.log("[messages tail]", messagesRef.current.slice(-3));
       }, 0);
     },
-    [upsertStatus],
+    [isViewingStreamConversation, upsertStatus],
   );
 
   const handleChunk = useCallback(
@@ -256,17 +289,19 @@ export default function LandingPage() {
   const handleDone = useCallback(() => {
     hasBackendStatusRef.current = false;
 
-    // ALWAYS stop animations / typing-mode for the current UI state
-    clearStatus();
-    finalizeStreamingAssistant();
+    // IMPORTANT: convo-based processing must be cleared using fresh closures
+    setProcessingForKey(streamConvoKey(), false);
 
-    // If we are no longer viewing the stream’s conversation, also cleanup leftovers
-    if (!isViewingStreamConversation()) {
+    const viewing = isViewingStreamConversation();
+
+    if (viewing) {
+      clearStatus();
+      finalizeStreamingAssistant();
+    } else {
       dropAllStreamingAssistants();
-      resetStreamRefs();
     }
 
-    setIsProcessing(false);
+    resetStreamRefs();
 
     const cid =
       activeStreamRef.current.resolvedConversationId ||
@@ -276,29 +311,32 @@ export default function LandingPage() {
     if (cid) emitStreamEvent("cap:stream-end", { conversationId: cid });
   }, [
     isViewingStreamConversation,
-    finalizeStreamingAssistant,
     clearStatus,
+    finalizeStreamingAssistant,
     dropAllStreamingAssistants,
     resetStreamRefs,
     emitStreamEvent,
+    setProcessingForKey,
+    streamConvoKey,
   ]);
 
   const handleError = useCallback(
     (err) => {
       hasBackendStatusRef.current = false;
 
-      const shouldMutate = isViewingStreamConversation();
+      setProcessingForKey(streamConvoKey(), false);
 
-      if (shouldMutate) {
+      const viewing = isViewingStreamConversation();
+
+      if (viewing) {
         clearStatus();
         const msg = err?.message || t("landing.unexpectedError");
         addMessage("error", msg);
       } else {
         dropAllStreamingAssistants();
-        resetStreamRefs();
       }
 
-      setIsProcessing(false);
+      resetStreamRefs();
 
       const cid =
         activeStreamRef.current.resolvedConversationId ||
@@ -315,6 +353,8 @@ export default function LandingPage() {
       dropAllStreamingAssistants,
       resetStreamRefs,
       emitStreamEvent,
+      setProcessingForKey,
+      streamConvoKey,
     ],
   );
 
@@ -354,6 +394,7 @@ export default function LandingPage() {
     (meta) => {
       if (!meta) return;
 
+      const rid = meta.requestId || null;
       const rawCid = meta.conversationId;
       const rawUserMsgId = meta.userMessageId;
 
@@ -365,21 +406,25 @@ export default function LandingPage() {
           ? rawUserMsgId
           : null;
 
-      // Nothing useful
       if (!cid && !userMessageId) return;
 
-      // Bind stream refs so status/chunks keep flowing correctly even on "/"
-      // (Important: resolvedConversationId can appear BEFORE we navigate to /conversations/:id)
+      if (
+        cid &&
+        (activeStreamRef.current.startedRouteConversationId == null ||
+          Number.isNaN(activeStreamRef.current.startedRouteConversationId))
+      ) {
+        migrateProcessingKey("root", `conv:${cid}`);
+      }
+
       activeStreamRef.current = {
         ...activeStreamRef.current,
+        requestId: rid || activeStreamRef.current.requestId,
         resolvedConversationId:
           cid || activeStreamRef.current.resolvedConversationId,
-        // Keep startedRouteConversationId intact if already set elsewhere
         startedRouteConversationId:
           activeStreamRef.current.startedRouteConversationId ?? null,
       };
 
-      // Bind conversationMetaRef too (used by done/navigation / other logic)
       conversationMetaRef.current = {
         ...conversationMetaRef.current,
         conversationId: cid || conversationMetaRef.current.conversationId,
@@ -387,13 +432,12 @@ export default function LandingPage() {
           userMessageId || conversationMetaRef.current.userMessageId,
       };
 
-      // Emit stream-start only once per stream
       if (cid && !activeStreamRef.current._streamStartEmitted) {
         activeStreamRef.current._streamStartEmitted = true;
         emitStreamEvent("cap:stream-start", { conversationId: cid });
       }
     },
-    [emitStreamEvent],
+    [emitStreamEvent, migrateProcessingKey],
   );
 
   const isDev = import.meta.env.DEV === true;
@@ -409,7 +453,6 @@ export default function LandingPage() {
     onError: handleError,
     onMetadata: handleOnMetadata,
     acceptBareStatusLines: isDev && isDemoEndpoint,
-
     onDone: () => {
       handleDone();
 
@@ -473,11 +516,9 @@ export default function LandingPage() {
     addMessage("user", trimmed);
     setQuery("");
     setCharCount(0);
-    setIsProcessing(true);
 
     ensureStreamingAssistant();
 
-    // Fallback only; backend status will replace it as soon as the first status arrives
     if (
       !hasBackendStatusRef.current &&
       !activeStreamRef.current._fallbackStatusWritten
@@ -509,6 +550,16 @@ export default function LandingPage() {
       resolvedConversationId: null,
     };
 
+    bindStreamScope({
+      requestId,
+      conversationId: routeConversationId ? Number(routeConversationId) : null,
+    });
+
+    const startedKey = routeConversationId
+      ? `conv:${Number(routeConversationId)}`
+      : "root";
+    setProcessingForKey(startedKey, true, { requestId });
+
     start({
       url: NL_ENDPOINT,
       method: "POST",
@@ -519,16 +570,23 @@ export default function LandingPage() {
       body,
     });
   }, [
+    readOnly,
+    showToast,
+    t,
     query,
     isProcessing,
     isSyncBlocked,
-    addMessage,
-    upsertStatus,
     resetStreamRefs,
+    addMessage,
+    ensureStreamingAssistant,
+    upsertStatus,
+    bindStreamScope,
     start,
     NL_ENDPOINT,
     routeConversationId,
-    t,
+    isDev,
+    isDemoEndpoint,
+    setProcessingForKey,
   ]);
 
   useEffect(() => () => stop(), [stop]);
@@ -686,6 +744,7 @@ export default function LandingPage() {
           </div>
           <div ref={messagesEndRef} />
         </div>
+
         <ShareModal
           show={shareOpen}
           onHide={() => setShareOpen(false)}

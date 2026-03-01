@@ -151,7 +151,7 @@ export default function NavigationSidebar({
     window.dispatchEvent(
       new CustomEvent("cap:stream-state", {
         detail: { conversationId: cid ?? null },
-      })
+      }),
     );
   };
 
@@ -206,7 +206,7 @@ export default function NavigationSidebar({
       pageWrap.classList.remove(
         "has-static-sidebar",
         "sidebar-expanded",
-        "sidebar-collapsed"
+        "sidebar-collapsed",
       );
     };
   }, [collapsed]);
@@ -246,7 +246,7 @@ export default function NavigationSidebar({
 
   const safeConvos = useMemo(
     () => (Array.isArray(conversations) ? conversations : []),
-    [conversations]
+    [conversations],
   );
 
   // Whenever conversations change, ensure the "done" flag is sane:
@@ -322,7 +322,7 @@ export default function NavigationSidebar({
   const doDelete = async (c) => {
     setMenuOpenId(null);
     const ok = window.confirm(
-      t("nav.confirmDeleteConversation", "Delete this conversation?")
+      t("nav.confirmDeleteConversation", "Delete this conversation?"),
     );
     if (!ok) return;
 
@@ -528,7 +528,7 @@ export default function NavigationSidebar({
                           onClick={(e) => {
                             e.stopPropagation();
                             setMenuOpenId((prev) =>
-                              prev === c.id ? null : c.id
+                              prev === c.id ? null : c.id,
                             );
                           }}
                         >
