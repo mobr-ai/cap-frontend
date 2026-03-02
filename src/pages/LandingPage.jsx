@@ -268,10 +268,6 @@ export default function LandingPage() {
 
       hasBackendStatusRef.current = true;
       upsertStatus(text);
-
-      setTimeout(() => {
-        console.log("[messages tail]", messagesRef.current.slice(-3));
-      }, 0);
     },
     [isViewingStreamConversation, upsertStatus],
   );

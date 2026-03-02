@@ -571,5 +571,11 @@
     "cancel": "Cancelar",
     "save": "Salvar",
     "back": "Voltar"
+  },
+  "errors": {
+    "storageRequired": {
+      "title": "Armazenamento bloqueado",
+      "body": "O CAP precisa de armazenamento do navegador (cookies/local storage) para manter seu login. Ative o armazenamento para este site, desative o modo de privacidade estrito ou libere espaço e recarregue a página."
+    }
   }
 }
