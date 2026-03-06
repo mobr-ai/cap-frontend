@@ -7,8 +7,6 @@ import {
   faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
 
-import "@/styles/AdminPage.css";
-
 export function WaitlistDirectory({
   t,
   items = [],
@@ -41,7 +39,7 @@ export function WaitlistDirectory({
     if (!deleteWaitlistEntry) return;
 
     const confirmed = window.confirm(
-      t("admin.confirmDeleteWaitlist", { email })
+      t("admin.confirmDeleteWaitlist", { email }),
     );
     if (!confirmed) return;
 
