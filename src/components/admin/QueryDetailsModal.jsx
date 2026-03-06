@@ -263,7 +263,7 @@ export default function QueryDetailsModal({
             </button>
           </div>
 
-          <div className="uq-tabpanel uq-tight-scroll">
+          <div className="uq-tabpanel">
             {error ? (
               <pre className="uq-modal-error uq-tight-scroll">
                 <code>{error}</code>

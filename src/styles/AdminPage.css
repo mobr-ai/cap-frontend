@@ -681,7 +681,58 @@
 }
 
 /* =========================================================
-   QueryDetailsModal viewport safety + long error handling
+   Global Admin Scrollbar Style (match Artifacts.css)
+   ========================================================= */
+
+/* Apply to all admin scroll containers */
+.AdminPage .admin-table-wrapper,
+.AdminPage .admin-tabs-scroller,
+.AdminPage .admin-section--table,
+.AdminPage .admin-stat-grid,
+.AdminPage .admin-notify-card,
+.AdminPage .admin-table-wrapper * {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+}
+
+/* WebKit */
+.AdminPage .admin-table-wrapper::-webkit-scrollbar,
+.AdminPage .admin-tabs-scroller::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.AdminPage .admin-table-wrapper::-webkit-scrollbar-track,
+.AdminPage .admin-tabs-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Floating thumb */
+.AdminPage .admin-table-wrapper::-webkit-scrollbar-thumb,
+.AdminPage .admin-tabs-scroller::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  opacity: 0;
+  transition:
+    background-color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+/* Reveal on hover */
+.AdminPage .admin-table-wrapper:hover::-webkit-scrollbar-thumb,
+.AdminPage .admin-tabs-scroller:hover::-webkit-scrollbar-thumb {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.45);
+}
+
+/* Active drag */
+.AdminPage .admin-table-wrapper::-webkit-scrollbar-thumb:active,
+.AdminPage .admin-tabs-scroller::-webkit-scrollbar-thumb:active {
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+/* =========================================================
+   QueryDetailsModal
    ========================================================= */
 
 .uq-modal-backdrop {
@@ -695,20 +746,19 @@
   background: rgba(2, 6, 23, 0.72);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  overflow: hidden;
 }
 
 .uq-modal {
   width: min(920px, 100%);
   max-width: 100%;
-  max-height: min(92vh, 100dvh - 2rem);
+  max-height: min(92vh, calc(100dvh - 2rem));
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  color: #e5e7eb;
   background: linear-gradient(135deg, #020617, #0b1220);
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 0.75rem;
-  color: #e5e7eb;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
 }
 
@@ -724,9 +774,9 @@
 
 .uq-modal-header h3 {
   margin: 0;
+  min-width: 0;
   font-size: 1rem;
   font-weight: 600;
-  min-width: 0;
 }
 
 .uq-modal-close {
@@ -745,9 +795,7 @@
   color: #fff;
 }
 
-/* Let inner areas shrink inside flex modal */
 .uq-tabcard,
-.uq-tabpanel,
 .uq-modal-grid {
   min-height: 0;
 }
@@ -765,19 +813,12 @@
 }
 
 .uq-tabpanel {
-  overflow: auto;
-  max-height: 34vh;
+  padding: 0.75rem 0.75rem 0.25rem;
+  overflow: visible;
+  max-height: none;
 }
 
-.uq-modal-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.65rem 1rem;
-  padding: 0.9rem 0.2rem 0 0.2rem;
-  overflow: auto;
-}
-
-.uq-modal-grid > div {
+.uq-modal-section {
   min-width: 0;
 }
 
@@ -791,13 +832,29 @@
   letter-spacing: 0.04em;
 }
 
+.uq-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+  padding: 0.9rem 0.2rem 0;
+  overflow: auto;
+  max-height: 30vh;
+}
+
+.uq-modal-grid > div {
+  min-width: 0;
+}
+
 .uq-modal-query,
 .uq-modal-code,
 .uq-modal-error {
+  display: block;
   margin: 0;
   width: 100%;
   max-width: 100%;
-  overflow: auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
@@ -812,6 +869,16 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.uq-modal-query {
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.uq-modal-code {
+  font-size: 0.83rem;
+  line-height: 1.45;
+}
+
 .uq-modal-error {
   max-height: min(24vh, 240px);
   padding: 0.85rem 0.9rem;
@@ -823,14 +890,64 @@
   line-height: 1.45;
 }
 
-.uq-modal-error code,
-.uq-modal-code code {
+.uq-modal-code code,
+.uq-modal-error code {
   white-space: inherit;
   word-break: inherit;
   overflow-wrap: inherit;
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     "Courier New", monospace;
+}
+
+.uq-modal-query.uq-tight-scroll,
+.uq-modal-code.uq-tight-scroll,
+.uq-modal-error.uq-tight-scroll,
+.uq-modal-grid.uq-tight-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+}
+
+.uq-modal-query.uq-tight-scroll::-webkit-scrollbar,
+.uq-modal-code.uq-tight-scroll::-webkit-scrollbar,
+.uq-modal-error.uq-tight-scroll::-webkit-scrollbar,
+.uq-modal-grid.uq-tight-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.uq-modal-query.uq-tight-scroll::-webkit-scrollbar-track,
+.uq-modal-code.uq-tight-scroll::-webkit-scrollbar-track,
+.uq-modal-error.uq-tight-scroll::-webkit-scrollbar-track,
+.uq-modal-grid.uq-tight-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.uq-modal-query.uq-tight-scroll::-webkit-scrollbar-thumb,
+.uq-modal-code.uq-tight-scroll::-webkit-scrollbar-thumb,
+.uq-modal-error.uq-tight-scroll::-webkit-scrollbar-thumb,
+.uq-modal-grid.uq-tight-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  opacity: 0;
+  transition:
+    background-color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.uq-modal-query.uq-tight-scroll:hover::-webkit-scrollbar-thumb,
+.uq-modal-code.uq-tight-scroll:hover::-webkit-scrollbar-thumb,
+.uq-modal-error.uq-tight-scroll:hover::-webkit-scrollbar-thumb,
+.uq-modal-grid.uq-tight-scroll:hover::-webkit-scrollbar-thumb {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.45);
+}
+
+.uq-modal-query.uq-tight-scroll::-webkit-scrollbar-thumb:active,
+.uq-modal-code.uq-tight-scroll::-webkit-scrollbar-thumb:active,
+.uq-modal-error.uq-tight-scroll::-webkit-scrollbar-thumb:active,
+.uq-modal-grid.uq-tight-scroll::-webkit-scrollbar-thumb:active {
+  background-color: rgba(255, 255, 255, 0.6);
 }
 
 @media (max-width: 768px) {
@@ -861,10 +978,6 @@
     gap: 0.55rem;
   }
 
-  .uq-tabpanel {
-    max-height: 28vh;
-  }
-
   .uq-modal-query,
   .uq-modal-code {
     max-height: 28vh;
@@ -874,150 +987,4 @@
     max-height: 22vh;
     font-size: 0.8rem;
   }
-}
-
-.uq-tabpanel,
-.uq-modal-query,
-.uq-modal-code,
-.uq-modal-error,
-.uq-modal-grid {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
-}
-
-.uq-modal-query,
-.uq-modal-code,
-.uq-modal-error,
-.uq-modal-grid {
-  min-height: 0;
-  max-width: 100%;
-}
-
-/* make the query/code/error blocks true inner scroll containers */
-.uq-modal-query,
-.uq-modal-code,
-.uq-modal-error {
-  display: block;
-  overflow-y: auto;
-  overflow-x: hidden;
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-/* query/code sizing */
-.uq-modal-query,
-.uq-modal-code {
-  max-height: 32vh;
-}
-
-/* metadata block should also scroll with same thumb style */
-.uq-modal-grid {
-  overflow: auto;
-  max-height: 28vh;
-}
-
-/* shared tight scrollbar look */
-.uq-modal-query::-webkit-scrollbar,
-.uq-modal-code::-webkit-scrollbar,
-.uq-modal-error::-webkit-scrollbar,
-.uq-modal-grid::-webkit-scrollbar,
-.uq-tabpanel::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.uq-modal-query::-webkit-scrollbar-track,
-.uq-modal-code::-webkit-scrollbar-track,
-.uq-modal-error::-webkit-scrollbar-track,
-.uq-modal-grid::-webkit-scrollbar-track,
-.uq-tabpanel::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.uq-modal-query::-webkit-scrollbar-thumb,
-.uq-modal-code::-webkit-scrollbar-thumb,
-.uq-modal-error::-webkit-scrollbar-thumb,
-.uq-modal-grid::-webkit-scrollbar-thumb,
-.uq-tabpanel::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.25);
-  border-radius: 999px;
-  opacity: 0;
-  transition:
-    background-color 0.2s ease,
-    opacity 0.2s ease;
-}
-
-.uq-modal-query:hover::-webkit-scrollbar-thumb,
-.uq-modal-code:hover::-webkit-scrollbar-thumb,
-.uq-modal-error:hover::-webkit-scrollbar-thumb,
-.uq-modal-grid:hover::-webkit-scrollbar-thumb,
-.uq-tabpanel:hover::-webkit-scrollbar-thumb {
-  opacity: 1;
-  background-color: rgba(255, 255, 255, 0.45);
-}
-
-.uq-modal-query::-webkit-scrollbar-thumb:active,
-.uq-modal-code::-webkit-scrollbar-thumb:active,
-.uq-modal-error::-webkit-scrollbar-thumb:active,
-.uq-modal-grid::-webkit-scrollbar-thumb:active,
-.uq-tabpanel::-webkit-scrollbar-thumb:active {
-  background-color: rgba(255, 255, 255, 0.6);
-}
-
-/* =========================================================
-   Global Admin Scrollbar Style (match Artifacts.css)
-   ========================================================= */
-
-/* Apply to all admin scroll containers */
-.AdminPage .admin-table-wrapper,
-.AdminPage .admin-tabs-scroller,
-.AdminPage .admin-section--table,
-.AdminPage .admin-stat-grid,
-.AdminPage .uq-tabpanel,
-.AdminPage .admin-notify-card,
-.AdminPage .admin-table-wrapper * {
-  scrollbar-width: thin; /* Firefox */
-  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
-}
-
-/* WebKit */
-.AdminPage .admin-table-wrapper::-webkit-scrollbar,
-.AdminPage .admin-tabs-scroller::-webkit-scrollbar,
-.AdminPage .uq-tabpanel::-webkit-scrollbar {
-  height: 6px;
-  width: 6px;
-}
-
-.AdminPage .admin-table-wrapper::-webkit-scrollbar-track,
-.AdminPage .admin-tabs-scroller::-webkit-scrollbar-track,
-.AdminPage .uq-tabpanel::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* Floating thumb */
-.AdminPage .admin-table-wrapper::-webkit-scrollbar-thumb,
-.AdminPage .admin-tabs-scroller::-webkit-scrollbar-thumb,
-.AdminPage .uq-tabpanel::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.25);
-  border-radius: 999px;
-  opacity: 0;
-  transition:
-    background-color 0.2s ease,
-    opacity 0.2s ease;
-}
-
-/* Reveal on hover */
-.AdminPage .admin-table-wrapper:hover::-webkit-scrollbar-thumb,
-.AdminPage .admin-tabs-scroller:hover::-webkit-scrollbar-thumb,
-.AdminPage .uq-tabpanel:hover::-webkit-scrollbar-thumb {
-  opacity: 1;
-  background-color: rgba(255, 255, 255, 0.45);
-}
-
-/* Active drag */
-.AdminPage .admin-table-wrapper::-webkit-scrollbar-thumb:active,
-.AdminPage .admin-tabs-scroller::-webkit-scrollbar-thumb:active,
-.AdminPage .uq-tabpanel::-webkit-scrollbar-thumb:active {
-  background-color: rgba(255, 255, 255, 0.6);
 }
