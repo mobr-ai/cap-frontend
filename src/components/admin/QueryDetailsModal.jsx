@@ -96,7 +96,6 @@ export default function QueryDetailsModal({
   const sparql = useMemo(() => normalizeSparql(data?.sparql_query), [data]);
   const canOpenConversation = !!data?.conversation_id;
 
-  // Copy behavior: copies active tab (NL or SPARQL), with dynamic tooltip + "Copied" feedback.
   const [copied, setCopied] = useState(false);
   const copyResetTimerRef = useRef(null);
 
@@ -183,6 +182,20 @@ export default function QueryDetailsModal({
     }, 140);
   }, [onClose]);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        requestClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [requestClose]);
+
   return (
     <div
       className={`uq-modal-backdrop ${isClosing ? "uq-modal-backdrop--closing" : ""}`}
@@ -196,14 +209,13 @@ export default function QueryDetailsModal({
           <h3>{t("admin.queryDetails.title")}</h3>
           <button
             className="uq-modal-close"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label={t("common.close")}
           >
             ×
           </button>
         </header>
 
-        {/* Tab Card (tabs + panel) */}
         <div className="uq-tabcard">
           <div className="uq-tabbar">
             <button
@@ -251,8 +263,12 @@ export default function QueryDetailsModal({
             </button>
           </div>
 
-          <div className="uq-tabpanel">
-            {error ? <div className="uq-modal-error">{error}</div> : null}
+          <div className="uq-tabpanel uq-tight-scroll">
+            {error ? (
+              <pre className="uq-modal-error uq-tight-scroll">
+                <code>{error}</code>
+              </pre>
+            ) : null}
 
             {loading ? (
               <div
@@ -373,9 +389,12 @@ export default function QueryDetailsModal({
         )}
 
         {!loading && data?.error_message ? (
-          <div className="uq-modal-error" style={{ marginTop: "0.75rem" }}>
-            {data.error_message}
-          </div>
+          <pre
+            className="uq-modal-error uq-tight-scroll"
+            style={{ marginTop: "0.75rem" }}
+          >
+            <code>{data.error_message}</code>
+          </pre>
         ) : null}
       </div>
     </div>
