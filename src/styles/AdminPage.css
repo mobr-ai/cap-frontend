@@ -876,6 +876,95 @@
   }
 }
 
+.uq-tabpanel,
+.uq-modal-query,
+.uq-modal-code,
+.uq-modal-error,
+.uq-modal-grid {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+}
+
+.uq-modal-query,
+.uq-modal-code,
+.uq-modal-error,
+.uq-modal-grid {
+  min-height: 0;
+  max-width: 100%;
+}
+
+/* make the query/code/error blocks true inner scroll containers */
+.uq-modal-query,
+.uq-modal-code,
+.uq-modal-error {
+  display: block;
+  overflow-y: auto;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* query/code sizing */
+.uq-modal-query,
+.uq-modal-code {
+  max-height: 32vh;
+}
+
+/* metadata block should also scroll with same thumb style */
+.uq-modal-grid {
+  overflow: auto;
+  max-height: 28vh;
+}
+
+/* shared tight scrollbar look */
+.uq-modal-query::-webkit-scrollbar,
+.uq-modal-code::-webkit-scrollbar,
+.uq-modal-error::-webkit-scrollbar,
+.uq-modal-grid::-webkit-scrollbar,
+.uq-tabpanel::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.uq-modal-query::-webkit-scrollbar-track,
+.uq-modal-code::-webkit-scrollbar-track,
+.uq-modal-error::-webkit-scrollbar-track,
+.uq-modal-grid::-webkit-scrollbar-track,
+.uq-tabpanel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.uq-modal-query::-webkit-scrollbar-thumb,
+.uq-modal-code::-webkit-scrollbar-thumb,
+.uq-modal-error::-webkit-scrollbar-thumb,
+.uq-modal-grid::-webkit-scrollbar-thumb,
+.uq-tabpanel::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  opacity: 0;
+  transition:
+    background-color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.uq-modal-query:hover::-webkit-scrollbar-thumb,
+.uq-modal-code:hover::-webkit-scrollbar-thumb,
+.uq-modal-error:hover::-webkit-scrollbar-thumb,
+.uq-modal-grid:hover::-webkit-scrollbar-thumb,
+.uq-tabpanel:hover::-webkit-scrollbar-thumb {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.45);
+}
+
+.uq-modal-query::-webkit-scrollbar-thumb:active,
+.uq-modal-code::-webkit-scrollbar-thumb:active,
+.uq-modal-error::-webkit-scrollbar-thumb:active,
+.uq-modal-grid::-webkit-scrollbar-thumb:active,
+.uq-tabpanel::-webkit-scrollbar-thumb:active {
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
 /* =========================================================
    Global Admin Scrollbar Style (match Artifacts.css)
    ========================================================= */

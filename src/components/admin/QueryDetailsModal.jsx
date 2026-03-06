@@ -300,7 +300,7 @@ export default function QueryDetailsModal({
         </div>
 
         {!loading && (
-          <section className="uq-modal-grid">
+          <section className="uq-modal-grid uq-tight-scroll">
             <div>
               <strong>ID</strong> #{data?.id}
             </div>
