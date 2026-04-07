@@ -19,6 +19,15 @@ export function useLLMStream({
   const abortRef = useRef(null);
   const stripTrailingDataPrefix = (s) => s.replace(/data\s*:\s*$/i, "");
 
+  const makeRequestId = () => {
+    try {
+      // Modern browsers
+      if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+    } catch {}
+    // Fallback: stable-enough for client routing
+    return `req_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  };
+
   const start = useCallback(
     async ({
       url = VITE_NL_ENDPOINT,
@@ -34,7 +43,17 @@ export function useLLMStream({
         body?.conversation_id ?? body?.conversationId ?? null;
       const isNewConversation = !requestedConversationId;
 
-      const streamMeta = { conversationId: null, userMessageId: null };
+      const requestId = body?.request_id ?? body?.requestId ?? makeRequestId();
+
+      const streamMeta = {
+        requestId,
+        requestedConversationId: requestedConversationId
+          ? Number(requestedConversationId)
+          : null,
+        conversationId: null,
+        userMessageId: null,
+      };
+
       let createdEventEmitted = false;
 
       if (abortRef.current) abortRef.current.abort();
@@ -67,6 +86,7 @@ export function useLLMStream({
                 last_message_preview: null,
                 _justCreated: true,
                 _localUpdatedAt: Date.now(),
+                requestId,
               },
             },
           }),
@@ -85,6 +105,7 @@ export function useLLMStream({
                 updated_at: new Date().toISOString(),
                 _localUpdatedAt: Date.now(),
                 title: makeTitleCandidate(),
+                requestId,
               },
             },
           }),
@@ -160,7 +181,11 @@ export function useLLMStream({
       try {
         const response = await fetcher(url, {
           method,
-          headers: { "Content-Type": "application/json", ...headers },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Client-Request-Id": requestId,
+            ...headers,
+          },
           body: body ? JSON.stringify(body) : undefined,
           signal: controller.signal,
         });
@@ -169,7 +194,7 @@ export function useLLMStream({
           const err = new Error(
             `Streaming request failed: ${response.status} ${response.statusText}`,
           );
-          onError?.(err);
+          onError?.(err, { ...streamMeta });
           return;
         }
 
@@ -242,7 +267,7 @@ export function useLLMStream({
               } catch {}
             }
             console.error("useLLMStream: failed to parse kv_results", err, s);
-            onError?.(err);
+            onError?.(err, { ...streamMeta });
           }
         };
 

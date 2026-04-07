@@ -570,5 +570,11 @@
     "cancel": "Cancel",
     "save": "Save",
     "back": "Back"
+  },
+  "errors": {
+    "storageRequired": {
+      "title": "Storage is blocked",
+      "body": "CAP needs browser storage (cookies/local storage) to keep you signed in. Please enable storage for this site, disable strict privacy mode, or free up storage space, then reload."
+    }
   }
 }

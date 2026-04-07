@@ -1,5 +1,11 @@
 // src/index.jsx
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Image from "react-bootstrap/Image";
 import { createRoot } from "react-dom/client";
 import {
@@ -39,19 +45,55 @@ import useSyncStatus from "./hooks/useSyncStatus";
 // Components
 import Header from "./components/Header";
 
-function getInitialSession() {
+const SESSION_KEY = "cap_user_session";
+
+function canUseLocalStorage() {
   try {
-    const raw = localStorage.getItem("cap_user_session");
+    if (typeof window === "undefined" || !window.localStorage) return false;
+    const k = "__cap_ls_test__";
+    window.localStorage.setItem(k, "1");
+    window.localStorage.removeItem(k);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function safeGetSession() {
+  try {
+    const raw = window.localStorage.getItem(SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
+function safeSetSession(value) {
+  try {
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function safeRemoveSession() {
+  try {
+    window.localStorage.removeItem(SESSION_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getInitialSession() {
+  if (!canUseLocalStorage()) return null;
+  return safeGetSession();
+}
+
 function getInitialLoading() {
   try {
-    const raw = localStorage.getItem("cap_user_session");
-    const sess = raw ? JSON.parse(raw) : null;
+    const sess = canUseLocalStorage() ? safeGetSession() : null;
     const path = window.location.pathname;
     if (!sess) return false;
     // Start with loader ON for dashboard (and optionally landing)
@@ -74,6 +116,9 @@ function Layout() {
 
   const [sidebarIsOpen, setSidebarOpen] = useState(false);
 
+  const storageWorksRef = useRef(canUseLocalStorage());
+  const storageWarnedRef = useRef(false);
+
   // --- Toasts ---------------------------------------------------------------
   const [toast, setToast] = useState({
     show: false,
@@ -94,27 +139,71 @@ function Layout() {
     [],
   );
 
+  const warnStorageOnce = useCallback(() => {
+    if (storageWarnedRef.current) return;
+    storageWarnedRef.current = true;
+
+    showToast(
+      `${t("errors.storageRequired.title")}\n${t("errors.storageRequired.body")}`,
+      "danger",
+    );
+  }, [showToast, t]);
+
+  const persistSessionOrWarn = useCallback(
+    (value) => {
+      // If we already know storage doesn't work, warn once and stop trying.
+      if (!storageWorksRef.current) {
+        warnStorageOnce();
+        return false;
+      }
+
+      const ok = safeSetSession(value);
+      if (!ok) {
+        storageWorksRef.current = false;
+        warnStorageOnce();
+      }
+      return ok;
+    },
+    [warnStorageOnce],
+  );
+
+  const clearSessionOrWarn = useCallback(() => {
+    if (!storageWorksRef.current) {
+      warnStorageOnce();
+      return false;
+    }
+
+    const ok = safeRemoveSession();
+    if (!ok) {
+      storageWorksRef.current = false;
+      warnStorageOnce();
+    }
+    return ok;
+  }, [warnStorageOnce]);
+
   // --- Auth & Session -------------------------------------------------------
   const handleLogin = useCallback(
     (userObj) => {
-      try {
-        localStorage.setItem("cap_user_session", JSON.stringify(userObj));
-        setSession(userObj);
-      } catch {}
+      // Always set state, even if persistence fails.
+      setSession(userObj);
+
+      // Best-effort persistence + user feedback if it fails.
+      persistSessionOrWarn(userObj);
+
       const from = (location.state && location.state.from) || "/";
       navigate(from, { replace: true });
     },
-    [location.state, navigate],
+    [location.state, navigate, persistSessionOrWarn],
   );
 
   const handleLogout = useCallback(() => {
-    try {
-      localStorage.removeItem("cap_user_session");
-    } catch {}
+    // Best-effort clear + warning if blocked.
+    clearSessionOrWarn();
+
     setSession(null);
     setSidebarOpen(false);
     navigate("/login", { replace: true });
-  }, [navigate]);
+  }, [navigate, clearSessionOrWarn]);
 
   // --- Authenticated fetch wrapper -----------------------------------------
   const { authFetch } = useAuthRequest({ session, showToast, handleLogout });
@@ -123,15 +212,22 @@ function Layout() {
   const { healthOnline, capBlock, cardanoBlock, syncStatus, syncPct, syncLag } =
     useSyncStatus(session ? authFetch : null);
 
-  const setUser = useCallback((next) => {
-    setSession((prev) => {
-      const resolved = typeof next === "function" ? next(prev) : next;
-      try {
-        localStorage.setItem("cap_user_session", JSON.stringify(resolved));
-      } catch {}
-      return resolved;
-    });
-  }, []);
+  const setUser = useCallback(
+    (next) => {
+      setSession((prev) => {
+        const resolved = typeof next === "function" ? next(prev) : next;
+
+        // Only attempt to persist if there's a session object; still ok to persist null.
+        const ok = persistSessionOrWarn(resolved);
+        if (!ok) {
+          // Keep state updated in-memory regardless.
+        }
+
+        return resolved;
+      });
+    },
+    [persistSessionOrWarn],
+  );
 
   const outletContext = useMemo(
     () => ({
@@ -155,6 +251,7 @@ function Layout() {
       showToast,
       handleLogout,
       handleLogin,
+      setUser,
       loading,
       healthOnline,
       capBlock,
@@ -187,6 +284,11 @@ function Layout() {
       navigate("/", { replace: true });
     }
   }, [session, location.pathname, navigate]);
+
+  // Optional: if storage is blocked, warn once early (helps users understand “won’t stay logged in after refresh”)
+  useEffect(() => {
+    if (!storageWorksRef.current) warnStorageOnce();
+  }, [warnStorageOnce]);
 
   return (
     <div id="outer-container">
@@ -223,7 +325,7 @@ function Layout() {
             bg={toast.variant}
             onClose={() => setToast((prev) => ({ ...prev, show: false }))}
             show={toast.show}
-            delay={5000}
+            delay={6000}
             autohide
             onClick={toast.onClick || undefined}
             style={{ cursor: toast.onClick ? "pointer" : "default" }}

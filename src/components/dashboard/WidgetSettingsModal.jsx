@@ -164,7 +164,7 @@ export default function WidgetSettingsModal({
         if (immediate) setSaving(false);
       }
     },
-    [item, saving, onSave, t]
+    [item, saving, onSave, t],
   );
 
   const readInitial = React.useCallback(() => {
@@ -190,30 +190,43 @@ export default function WidgetSettingsModal({
   const titleInputRef = React.useRef(null);
   const [draft, setDraft] = React.useState(readInitial);
 
-  React.useEffect(() => {
-    if (!show) return;
-    setErrorMsg("");
-    setDraft(readInitial());
+  const prevShowRef = React.useRef(false);
+  const prevItemIdRef = React.useRef(null);
 
-    requestAnimationFrame(() => {
-      const el = titleInputRef.current;
-      if (!el) return;
-      try {
-        el.setSelectionRange(0, 0);
-        el.scrollLeft = 0;
-        setTimeout(() => {
-          try {
-            el.setSelectionRange(0, 0);
-            el.scrollLeft = 0;
-          } catch {
-            // ignore
-          }
-        }, 0);
-      } catch {
-        // ignore
-      }
-    });
-  }, [show, readInitial]);
+  React.useEffect(() => {
+    if (!show) {
+      prevShowRef.current = false;
+      prevItemIdRef.current = null;
+      return;
+    }
+
+    const currentId = item?.id ?? null;
+    const justOpened = !prevShowRef.current;
+    const switchedItem = prevItemIdRef.current !== currentId;
+
+    // Only reset local draft when the modal is opened (or the user switched items),
+    // not on every upstream item update caused by autosave.
+    if (justOpened || switchedItem) {
+      setErrorMsg("");
+      setDraft(readInitial());
+
+      requestAnimationFrame(() => {
+        const el = titleInputRef.current;
+        if (!el) return;
+        // optional: put caret at end on open
+        try {
+          const end = el.value?.length ?? 0;
+          el.setSelectionRange(end, end);
+          el.scrollLeft = el.scrollWidth;
+        } catch {
+          // ignore
+        }
+      });
+    }
+
+    prevShowRef.current = true;
+    prevItemIdRef.current = currentId;
+  }, [show, item?.id, readInitial]);
 
   const update = (patch, { flush = false } = {}) => {
     setErrorMsg("");
@@ -340,18 +353,18 @@ export default function WidgetSettingsModal({
   const moveUpTip = !canManualReorder
     ? t("dashboard.settings.moveDisabledManualOnly")
     : !hasVisual
-    ? t("dashboard.settings.positionUnknown")
-    : posMinVisual <= 1
-    ? t("dashboard.settings.moveUpDisabled")
-    : null;
+      ? t("dashboard.settings.positionUnknown")
+      : posMinVisual <= 1
+        ? t("dashboard.settings.moveUpDisabled")
+        : null;
 
   const moveDownTip = !canManualReorder
     ? t("dashboard.settings.moveDisabledManualOnly")
     : !hasVisual
-    ? t("dashboard.settings.positionUnknown")
-    : posMinVisual >= posMaxVisual
-    ? t("dashboard.settings.moveDownDisabled")
-    : null;
+      ? t("dashboard.settings.positionUnknown")
+      : posMinVisual >= posMaxVisual
+        ? t("dashboard.settings.moveDownDisabled")
+        : null;
 
   return (
     <Modal
@@ -500,12 +513,12 @@ export default function WidgetSettingsModal({
                       if (opt.key === null) {
                         update(
                           { color: null, category: null },
-                          { flush: true }
+                          { flush: true },
                         );
                       } else {
                         update(
                           { color: opt.key, category: null },
-                          { flush: true }
+                          { flush: true },
                         );
                       }
                     }}
@@ -550,7 +563,7 @@ export default function WidgetSettingsModal({
                       onClick={() =>
                         update(
                           { category: opt.key, color: null },
-                          { flush: true }
+                          { flush: true },
                         )
                       }
                       disabled={saving}
