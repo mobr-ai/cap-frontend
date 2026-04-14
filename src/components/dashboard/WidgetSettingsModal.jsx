@@ -90,9 +90,9 @@ export default function WidgetSettingsModal({
 
     // Pull current snapshot
     const initial =
-      Array.isArray(window.__capDashboardVisualOrder) &&
-      window.__capDashboardVisualOrder.length > 0
-        ? window.__capDashboardVisualOrder
+      Array.isArray(window.__appDashboardVisualOrder) &&
+      window.__appDashboardVisualOrder.length > 0
+        ? window.__appDashboardVisualOrder
         : [];
 
     setVisualOrder(initial);
@@ -103,9 +103,9 @@ export default function WidgetSettingsModal({
       setVisualOrder(next);
     };
 
-    window.addEventListener("cap:dashboard-visual-order", onVisualOrder);
+    window.addEventListener("app:dashboard-visual-order", onVisualOrder);
     return () => {
-      window.removeEventListener("cap:dashboard-visual-order", onVisualOrder);
+      window.removeEventListener("app:dashboard-visual-order", onVisualOrder);
     };
   }, [show]);
 

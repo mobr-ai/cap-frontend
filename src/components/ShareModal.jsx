@@ -36,7 +36,7 @@ function dataUrlToBlob(dataUrl) {
 }
 
 function safeFilename(name) {
-  return String(name || "cap-widget")
+  return String(name || "app-widget")
     .toLowerCase()
     .replace(/[^a-z0-9-_]+/g, "-")
     .replace(/-+/g, "-")
@@ -99,7 +99,7 @@ export default function ShareModal(props) {
       try {
         const blob = imageDataUrl ? dataUrlToBlob(imageDataUrl) : null;
         if (!blob) return false;
-        const file = new File([blob], "cap.png", { type: blob.type });
+        const file = new File([blob], "logo.png", { type: blob.type });
         return navigator.canShare({ files: [file] });
       } catch {
         return false;
@@ -107,7 +107,7 @@ export default function ShareModal(props) {
     })();
 
   const buildInviteLine = (title2) => {
-    const safeTitle = String(title2 || title || "CAP").trim();
+    const safeTitle = String(title2 || title || "SAP").trim();
 
     const i18nText = t("dashboard.shareInvite", {
       title: safeTitle,
@@ -179,7 +179,7 @@ export default function ShareModal(props) {
         type: blob.type,
       });
       await navigator.share({
-        title: title || "CAP",
+        title: title || "SAP",
         text: message || "",
         files: [file],
       });
@@ -230,12 +230,12 @@ export default function ShareModal(props) {
       const cleaned = String(title).trim().replace(/"/g, "'");
       header = `Explore insights from this analysis: "${cleaned}"`;
     } else {
-      header = `Explore insights from this analysis on CAP:`;
+      header = `Explore insights from this analysis on SAP:`;
     }
 
     const text = `${header}\n\n${shareUrl}\n\n${tags}`.trim();
     const intentUrl = `https://x.com/intent/post?text=${encodeURIComponent(
-      text
+      text,
     )}`;
 
     window.open(intentUrl, "_blank", "noopener,noreferrer");
@@ -253,7 +253,7 @@ export default function ShareModal(props) {
     hashtags,
     related: ["@mobrsys"],
     title: buildInviteLine(title),
-    subject: "CAP",
+    subject: "SAP",
     body: buildShareText(),
   };
 
@@ -351,7 +351,7 @@ export default function ShareModal(props) {
               <div className="ShareModal-panel ShareModal-panelPreview">
                 <div className="ShareModal-imageMode">
                   <div className="ShareModal-imagePreview">
-                    <img src={imageDataUrl} alt="CAP share preview" />
+                    <img src={imageDataUrl} alt="SAP share preview" />
                   </div>
 
                   <div className="ShareModal-imageActions">
@@ -401,7 +401,7 @@ export default function ShareModal(props) {
                           {t("dashboard.shareLinkReady")}
                           {uploadedExpiresAt
                             ? ` (${t("dashboard.shareLinkExpires")} ${new Date(
-                                uploadedExpiresAt
+                                uploadedExpiresAt,
                               ).toLocaleString()})`
                             : ""}
                         </span>

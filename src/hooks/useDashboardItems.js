@@ -3,7 +3,7 @@ import { getPoller } from "@/utils/poller";
 import { shallowEqualArray, setIfChanged } from "@/utils/arrays";
 
 const DISABLE_DASH =
-  String(import.meta.env.VITE_CAP_DISABLE_DASHBOARD_POLL ?? "false") === "true";
+  String(import.meta.env.VITE_APP_DISABLE_DASHBOARD_POLL ?? "false") === "true";
 
 function asTimeMs(v) {
   if (!v) return null;
@@ -102,7 +102,7 @@ export function useDashboardItems({
 
       // Include sort in poll key so switching sort doesn't reuse cached payload
       const pollKey = `dashboard-items:${dashId}:${String(
-        sortOrder || "position"
+        sortOrder || "position",
       )}`;
 
       const poller = getPoller(pollKey, {
@@ -143,7 +143,7 @@ export function useDashboardItems({
 
       itemsPollerRef.current = { unsub };
     },
-    [authFetch, stopItemsPoller, sortOrder]
+    [authFetch, stopItemsPoller, sortOrder],
   );
 
   // React to activeId changes
@@ -235,7 +235,7 @@ export function useDashboardItems({
     () => () => {
       stopItemsPoller();
     },
-    [stopItemsPoller]
+    [stopItemsPoller],
   );
 
   const activeName = useMemo(() => {

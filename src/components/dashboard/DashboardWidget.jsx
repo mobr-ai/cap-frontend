@@ -340,7 +340,7 @@ export default function DashboardWidget({
       onShare({
         title: item.title,
         imageDataUrl,
-        hashtags: ["CAP", "Cardano", "Analytics"],
+        hashtags: ["SAP", "Solana", "Analytics"],
         message: item.source_query ? item.source_query : "",
       });
     } catch (err) {
@@ -350,7 +350,7 @@ export default function DashboardWidget({
       onShare({
         title: item.title,
         imageDataUrl: null,
-        hashtags: ["CAP", "Cardano", "Analytics"],
+        hashtags: ["SAP", "Solana", "Analytics"],
         message: item.source_query ? item.source_query : "",
         error: "share_failed",
       });

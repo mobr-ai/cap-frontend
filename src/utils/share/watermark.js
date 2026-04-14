@@ -5,7 +5,7 @@ export const WATERMARK_PRESETS = {
 
   textBottomRight: {
     kind: "text",
-    text: "CAP",
+    text: "SAP",
     position: "bottom-right",
     opacity: 0.16,
     fontSize: 28,
@@ -119,7 +119,7 @@ export async function buildWatermarkOverlay(wm) {
 
   if (wm.kind === "text") {
     const txt = document.createElement("div");
-    txt.textContent = safeText(wm.text || "CAP");
+    txt.textContent = safeText(wm.text || "SAP");
     txt.style.fontFamily =
       "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
     txt.style.fontWeight = "800";
@@ -136,7 +136,7 @@ export async function buildWatermarkOverlay(wm) {
     );
 
     img.src = pngDataUrl || wm.src || "/icons/logo.svg";
-    img.alt = "CAP";
+    img.alt = "SAP";
     img.draggable = false;
 
     // requested attrs

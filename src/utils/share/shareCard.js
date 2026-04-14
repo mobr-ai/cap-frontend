@@ -13,7 +13,7 @@ export async function buildShareCardNode({
   watermark = WATERMARK_PRESETS.logoCenterBig,
 }) {
   const outer = document.createElement("div");
-  outer.setAttribute("data-cap-sharecard", "1");
+  outer.setAttribute("data-app-sharecard", "1");
 
   outer.style.display = "block";
   outer.style.width = "100%";

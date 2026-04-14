@@ -1,6 +1,6 @@
 /* src/styles/landing/TopQueries.css */
 
-.cap-root .empty-state {
+.app-root .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -14,7 +14,7 @@
   text-align: center;
 }
 
-.cap-root .empty-state-examples-title {
+.app-root .empty-state-examples-title {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -27,7 +27,7 @@
   text-align: left;
 }
 
-.cap-root .examples {
+.app-root .examples {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
@@ -36,7 +36,7 @@
   margin: 1rem;
 }
 
-.cap-root .example-chip {
+.app-root .example-chip {
   padding: 0.5rem 1rem;
 
   background: var(--surface-light);
@@ -62,28 +62,28 @@
   min-width: 0;
 }
 
-.cap-root .example-chip:hover:not(.disabled) {
+.app-root .example-chip:hover:not(.disabled) {
   background: var(--surface);
   border-color: var(--primary);
   color: var(--text-primary);
   transform: translateY(-1px);
 }
 
-.cap-root .example-chip.disabled {
+.app-root .example-chip.disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 /* Mobile */
 @media (max-width: 768px) {
-  .cap-root .examples {
+  .app-root .examples {
     padding: 0 0.5rem;
     margin: 0 0 1rem;
   }
 }
 
 /* Wrapper for showing examples only in empty state, with a smooth collapse */
-.cap-root .top-queries-wrap {
+.app-root .top-queries-wrap {
   overflow: hidden;
   transform-origin: top center;
 
@@ -101,7 +101,7 @@
     padding 280ms ease;
 }
 
-.cap-root .top-queries-wrap.is-hidden {
+.app-root .top-queries-wrap.is-hidden {
   max-height: 0;
   opacity: 0;
   transform: scaleY(0.92);
@@ -114,7 +114,7 @@
 
 /* Mobile: slightly smaller max-height and quicker collapse */
 @media (max-width: 768px) {
-  .cap-root .top-queries-wrap {
+  .app-root .top-queries-wrap {
     /* max-height: 220px; */
     transition:
       max-height 240ms ease,

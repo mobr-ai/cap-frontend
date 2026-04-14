@@ -9,7 +9,7 @@ export default function ConfirmMessageBox({
 }) {
   return (
     <Container className="Auth-container confirm-message-box">
-      <Image className="Auth-logo" src="./icons/logo.png" alt="CAP logo" />
+      <Image className="Auth-logo" src="./icons/logo.png" alt="SAP logo" />
       <h2 className="Auth-title">{t("confirmYourEmailTitle")}</h2>
       <p className="Auth-confirm-text">{t("confirmYourEmailMsg")}</p>
       <p className="Auth-confirm-text">{t("confirmDidNotReceive")}</p>
