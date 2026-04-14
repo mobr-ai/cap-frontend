@@ -160,6 +160,7 @@
 }
 
 .WelcomePage-kicker {
+  margin-bottom: 1rem;
   display: inline-flex;
   align-items: center;
   padding: 0.38rem 0.72rem;
