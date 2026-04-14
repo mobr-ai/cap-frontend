@@ -61,9 +61,11 @@ export default function SolanaWalletLogin({ showToast, disabled = false }) {
           onClick={handleConnectClick}
           disabled={disabled || connecting}
         >
-          <span className="Auth-oauth-logo" aria-hidden="true">
-            ◎
-          </span>
+          <img
+            src="/icons/solana.png"
+            alt={t("wallet.solanaDefaultName")}
+            className="Auth-oauth-logo"
+          />
           {connecting
             ? t("wallet.connecting")
             : t("wallet.connectSolanaWallet")}
@@ -76,9 +78,11 @@ export default function SolanaWalletLogin({ showToast, disabled = false }) {
             size="md"
             disabled
           >
-            <span className="Auth-oauth-logo" aria-hidden="true">
-              ◎
-            </span>
+            <img
+              src="/icons/solana.png"
+              alt={t("wallet.solanaDefaultName")}
+              className="Auth-oauth-logo"
+            />
             {t("wallet.connectedLabel", {
               wallet: walletName,
               address: truncateKey(address, 6, 6),
@@ -92,9 +96,11 @@ export default function SolanaWalletLogin({ showToast, disabled = false }) {
             onClick={handleDisconnectClick}
             disabled={disabled}
           >
-            <span className="Auth-oauth-logo" aria-hidden="true">
-              ◎
-            </span>
+            <img
+              src="/icons/solana.png"
+              alt={t("wallet.solanaDefaultName")}
+              className="Auth-oauth-logo"
+            />
             {t("wallet.disconnectWallet")}
           </Button>
         </>

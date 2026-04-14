@@ -65,10 +65,16 @@
 
 /* Entrance animation (starts only after videoReady flips true) */
 .WelcomePage-videoCard {
-  opacity: 0;
-  transform: translate3d(var(--enter-x, 0), var(--enter-y, 0), 0)
-    rotate(var(--enter-r, 0)) scale(var(--enter-s, 1));
-  will-change: transform, opacity;
+  position: relative;
+  width: min(720px, 100%);
+  aspect-ratio: 1 / 1;
+  max-height: min(64svh, 720px);
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow:
+    0 40px 110px rgba(0, 0, 0, 0.55),
+    0 12px 30px rgba(0, 0, 0, 0.35);
+  background: #070a10;
 }
 
 .WelcomePage-videoCard.is-loading {
