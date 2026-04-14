@@ -1,6 +1,6 @@
 // src/utils/waitlistStorage.js
 
-const STORAGE_PREFIX = "app_waitlist_wallet_claimed_v1:";
+const STORAGE_PREFIX = "cap_waitlist_wallet_claimed_v1:";
 
 function makeWalletKey(wallet) {
   return `${STORAGE_PREFIX}wallet:${wallet}`;

@@ -54,7 +54,7 @@
   align-items: center;
   justify-content: center;
 
-  /* Key: height in modal so images don't become "infinite tall" */
+  /* Key: cap height in modal so images don't become "infinite tall" */
   max-height: min(62vh, 780px);
 }
 

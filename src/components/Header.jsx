@@ -7,8 +7,8 @@ import "../styles/NavBar.css";
 export default function Header({
   user,
   handleLogout,
-  indexedHead,
-  sourceHead,
+  capBlock,
+  cardanoBlock,
   syncStatus,
   syncPct,
   syncLag,
@@ -41,8 +41,8 @@ export default function Header({
         <NavBar
           userData={user}
           handleLogout={handleLogout}
-          indexedHead={indexedHead}
-          sourceHead={sourceHead}
+          capBlock={capBlock}
+          cardanoBlock={cardanoBlock}
           syncStatus={syncStatus}
           syncLag={syncLag}
           syncPct={syncPct}

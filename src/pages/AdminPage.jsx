@@ -79,7 +79,7 @@ export default function AdminPage() {
 
   const [recipientPool, setRecipientPool] = useState(() => {
     try {
-      const raw = localStorage.getItem("app.admin.alertRecipientsPool");
+      const raw = localStorage.getItem("cap.admin.alertRecipientsPool");
       const parsed = raw ? JSON.parse(raw) : [];
       return Array.isArray(parsed) ? uniqEmails(parsed) : [];
     } catch {
@@ -91,7 +91,7 @@ export default function AdminPage() {
   useEffect(() => {
     try {
       localStorage.setItem(
-        "app.admin.alertRecipientsPool",
+        "cap.admin.alertRecipientsPool",
         JSON.stringify(uniqEmails(recipientPool)),
       );
     } catch {}

@@ -39,7 +39,7 @@ const WaitingListPage = () => {
             className={
               !submitted ? "WaitingList-logo" : "WaitingList-logo-static"
             }
-            alt="App Logo"
+            alt="CAP Logo"
           />
         </div>
 

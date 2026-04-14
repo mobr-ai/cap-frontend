@@ -1,5 +1,5 @@
 import "./../styles/NavBar.css";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Container from "react-bootstrap/Container";
 import Image from "react-bootstrap/Image";
 import Nav from "react-bootstrap/Nav";
@@ -14,19 +14,68 @@ import avatarImg from "/icons/avatar.png";
 function NavBar({
   userData,
   handleLogout,
-  indexedHead,
-  sourceHead,
+  capBlock,
+  cardanoBlock,
   syncStatus,
   syncLag,
   syncPct,
   healthOnline,
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [brand, setBrand] = useState("");
+  const brandRef = useRef("");
   const navigate = useNavigate();
   const location = useLocation();
   const hideLoginLink =
     location?.pathname === "/login" || location?.pathname === "/welcome";
   const { t } = useTranslation();
+  const brandRanRef = useRef(false);
+
+  // Typing → pause → shrink animation
+  useEffect(() => {
+    if (brandRanRef.current) return;
+    brandRanRef.current = true;
+    const FULL = "Cardano Analytics Platform";
+    const TARGET = "CAP";
+    const TYPE_MS = 40,
+      BACK_MS = 35,
+      PAUSE_MS = 700;
+    let stage = "type",
+      i = 0,
+      tId;
+
+    const tick = () => {
+      if (stage === "type") {
+        if (i < FULL.length) {
+          const next = FULL.slice(0, i + 1);
+          brandRef.current = next;
+          setBrand(next);
+          i += 1;
+          tId = setTimeout(tick, TYPE_MS);
+        } else {
+          stage = "pause";
+          tId = setTimeout(tick, PAUSE_MS);
+        }
+      } else if (stage === "pause") {
+        stage = "shrink";
+        tId = setTimeout(tick, BACK_MS);
+      } else {
+        const current = brandRef.current || FULL;
+        if (current.length > TARGET.length) {
+          const next = current.slice(0, -1);
+          brandRef.current = next;
+          setBrand(next);
+          tId = setTimeout(tick, BACK_MS);
+        } else {
+          brandRef.current = TARGET;
+          setBrand(TARGET);
+          clearTimeout(tId);
+        }
+      }
+    };
+    tick();
+    return () => clearTimeout(tId);
+  }, []);
 
   const logout = () => handleLogout && handleLogout();
   const login = () => navigate("/login");
@@ -67,9 +116,7 @@ function NavBar({
     ],
     [],
   );
-
   const currentLang = (i18n.language || "en").split("-")[0];
-
   const langMenuTitle = (
     <span className="navbar-lang-title nav-text">
       <span className="navbar-lang-label">{t("language")}</span>
@@ -82,6 +129,7 @@ function NavBar({
   function SyncRadial({ pct, state, tooltip }) {
     const size = 26;
     const stroke = 3.2;
+
     const r = (size - stroke) / 2;
     const c = 2 * Math.PI * r;
 
@@ -90,32 +138,32 @@ function NavBar({
     const dash = (clamped / 100) * c;
 
     return (
-      <span className="app-sync" data-state={state}>
-        <span className="app-sync-label">SYNC</span>
+      <span className="cap-sync" data-state={state}>
+        <span className="cap-sync-label">SYNC</span>
 
-        <span className="app-sync-ring" aria-label={tooltip}>
+        <span className="cap-sync-ring" aria-label={tooltip}>
           <svg
-            className="app-sync-svg"
+            className="cap-sync-svg"
             width={size}
             height={size}
             viewBox={`0 0 ${size} ${size}`}
             aria-hidden="true"
           >
             <circle
-              className="app-sync-track"
+              className="cap-sync-track"
               cx={size / 2}
               cy={size / 2}
               r={r}
             />
             <circle
-              className="app-sync-progress"
+              className="cap-sync-progress"
               cx={size / 2}
               cy={size / 2}
               r={r}
               strokeDasharray={`${dash} ${c - dash}`}
             />
             <path
-              className="app-sync-slash"
+              className="cap-sync-slash"
               d={`M${size * 0.28} ${size * 0.72} L${size * 0.72} ${
                 size * 0.28
               }`}
@@ -123,11 +171,13 @@ function NavBar({
           </svg>
 
           {hasPct && clamped < 100 ? (
-            <span className="app-sync-ring-text">{clamped.toFixed(1)}</span>
+            <span className="cap-sync-ring-text">{clamped.toFixed(1)}</span>
           ) : null}
         </span>
 
-        <span className="app-sync-tooltip" role="tooltip">
+        {/* <span className="cap-sync-pct">{hasPct ? `${clamped}%` : "—"}</span> */}
+
+        <span className="cap-sync-tooltip" role="tooltip">
           {tooltip}
         </span>
       </span>
@@ -145,18 +195,20 @@ function NavBar({
         expand="lg"
         expanded={expanded}
         onToggle={() => setExpanded((v) => !v)}
-        className="bg-body-tertiary app-navbar"
+        className="bg-body-tertiary cap-navbar"
         sticky="top"
       >
-        <Container fluid className="app-navbar-row">
+        <Container fluid className="cap-navbar-row">
+          {/* Brand */}
           <Navbar.Brand
             as={Link}
             to="/"
             className="Navbar-brand-container nav-text"
           >
-            <span className="Navbar-brand-slot">SAP</span>
+            <span className="Navbar-brand-slot">{brand || "CAP"}</span>
           </Navbar.Brand>
 
+          {/* Status line (hidden on very small screens via CSS) */}
           {userData && (
             <div className="navbar-status-bar">
               {(() => {
@@ -183,15 +235,15 @@ function NavBar({
                   showOffline || isUnknown || healthOnline == null;
 
                 const tooltip = isBlocked ? (
-                  <div className="app-sync-tooltip-blocked">
-                    <span className="app-tip-icon" aria-hidden="true">
+                  <div className="cap-sync-tooltip-blocked">
+                    <span className="cap-tip-icon" aria-hidden="true">
                       !
                     </span>
-                    <div className="app-sync-tooltip-text">
-                      <div className="app-sync-tooltip-title">
+                    <div className="cap-sync-tooltip-text">
+                      <div className="cap-sync-tooltip-title">
                         {t("sync.tooltip.blockedTitle")}
                       </div>
-                      <div className="app-sync-tooltip-body">
+                      <div className="cap-sync-tooltip-body">
                         {showOffline
                           ? t("sync.tooltip.offlineBody")
                           : t("sync.tooltip.unknownBody")}
@@ -203,11 +255,11 @@ function NavBar({
                     `${t("sync.tooltip.statusLabel")}: ${t(
                       `sync.status.${statusCode}`,
                     )}`,
-                    `${t("sync.tooltip.indexedLabel")}: ${
-                      indexedHead == null ? "—" : indexedHead.toLocaleString()
+                    `${t("sync.tooltip.capLabel")}: ${
+                      capBlock == null ? "—" : capBlock.toLocaleString()
                     }`,
-                    `${t("sync.tooltip.sourceLabel")}: ${
-                      sourceHead == null ? "—" : sourceHead.toLocaleString()
+                    `${t("sync.tooltip.cardanoLabel")}: ${
+                      cardanoBlock == null ? "—" : cardanoBlock.toLocaleString()
                     }`,
                     `${t("sync.tooltip.lagLabel")}: ${
                       syncLag == null ? "—" : syncLag.toLocaleString()
@@ -224,9 +276,10 @@ function NavBar({
             </div>
           )}
 
-          <Navbar.Toggle aria-controls="app-navbar" />
-          <Navbar.Collapse id="app-navbar" className="justify-content-end">
+          <Navbar.Toggle aria-controls="cap-navbar" />
+          <Navbar.Collapse id="cap-navbar" className="justify-content-end">
             <Nav className="ml-auto NavBar-top-container">
+              {/* Admin entry (only for admins) */}
               {userData?.is_admin && (
                 <Nav.Link
                   as={Link}
@@ -237,7 +290,7 @@ function NavBar({
                   {t("nav.admin")}
                 </Nav.Link>
               )}
-
+              {/* Dashboard entry (important for mobile where sidebar is hidden) */}
               {userData && (
                 <Nav.Link
                   as={Link}
@@ -249,6 +302,7 @@ function NavBar({
                 </Nav.Link>
               )}
 
+              {/* Learn more link */}
               <Nav.Link
                 className="nav-text"
                 onClick={() => {
@@ -263,6 +317,7 @@ function NavBar({
                 {t("learnMore")}
               </Nav.Link>
 
+              {/* Language dropdown */}
               <NavDropdown
                 title={langMenuTitle}
                 id="navbar-lang"

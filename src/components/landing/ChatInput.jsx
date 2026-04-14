@@ -52,7 +52,7 @@ export default function ChatInput({
         </div>
       </div>
 
-      <div className="app-send-btn-wrap">
+      <div className="cap-send-btn-wrap">
         <button
           className={`send-button ${isProcessing ? "processing" : ""}`}
           disabled={isSendDisabled}
@@ -67,19 +67,19 @@ export default function ChatInput({
         </button>
 
         {readOnly && !!readOnlyReason && (
-          <div className="app-send-tooltip" role="tooltip">
-            <span className="app-tip-icon" aria-hidden="true">
+          <div className="cap-send-tooltip" role="tooltip">
+            <span className="cap-tip-icon" aria-hidden="true">
               !
             </span>
-            <span className="app-tip-text">{readOnlyReason}</span>
+            <span className="cap-tip-text">{readOnlyReason}</span>
           </div>
         )}
         {isSyncBlocked && !!syncBlockedReason && (
-          <div className="app-send-tooltip" role="tooltip">
-            <span className="app-tip-icon" aria-hidden="true">
+          <div className="cap-send-tooltip" role="tooltip">
+            <span className="cap-tip-icon" aria-hidden="true">
               !
             </span>
-            <span className="app-tip-text">{syncBlockedReason}</span>
+            <span className="cap-tip-text">{syncBlockedReason}</span>
           </div>
         )}
       </div>

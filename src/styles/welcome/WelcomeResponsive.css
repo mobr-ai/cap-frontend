@@ -1,25 +1,4 @@
-@media (max-width: 1320px) {
-  .WelcomeShowcase-infographic {
-    grid-template-columns: 1fr;
-    gap: 1.15rem;
-  }
-
-  .WelcomeShowcase-center {
-    order: -1;
-    min-height: 720px;
-  }
-
-  .WelcomeShowcase-column--left,
-  .WelcomeShowcase-column--right {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    align-items: stretch;
-  }
-
-  .WelcomeFeatureCard--left,
-  .WelcomeFeatureCard--right {
-    height: 100%;
-  }
-}
+/* src/styles/welcome/WelcomeResponsive.css */
 
 @media (max-width: 1100px) {
   .WelcomePage-content {
@@ -33,29 +12,6 @@
 
   .WelcomePage-videoCard {
     width: min(720px, 100%);
-  }
-
-  .WelcomeQueries {
-    grid-template-columns: 1fr;
-  }
-
-  .WelcomeStack-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .WelcomeCTA {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .WelcomeCTA-button {
-    width: 100%;
-  }
-
-  .WelcomeShowcase-inner,
-  .WelcomeFooter-inner {
-    padding-left: 1.6rem;
-    padding-right: 1.6rem;
   }
 }
 
@@ -74,6 +30,7 @@
     width: 100%;
   }
 
+  /* On mobile, keep the video big but not taller than the screen */
   .WelcomePage-videoCard {
     width: 100%;
     aspect-ratio: 1 / 1;
@@ -88,118 +45,8 @@
     text-align-last: center;
   }
 
-  .WelcomeShowcase {
+  .WelcomePage-showcase {
     padding: 0 !important;
-  }
-
-  .WelcomeShowcase-head {
-    text-align: left;
-    margin-bottom: 1.8rem;
-  }
-
-  .WelcomeShowcase-badges {
-    justify-content: flex-start;
-  }
-
-  .WelcomeShowcase-center {
-    min-height: 620px;
-  }
-
-  .WelcomeShowcase-column--left,
-  .WelcomeShowcase-column--right {
-    grid-template-columns: 1fr;
-  }
-
-  .WelcomeCore {
-    width: min(100%, 480px);
-  }
-
-  .WelcomeCore-node {
-    min-width: 132px;
-    max-width: 152px;
-    font-size: 0.84rem;
-  }
-
-  .WelcomeCore-center {
-    width: 180px;
-    height: 180px;
-  }
-
-  .WelcomeMiniPanel-split {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 640px) {
-  .WelcomeShowcase-shell {
-    padding: 2rem 0;
-  }
-
-  .WelcomeShowcase-inner,
-  .WelcomeFooter-inner {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-
-  .WelcomeShowcase-title {
-    font-size: clamp(2.05rem, 11vw, 3rem);
-  }
-
-  .WelcomeShowcase-lead,
-  .WelcomeShowcase-sectionBody,
-  .WelcomeFeatureCard-desc,
-  .WelcomeCTA-desc {
-    font-size: 0.95rem;
-  }
-
-  .WelcomeShowcase-center {
-    min-height: 540px;
-  }
-
-  .WelcomeCore {
-    aspect-ratio: 1 / 1.18;
-  }
-
-  .WelcomeCore-node--top,
-  .WelcomeCore-node--bottom {
-    min-width: 124px;
-  }
-
-  .WelcomeCore-node--left,
-  .WelcomeCore-node--right {
-    top: auto;
-    bottom: 6%;
-    transform: none;
-  }
-
-  .WelcomeCore-node--left {
-    left: 0;
-  }
-
-  .WelcomeCore-node--left::before {
-    right: 50%;
-    top: -18px;
-    transform: translateX(50%);
-  }
-
-  .WelcomeCore-node--right {
-    right: 0;
-  }
-
-  .WelcomeCore-node--right::before {
-    left: 50%;
-    top: -18px;
-    transform: translateX(-50%);
-  }
-
-  .WelcomeCore-stem--left,
-  .WelcomeCore-stem--right {
-    display: none;
-  }
-
-  .WelcomeFooter-brand {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }
 
@@ -215,30 +62,78 @@
   .WelcomePage-content {
     padding: 1.1rem;
   }
+}
 
-  .WelcomeShowcase-badge,
-  .WelcomeQueryChip {
-    padding-left: 0.78rem;
-    padding-right: 0.78rem;
-  }
-
-  .WelcomeFeatureCard,
-  .WelcomeQueries,
-  .WelcomeStack,
-  .WelcomeCTA {
-    border-radius: 20px;
-  }
-
-  .WelcomeCore-center {
-    width: 156px;
-    height: 156px;
-  }
-
-  .WelcomeCore-mark {
-    font-size: 1.8rem;
+@media (max-width: 1100px) {
+  .CapCardGrid {
+    grid-template-columns: 1fr;
   }
 }
 
+@media (max-width: 900px) {
+  .CapSection-inner {
+    padding: 0 1.35rem;
+  }
+
+  .CapKpis {
+    grid-template-columns: 1fr;
+  }
+
+  .CapSectionGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .CapSteps {
+    grid-template-columns: 1fr;
+  }
+
+  .CapTableRow {
+    grid-template-columns: 1fr;
+  }
+
+  .CapCTA-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .CapCTAButton {
+    width: 100%;
+  }
+
+  .CapFooter-inner {
+    padding: 1.1rem 1.35rem;
+  }
+
+  .CapFooterBrand {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* 1) Give the whole hero more room on large displays */
+.WelcomePage-content {
+  max-width: 1520px;
+  padding: 2.5rem;
+}
+
+/* 2) Let the right side claim more of the width */
+.WelcomePage-content {
+  /* was: minmax(380px, 520px) minmax(420px, 1fr) */
+  /* grid-template-columns: minmax(360px, 520px) minmax(520px, 1fr); */
+}
+
+/* 3) Make the video panel “sit” more like Claude (toward the right) */
+.WelcomePage-right {
+  justify-self: end;
+}
+
+/* 4) Let the card scale up when space exists */
+.WelcomePage-videoCard {
+  width: clamp(560px, 44vw, 980px);
+  max-height: calc(100vh - 5.25rem);
+}
+
+/* 5) Extra boost on ultra-wide screens (optional but matches Claude feel) */
 @media (min-width: 1500px) {
   .WelcomePage-content {
     max-width: 1680px;
@@ -248,13 +143,9 @@
   .WelcomePage-videoCard {
     width: clamp(640px, 46vw, 1100px);
   }
-
-  .WelcomeShowcase-inner,
-  .WelcomeFooter-inner {
-    max-width: 1540px;
-  }
 }
 
+/* If you want it bigger on tall screens, allow a bit more width */
 @media (min-height: 900px) {
   .WelcomePage-videoCard {
     width: min(1200px, 100%);
@@ -262,6 +153,7 @@
   }
 }
 
+/* Optional: on ultrawide specifically, be stricter on max-height */
 @media (min-aspect-ratio: 21/9) {
   .WelcomePage-videoCard {
     max-height: calc(100vh - 15rem);

@@ -42,7 +42,7 @@ export function useAuthRequest(overrides = {}) {
 
   const unauthorized = useCallback(() => {
     try {
-      localStorage.removeItem("app_user_session");
+      localStorage.removeItem("cap_user_session");
     } catch {}
 
     const onLogin =

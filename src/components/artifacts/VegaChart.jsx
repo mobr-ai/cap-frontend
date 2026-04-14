@@ -137,8 +137,8 @@ function getSlotSize(containerEl) {
 }
 
 function detachHandlers(view) {
-  if (!view || !view.__appLinkHandlers) return;
-  const { click, move, out } = view.__appLinkHandlers;
+  if (!view || !view.__capLinkHandlers) return;
+  const { click, move, out } = view.__capLinkHandlers;
 
   try {
     if (click) view.removeEventListener?.("click", click);
@@ -148,7 +148,7 @@ function detachHandlers(view) {
     // ignore
   }
 
-  view.__appLinkHandlers = null;
+  view.__capLinkHandlers = null;
 }
 
 function attachHandlers(view, rawSpec, hostEl) {
@@ -200,7 +200,7 @@ function attachHandlers(view, rawSpec, hostEl) {
     view.addEventListener?.("click", click);
     view.addEventListener?.("mousemove", move);
     view.addEventListener?.("mouseout", out);
-    view.__appLinkHandlers = { click, move, out };
+    view.__capLinkHandlers = { click, move, out };
   } catch {
     // ignore
   }
