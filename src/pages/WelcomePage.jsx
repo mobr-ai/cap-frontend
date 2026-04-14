@@ -1,3 +1,4 @@
+// src/pages/WelcomePage.jsx
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useGoogleOneTapLogin } from "@react-oauth/google";
@@ -63,10 +64,8 @@ export default function WelcomePage(props) {
   const showcaseRef = useRef(null);
 
   const handleScrollToShowcase = () => {
-    const yOffset = 20;
+    const yOffset = +20; // navbar height
     const element = showcaseRef.current;
-    if (!element) return;
-
     const y =
       element.getBoundingClientRect().top + window.pageYOffset + yOffset;
 
@@ -109,6 +108,7 @@ export default function WelcomePage(props) {
     cancel_on_tap_outside: false,
     promptMomentNotification: (n) => {
       try {
+        // eslint-disable-next-line no-console
         console.log("[OneTap]", {
           displayed: n.isDisplayed?.(),
           notDisplayedReason: n.getNotDisplayedReason?.(),
@@ -283,9 +283,9 @@ export default function WelcomePage(props) {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     const redirectUri = getGoogleRedirectUri();
 
-    const state = `sap_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+    const state = `cap_${Math.random().toString(36).slice(2)}_${Date.now()}`;
     try {
-      sessionStorage.setItem("app_google_oauth_state", state);
+      sessionStorage.setItem("cap_google_oauth_state", state);
     } catch {}
 
     const params = new URLSearchParams({
@@ -391,7 +391,7 @@ export default function WelcomePage(props) {
     googleHandledHashRef.current = true;
 
     try {
-      const expected = sessionStorage.getItem("app_google_oauth_state") || "";
+      const expected = sessionStorage.getItem("cap_google_oauth_state") || "";
       if (expected && state && expected !== state) {
         window.history.replaceState(
           null,
@@ -401,7 +401,7 @@ export default function WelcomePage(props) {
         showToast(t("googleAuthFailed"), "danger");
         return;
       }
-      sessionStorage.removeItem("app_google_oauth_state");
+      sessionStorage.removeItem("cap_google_oauth_state");
     } catch {}
 
     window.history.replaceState(
@@ -465,8 +465,8 @@ export default function WelcomePage(props) {
   const titleText = setupMode
     ? t("setPasswordTitle")
     : props.type === "create"
-      ? t("signUpMsg", "Create your SAP account")
-      : t("loginMsg", "Sign in to SAP");
+      ? t("signUpMsg")
+      : t("loginMsg");
 
   const isConfirmFalse = searchParams.get("confirmed") === "false";
 
@@ -479,51 +479,20 @@ export default function WelcomePage(props) {
       <section className="WelcomePage-hero">
         <div className="WelcomePage-content">
           <div className="WelcomePage-left">
-            <div className="WelcomePage-heading" data-reveal>
-              <div className="WelcomePage-kicker">
-                {t("welcomeHeroKicker", "SAP · Solana Analytics Platform")}
-              </div>
-
+            <div className="WelcomePage-heading">
               <h1 className="WelcomePage-title">
-                {t(
-                  "welcomeHeroTitle",
-                  "The intelligence layer for grounded Solana analytics.",
-                )}
+                {t("welcomeTitle", "Welcome")}
               </h1>
-
               <p className="WelcomePage-subtitle">
                 {t(
-                  "welcomeHeroSubtitle",
-                  "Empowering builders with semantic querying, explainable insights, interactive dashboards, and ontology-backed blockchain intelligence.",
+                  "welcomeSubtitle",
+                  "Sign in to access your workspace, dashboards, and analytics.",
                 )}
               </p>
-
-              <div className="WelcomePage-highlights" role="list">
-                <div className="WelcomePage-highlight" role="listitem">
-                  <span className="WelcomePage-highlightDot" />
-                  <span>
-                    {t("welcomeHeroHighlight1", "Grounded AI reasoning")}
-                  </span>
-                </div>
-                <div className="WelcomePage-highlight" role="listitem">
-                  <span className="WelcomePage-highlightDot" />
-                  <span>
-                    {t("welcomeHeroHighlight2", "Semantic knowledge graph")}
-                  </span>
-                </div>
-                <div className="WelcomePage-highlight" role="listitem">
-                  <span>
-                    {t(
-                      "welcomeHeroHighlight3",
-                      "Streaming analytics experience",
-                    )}
-                  </span>
-                </div>
-              </div>
             </div>
 
             {!loading && !isConfirmFalse && (
-              <div className="WelcomePage-auth" data-reveal>
+              <div className="WelcomePage-auth">
                 <AuthShell title={titleText}>
                   {setupMode ? (
                     <SetPasswordPanel
@@ -575,7 +544,7 @@ export default function WelcomePage(props) {
             )}
 
             {!loading && isConfirmFalse && !setupMode && (
-              <div className="WelcomePage-auth" data-reveal>
+              <div className="WelcomePage-auth">
                 <ConfirmMessageBox
                   t={t}
                   resendLoading={resendLoading}
@@ -585,7 +554,7 @@ export default function WelcomePage(props) {
             )}
           </div>
 
-          <div className="WelcomePage-right" aria-hidden="true" data-reveal>
+          <div className="WelcomePage-right" aria-hidden="true">
             <div
               className={`WelcomePage-videoCard ${videoReady ? "is-ready" : "is-loading"}`}
               style={{
@@ -609,21 +578,6 @@ export default function WelcomePage(props) {
               />
               <div className="WelcomePage-videoShade" />
               {!videoReady && <div className="WelcomePage-videoSkeleton" />}
-
-              <div className="WelcomePage-videoOverlay">
-                <div className="WelcomePage-videoPill">
-                  {t("welcomeHeroOverlayTop", "Natural-language discovery")}
-                </div>
-                <div className="WelcomePage-videoOverlayTitle">
-                  {t("welcomeHeroOverlayTitle", "Grounded insight generation")}
-                </div>
-                <div className="WelcomePage-videoOverlayBody">
-                  {t(
-                    "welcomeHeroOverlayBody",
-                    "From conversational questions to explainable Solana analytics.",
-                  )}
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -635,7 +589,7 @@ export default function WelcomePage(props) {
         >
           <div className="WelcomePage-scrollHintPill">
             <span className="WelcomePage-scrollHintText">
-              {t("welcomeScrollHint", "Explore the SAP architecture")}
+              {t("welcome.cap.scrollHint", "Discover CAP")}
             </span>
             <span className="WelcomePage-scrollHintDot" />
           </div>

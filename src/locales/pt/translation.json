@@ -1,23 +1,13 @@
 {
   "welcomeTitle": "Bem-vindo",
   "welcomeSubtitle": "Entre para acessar seu workspace, dashboards e análises.",
-  "welcomeHeroKicker": "SAP · Solana Analytics Platform",
-  "welcomeHeroTitle": "A camada de inteligência para analytics confiável na Solana.",
-  "welcomeHeroSubtitle": "Capacitando builders com consultas semânticas, insights explicáveis, dashboards interativos e inteligência blockchain apoiada por ontologias.",
-  "welcomeHeroHighlight1": "Raciocínio de IA com grounding",
-  "welcomeHeroHighlight2": "Grafo de conhecimento semântico",
-  "welcomeHeroHighlight3": "Experiência de analytics em streaming",
-  "welcomeHeroOverlayTop": "Descoberta em linguagem natural",
-  "welcomeHeroOverlayTitle": "Geração de insights com grounding",
-  "welcomeHeroOverlayBody": "De perguntas conversacionais a análises explicáveis sobre Solana.",
-  "welcomeScrollHint": "Explore a arquitetura da plataforma",
-  "loginMsg": "Entrar na SAP",
-  "signUpMsg": "Criar sua conta SAP",
+  "loginMsg": "Entrar na sua conta CAP",
+  "signUpMsg": "Cadastre-se na CAP",
   "mailPlaceholder": "Digite seu e-mail",
   "processingMail": "Processando…",
   "authNextStep": "Continuar",
   "keepMeLoggedIn": "Manter-me conectado",
-  "forgotPass": "Esqueceu sua senha?",
+  "forgotPass": "Esqueceu a senha?",
   "signUpButton": "Cadastrar",
   "loginButton": "Entrar",
   "signUpAlternativeMsg": "Não tem uma conta? {}",
@@ -37,46 +27,46 @@
   "passwordStrengthStrong": "Força: forte",
   "requestNewSetupLinkHelp": "Problemas com o link? Informe seu e-mail e enviaremos um novo link de configuração.",
   "requestNewSetupLinkCta": "Enviar novo link",
-  "emailRequiredForSetupLink": "Informe um e-mail válido para enviarmos um novo link de configuração.",
-  "setupLinkSent": "Um novo link de configuração foi enviado para o seu e-mail.",
-  "passwordAlreadySet": "Já existe uma senha definida para esta conta. Faça login.",
+  "emailRequiredForSetupLink": "Informe um e-mail válido para enviarmos um novo link.",
+  "setupLinkSent": "Enviamos um novo link de configuração para o seu e-mail.",
+  "passwordAlreadySet": "Este usuário já possui senha definida. Faça login normalmente.",
   "accessNotGranted": "Esta conta ainda não foi aprovada.",
   "loginWithGoogle": "Entrar com Google",
-  "sessionExpired": "Sua sessão expirou. Faça login novamente.",
+  "sessionExpired": "Sua sessão expirou. Por favor, faça login novamente.",
   "emailConfirmed": "Seu e-mail foi confirmado. Agora você pode entrar.",
-  "accountNotConfirmedMessage": "Sua conta não está confirmada. Confirme seu e-mail.",
+  "accountNotConfirmedMessage": "Sua conta não está confirmada. Por favor, confirme seu e-mail.",
   "confirmationEmailResent": "Um novo e-mail de confirmação foi enviado.",
-  "errorResendingConfirmation": "Ocorreu um erro ao reenviar o e-mail de confirmação.",
+  "errorResendingConfirmation": "Erro ao reenviar o e-mail de confirmação.",
   "resending": "Reenviando…",
   "resendConfirmation": "Reenviar e-mail de confirmação",
   "confirmYourEmailTitle": "Confirme seu e-mail",
   "confirmYourEmailMsg": "Verifique sua caixa de entrada para o link de confirmação que enviamos.",
   "confirmDidNotReceive": "Não recebeu o e-mail?",
-  "registerError": "Falha no cadastro. Verifique seus dados.",
-  "userExistsError": "Este e-mail já está associado a outra conta. Tente um endereço diferente.",
+  "registerError": "Falha no cadastro. Verifique os dados.",
+  "userExistsError": "Este e-mail já está associado a outra conta. Por favor, tente um endereço diferente.",
   "walletEmailAlreadySet": "Esta carteira já está associada a outro endereço de e-mail.",
   "oauthExistsError": "Esta conta está vinculada ao login com Google.",
-  "confirmationError": "A confirmação de e-mail é obrigatória antes do login.",
-  "googleLinkedPasswordLoginNotice": "Esta conta também está vinculada ao Google. Da próxima vez, você pode entrar com Google em um clique.",
+  "confirmationError": "Confirme seu e-mail antes de fazer login.",
+  "googleLinkedPasswordLoginNotice": "Esta conta também está vinculada ao Google. Da próxima vez, você pode entrar com o Google em um clique.",
   "googleAuthFailed": "Falha na autenticação com Google",
   "googleAuthNoCallback": "O login com Google não foi concluído. Tente novamente.",
   "googleAuthCancelled": "O login com Google foi cancelado. Tente novamente.",
   "googleAuthUnavailable": "O login com Google ainda não está pronto. Atualize a página e tente novamente.",
   "popupBlockedMsg": "Pop-up bloqueado pelo seu navegador. Permita pop-ups para este site e tente novamente.",
-  "joinWaitList": "Entre na lista de espera da SAP",
-  "joinWaitListSubtitle": "Tenha acesso antecipado à Solana Analytics Platform.",
+  "joinWaitList": "Entre na lista de espera da CAP",
+  "joinWaitListSubtitle": "Obtenha acesso antecipado a Cardano Analytics Platform.",
   "enterEmailPlaceholder": "Digite seu endereço de e-mail",
-  "successWaitListMsg": "Obrigado por se inscrever. Você está na lista de espera.",
+  "successWaitListMsg": "Obrigado por se inscrever! Você está na lista de espera.",
   "errorWaitListMsg": "Algo deu errado. Tente novamente mais tarde.",
-  "alreadyOnWaitListMsg": "Ótimo. Seu e-mail já está na nossa lista de espera. Fique atento ao que vem a seguir.",
-  "loginWithWallet": "Conectar com uma carteira blockchain",
-  "connectWallet": "Conectar carteira {{wallet}}",
-  "joinWaitListSubtitleWallet": "Você conectou uma carteira. Informe seu e-mail para concluir o cadastro e entrar na lista de espera.",
-  "walletNotFound": "Nenhuma carteira compatível foi detectada. Instale uma carteira suportada e recarregue a página.",
+  "alreadyOnWaitListMsg": "Ótimo! Seu e-mail está na nossa lista de espera. Fique atento às próximas novidades.",
+  "loginWithWallet": "Conectar com uma carteira Cardano",
+  "connectWallet": "Conectar Carteira {{wallet}}",
+  "joinWaitListSubtitleWallet": "Você conectou uma carteira Cardano. Informe seu e-mail para concluir o cadastro e entrar na lista de espera.",
+  "walletNotFound": "Nenhuma carteira Cardano detectada. Instale <nami>Nami</nami>, <lace>Lace</lace>, <flint>Flint</flint> ou <eternl>Eternl</eternl> e recarregue a página.",
   "walletLoginSuccess": "Login com carteira realizado com sucesso",
-  "loginError": "Falha no login. Tente novamente.",
+  "loginError": "Falha no login. Por favor, tente novamente.",
   "tooltipAvatar": "Alterar seu avatar",
-  "tooltipDisplayName": "Nome de exibição: mostrado publicamente primeiro (header e perfil).",
+  "tooltipDisplayName": "Nome de exibição: aparece primeiro publicamente (header e perfil).",
   "tooltipUsername": "Nome de usuário: identificador único usado em links e menções.",
   "invalidDisplayName": "Nome de exibição inválido. Use de 2 a 30 caracteres e evite caracteres de controle.",
   "usernameSuggested": "Esse nome de usuário não está disponível. Sugestão: {{name}}",
@@ -88,13 +78,13 @@
   "share": "Compartilhar",
   "copiedToClipboard": "Copiado para a área de transferência.",
   "copyFailed": "Falha ao copiar.",
-  "shareMessageIntro": "Junte-se a mim na SAP — Solana Analytics Platform",
-  "shareMessageOutro": "#Solana #Analytics #SAP",
-  "invalidUsername": "Nome de usuário inválido. Ele deve começar com uma letra e ter de 6 a 30 caracteres (letras, números, ponto ou sublinhado).",
-  "invalidEmailFormat": "Digite um endereço de e-mail válido.",
-  "requestInvalid": "Solicitação inválida. Verifique seus dados e tente novamente.",
-  "oauthPendingApproval": "Conta criada. Aguardando aprovação antes de você poder entrar.",
-  "walletPendingApproval": "Carteira vinculada. Aguardando aprovação antes de você poder entrar.",
+  "shareMessageIntro": "Junte-se a mim no CAP — Cardano Analytics Platform",
+  "shareMessageOutro": "#Cardano #Analytics #CAP",
+  "invalidUsername": "Nome de usuário inválido. Deve começar com letra e ter entre 6 e 30 caracteres (letras, números, ponto ou sublinhado).",
+  "invalidEmailFormat": "Por favor, insira um endereço de e-mail válido.",
+  "requestInvalid": "Solicitação inválida. Verifique os dados e tente novamente.",
+  "oauthPendingApproval": "Conta criada. Aguardando aprovação para você conseguir entrar.",
+  "walletPendingApproval": "Carteira vinculada. Aguardando aprovação para você conseguir entrar.",
   "usernameTaken": "Este nome de usuário já está em uso.",
   "settingsSaved": "Configurações salvas.",
   "settingsFailed": "Não foi possível salvar suas configurações.",
@@ -108,170 +98,87 @@
   "language": "Idioma",
   "learnMore": "Saiba mais",
   "welcome": {
-    "sap": {
-      "eyebrow": "SAP",
-      "hero": {
-        "badges": {
-          "0": "Raciocínio de IA com grounding",
-          "1": "Insights apoiados por ontologias",
-          "2": "UX de analytics em streaming"
-        }
-      },
-      "features": {
-        "kg": {
-          "eyebrow": "Inteligência semântica",
-          "title": "Grafo de Conhecimento Apoiado por Ontologias",
-          "desc": "Modela construtos específicos da Solana em uma camada semântica formal que sustenta analytics reutilizável, consultas explicáveis e saídas de IA com grounding."
-        },
-        "etl": {
-          "eyebrow": "Ingestão confiável",
-          "title": "Pipelines ETL Determinísticos",
-          "desc": "Sincroniza atividade on-chain bruta em representações estruturadas e consultáveis, projetadas para analytics, raciocínio e visualização."
-        },
-        "ai": {
-          "eyebrow": "Ground truth primeiro",
-          "title": "Raciocínio de IA Resistente a Alucinações",
-          "desc": "Usa o grafo de conhecimento como camada de grounding para que respostas, gráficos e resumos permaneçam rastreáveis até evidências blockchain estruturadas."
-        },
-        "discovery": {
-          "eyebrow": "UX profissional",
-          "title": "Descoberta em Linguagem Natural",
-          "desc": "Permite investigações blockchain complexas por meio de prompts em linguagem natural, perguntas de refinamento e resultados explicáveis."
-        },
-        "dashboard": {
-          "eyebrow": "Monitoramento ao vivo",
-          "title": "Dashboards Inteligentes Interativos",
-          "desc": "Gera gráficos e tabelas definidos pelo usuário para monitoramento em tempo real da atividade de tokens, comportamento de programas e padrões do ecossistema."
-        },
-        "context": {
-          "eyebrow": "Análise holística",
-          "title": "Contexto On-Chain + Off-Chain",
-          "desc": "Combina atividade de rede ao vivo com metadados semânticos e contexto externo para investigações mais profundas e insights mais significativos."
-        }
-      },
-      "core": {
-        "mark": "SAP",
-        "nodes": {
-          "0": "Inteligência de carteiras",
-          "1": "Atividade de validadores",
-          "2": "Fluxos de transação",
-          "3": "Exploração do grafo semântico"
-        }
-      },
-      "mini": {
-        "discoveryLabel": "Descoberta em linguagem natural",
-        "discoveryPrompt": "Buscar consulta...",
-        "liveData": "Dados de Rede ao Vivo",
-        "externalContext": "Contexto Externo"
-      },
-      "queries": {
-        "eyebrow": "Experiência de consulta",
-        "title": "Investigação em linguagem natural, estruturada por semântica",
-        "body": "A SAP transforma solicitações conversacionais em operações semânticas estruturadas, retornando resultados explicáveis que podem ser fixados, compartilhados e revisitados."
-      },
-      "stack": {
-        "eyebrow": "Stack técnico de serviços",
-        "title": "Infraestrutura projetada para analytics com grounding",
-        "qlever": {
-          "title": "QLever KG",
-          "subtitle": "Motor de grafo de conhecimento",
-          "desc": "Processa grandes conjuntos de dados semânticos para recuperação com grounding e execução explicável de consultas."
-        },
-        "triton": {
-          "title": "Triton RPC",
-          "subtitle": "Acesso a dados blockchain",
-          "desc": "Fornece acesso de alta concorrência à atividade histórica e ao vivo do ledger da Solana."
-        },
-        "openai": {
-          "title": "OpenAI API",
-          "subtitle": "Camada de raciocínio",
-          "desc": "Transforma solicitações em linguagem natural em análises, narrativas e artefatos com grounding."
-        }
-      },
-      "scrollHint": "Descubra SAP",
-      "headline": "Bem-vindo à SAP: Analytics para Solana com IA",
-      "lead": "Simplificando a exploração de dados da blockchain Solana por meio de linguagem natural, conectando dados on-chain complexos a insights úteis com raciocínio fundamentado e um grafo de conhecimento semântico.",
+    "cap": {
+      "scrollHint": "Descubra a CAP",
+      "headline": "Bem-vindo a CAP: Analytics da Cardano com IA",
+      "lead": "Simplificando a exploração de dados da blockchain Cardano por meio de linguagem natural, conectando dados on-chain complexos a insights acessíveis com um LLM ajustado e um Grafo de Conhecimento Semântico.",
       "cta": {
-        "title": "Pronto para explorar a Solana por meio de uma camada de inteligência semântica?",
-        "desc": "Faça login acima para acessar seu workspace e começar a construir fluxos de analytics com grounding.",
-        "primary": "Explorar SAP",
-        "secondary": "Entrar na lista de espera",
-        "button": "Obter acesso antecipado",
-        "description": "Faça login acima para acessar seu workspace e começar a fixar insights."
+        "primary": "Explorar CAP",
+        "button": "Entrar na Lista de Espera",
+        "title": "Pronto para explorar os dados da Cardano em modo turbo?",
+        "description": "Faça login acima para acessar seu espaço de trabalho e começar a salvar suas análises."
       },
+
       "pillars": {
-        "title": "O roadmap: três capacidades centrais",
+        "title": "Nosso roadmap: Os Três Pilares da Inovação",
         "llm": {
-          "title": "Pipeline LLM ajustada para Solana",
-          "desc": "Um mecanismo especializado de raciocínio em IA desenvolvido para compreender estruturas de dados específicas da Solana, fluxos de analytics e modelos semânticos."
+          "title": "Pipeline LLM Customizada para Cardano",
+          "desc": "Um mecanismo de raciocínio em IA especializado para compreender estruturas de dados, ontologias e governança específicas da Cardano."
         },
         "kg": {
-          "title": "Grafo de conhecimento da Solana",
-          "desc": "Uma fonte semântica de verdade que conecta atividade on-chain com metadados off-chain para análise blockchain contextual e explicável."
+          "title": "Grafo de Conhecimento Cardano",
+          "desc": "Uma fonte semântica de verdade que conecta atividades on-chain com metadados off-chain para uma análise contextual e holística."
         },
         "dashboards": {
-          "title": "Dashboards inteligentes centrados no usuário",
-          "desc": "Workspaces interativos onde usuários fixam gráficos e tabelas gerados por IA para monitoramento e exploração em tempo real."
+          "title": "Dashboards Inteligentes Centrados no Usuário",
+          "desc": "Workspaces interativos e personalizáveis onde usuários fixam gráficos e tabelas gerados por IA para monitoramento em tempo real."
         }
       },
+
       "flow": {
-        "title": "Da pergunta ao insight",
+        "title": "Da Pergunta ao Insight",
         "step1": {
-          "title": "Pergunte em linguagem natural",
-          "desc": "Usuários podem inserir perguntas sobre blockchain usando linguagem do dia a dia, sem necessidade de SQL ou SPARQL."
+          "title": "Pergunte em Linguagem Natural",
+          "desc": "Usuários podem consultar dados da blockchain usando linguagem comum — sem necessidade de SQL ou SPARQL."
         },
         "step2": {
-          "title": "Tradução semântica",
-          "desc": "A SAP traduz perguntas humanas em operações semânticas estruturadas sobre a camada de inteligência da Solana."
+          "title": "Tradução Semântica",
+          "desc": "A IA do CAP converte sua pergunta em consultas SPARQL precisas e executáveis sobre o grafo de conhecimento da Cardano."
         },
         "step3": {
-          "title": "Resultados visuais instantâneos",
-          "desc": "Os resultados são automaticamente renderizados em gráficos, tabelas e artefatos reutilizáveis."
+          "title": "Resultados Visuais Instantâneos",
+          "desc": "Os resultados são automaticamente renderizados em gráficos interativos Vega-Lite ou tabelas estruturadas."
         }
       },
+
       "kpis": {
-        "ask": {
-          "title": "Pergunte",
-          "subtitle": "em linguagem simples"
-        },
+        "ask": { "title": "Perguntas", "subtitle": "em linguagem simples" },
         "federate": {
-          "title": "Conecte",
-          "subtitle": "on-chain + contexto"
+          "title": "Federação (planejado)",
+          "subtitle": "on-chain + off-chain"
         },
         "visualize": {
-          "title": "Visualize",
-          "subtitle": "instantaneamente"
+          "title": "Visualização",
+          "subtitle": "simples e instantânea"
         }
       },
+
       "examples": {
-        "0": "Mostre a atividade dos validadores com a maior movimentação de stake nas últimas 24 horas",
-        "1": "Compare padrões de fluxo de transações dos principais programas da Solana nesta semana",
-        "2": "Resuma anomalias na atividade de tokens e explique o que mudou",
-        "body": "Exemplos de consultas avançadas que a plataforma foi projetada para suportar.",
-        "colQuery": "Exemplo de consulta do usuário",
-        "colSources": "Fontes de dados combinadas",
-        "title": "Analytics complexa mais acessível",
+        "body": "O roadmap da plataforma prevê queries federadas.",
+        "colQuery": "Exemplo de pergunta do usuário",
+        "colSources": "Fontes de Dados Combinadas",
+        "title": "Nosso Alvo: Consultas Complexas e Avançadas de Forma Fácil.",
         "items": [
           {
-            "query": "Liste os 5 principais tokens da Solana pela maior variação recente de volume",
-            "sources": "Atividade de transações on-chain + metadados de tokens"
+            "query": "Liste os 5 principais meme tokens por volume",
+            "sources": "Transações on-chain + Descrições off-chain"
           },
           {
-            "query": "Compare a atividade de validadores com a maior movimentação de stake nesta semana",
-            "sources": "Dados de validadores + atividade de staking"
+            "query": "Compare a participação de votos por rótulo de proposta",
+            "sources": "Ações de governança + Âncoras de metadados"
           },
           {
-            "query": "Mostre programas com padrões incomuns de fluxo de transações",
-            "sources": "Interações de programas + análise comportamental"
+            "query": "Mostrar pools com discrepâncias de metadados",
+            "sources": "Certificados de registro + Registro off-chain"
           }
         ]
       }
     },
+
     "footer": {
       "tagline": "Construindo infraestrutura avançada de dados e IA para ecossistemas descentralizados.",
       "followUs": "Siga-nos",
-      "allRights": "Todos os direitos reservados.",
-      "linksAria": "Links"
+      "allRights": "Todos os direitos reservados."
     }
   },
   "nav": {
@@ -279,26 +186,22 @@
     "home": "Início",
     "dashboard": "Dashboard",
     "settings": "Configurações",
-    "logout": "Sair",
     "admin": "Admin",
+    "logout": "Sair",
     "recentAnalyses": "Análises recentes",
     "loadingConversations": "Carregando conversas…",
     "noConversations": "Nenhuma análise salva ainda",
     "untitledConversation": "Análise sem título",
     "expandSidebar": "Expandir barra lateral",
     "collapseSidebar": "Recolher barra lateral",
-    "conversationsLoadFailed": "Falha ao carregar conversas",
-    "renameFailed": "Falha ao renomear conversa",
-    "deleteFailed": "Falha ao excluir conversa",
-    "analyses": "Minhas análises",
-    "confirmDeleteConversation": "Excluir esta conversa?",
-    "conversationOptions": "Opções",
-    "rename": "Renomear",
-    "delete": "Excluir"
+    "conversationsLoadFailed": "Falha ao carregar análises",
+    "renameFailed": "Falha ao renomear análise",
+    "deleteFailed": "Falha ao deletar análise",
+    "analyses": "Minhas análises"
   },
   "analyses": {
     "title": "Minhas Análises",
-    "subtitle": "Navegue pelas suas conversas em uma visualização dedicada.",
+    "subtitle": "Navegue pelas suas conversas em uma visão dedicada.",
     "tip": "Ótimo no desktop e no celular",
     "searchPlaceholder": "Buscar por título, prévia ou id…",
     "loading": "Carregando análises…",
@@ -309,16 +212,16 @@
     "accessDeniedText": "Faça login para ver suas análises."
   },
   "landing": {
-    "emptyTitle": "Pergunte sobre Solana",
-    "emptySubtitle": "Explore a Solana em linguagem natural. Pergunte sobre transações, contas, validadores, programas, atividade de tokens ou outros dados on-chain.",
-    "topQueriesTitle": "Pergunte qualquer coisa sobre Solana",
-    "inputPlaceholder": "Pergunta aqui...",
+    "emptyTitle": "Pergunte sobre a Cardano",
+    "emptySubtitle": "Consulte a blockchain da Cardano em linguagem natural. Pergunte sobre transações, blocos, stake pools, governança ou qualquer dado on-chain.",
+    "topQueriesTitle": "Faça uma pergunta sobre a Cardano",
+    "inputPlaceholder": "Pergunte aqui...",
     "charCount": "{{count}} / {{max}}",
     "processing": "Processando",
     "send": "Enviar",
-    "statusPlanning": "Planejando e processando sua consulta...",
+    "statusPlanning": "Planejando e processando consulta...",
     "unexpectedError": "Ocorreu um erro inesperado ao processar sua consulta.",
-    "pinInvalidTable": "Este resultado em tabela está vazio ou inválido e não pode ser fixado.",
+    "pinInvalidTable": "Este resultado de tabela está vazio ou inválido e não pode ser fixado.",
     "pinSuccess": "Fixado no seu dashboard (clique para abrir).",
     "pinError": "Não foi possível fixar o artefato.",
     "defaultStatus": "Processando sua solicitação…",
@@ -329,11 +232,11 @@
     "syncBlockedOffline": "O serviço de sincronização está offline. As consultas estão temporariamente desativadas.",
     "syncBlockedUnknown": "O status de sincronização está indisponível. Aguarde um momento e tente novamente.",
     "emptyRotating": {
-      "0": "Mostre os 5 blocos mais recentes na Solana",
-      "1": "Quais tendências são visíveis na atividade de transações da Solana neste mês?",
-      "2": "Plote um gráfico da atividade recente de tokens nos principais programas da Solana",
-      "3": "Mostre os validadores com a maior movimentação recente de stake",
-      "4": "Resuma mudanças on-chain relevantes na Solana nesta semana"
+      "0": "Mostre os 5 blocos mais recentes na Cardano",
+      "1": "Quais são as tendências nas transações da Cardano neste mês?",
+      "2": "Plote um gráfico da atividade mensal de mint de NFTs em dezembro de 2025",
+      "3": "Quanto do supply de ADA está nas mãos do top 1%?",
+      "4": "Mostre as propostas de governança mais recentes e seus links de IPFS"
     }
   },
   "sync": {
@@ -349,22 +252,22 @@
       "offlineBody": "O serviço de sincronização está offline. As consultas estão desativadas.",
       "unknownBody": "O status de sincronização ainda não está disponível. Aguarde e tente novamente.",
       "statusLabel": "Status",
-      "indexedLabel": "Indexado",
-      "sourceLabel": "Solana",
+      "capLabel": "CAP",
+      "cardanoLabel": "Cardano",
       "lagLabel": "Atraso",
       "blocksSuffix": "blocos"
     }
   },
   "loading": {
     "default": "",
-    "workspace": "Carregando seu workspace SAP…",
+    "workspace": "Carregando seu ambiente CAP…",
     "dashboardItems": "Carregando widgets do dashboard…",
     "wallet": "Aguardando conexão com carteira…"
   },
   "dashboard": {
-    "emptyPrompt": "Fixe qualquer tabela ou gráfico do chat para criar seu dashboard automaticamente.",
+    "emptyPrompt": "Fixe qualquer tabela ou gráfico da conversa para criar seu dashboard automaticamente.",
     "noWidgetsYet": "Ainda não há widgets fixados neste dashboard.",
-    "loadError": "Houve um problema ao carregar dashboards ou widgets. A visualização pode ficar incompleta até a reconexão.",
+    "loadError": "Houve um problema ao carregar os dashboards ou widgets. A visualização pode ficar incompleta até que a conexão seja restabelecida.",
     "untitledConversation": "Conversa sem título",
     "noConversationLinked": "Nenhuma conversa vinculada",
     "removeWidget": "Remover",
@@ -383,20 +286,20 @@
     "shareImage": "Compartilhar imagem",
     "share": "Compartilhar link",
     "chartNotReady": "O gráfico ainda está sendo renderizado. Tente novamente em instantes.",
-    "goToConversation": "Ir para a análise",
+    "goToConversation": "Ver análise",
     "widgetImageCopied": "Imagem copiada para a área de transferência",
     "widgetImageCopyFailed": "Não foi possível copiar a imagem",
     "widgetImageDownloadFailed": "Não foi possível baixar a imagem",
-    "widgetNativeShareFailed": "O compartilhamento não está disponível neste dispositivo ou navegador",
-    "widgetShareFailed": "Não foi possível gerar a imagem de compartilhamento",
+    "widgetNativeShareFailed": "O compartilhamento não está disponível neste dispositivo/navegador",
+    "widgetShareFailed": "Não foi possível gerar a imagem para compartilhar",
     "nativeShareUnavailable": "O compartilhamento nativo não está disponível neste navegador",
     "lastUpdatedAt": "Última atualização em {{ts}}",
     "createdAt": "Criado em {{ts}}",
     "sort": {
       "label": "Ordenar widgets",
       "manual": "Ordem manual",
-      "newest": "Mais recentes primeiro",
-      "oldest": "Mais antigos primeiro",
+      "newest": "Mais recentes",
+      "oldest": "Mais antigos",
       "title": "Título (A–Z)"
     },
     "creatingShareLink": "Criando link",
@@ -421,8 +324,8 @@
       "layoutWide": "Largo",
       "moveUp": "Mover para cima",
       "moveDown": "Mover para baixo",
-      "widgetColorLabel": "Cor do widget",
       "colorLabel": "Cor da categoria",
+      "widgetColorLabel": "Cor do widget",
       "colorDefault": "Padrão",
       "colorBlue": "Azul",
       "colorGreen": "Verde",
@@ -434,37 +337,38 @@
       "categoryLabel": "Categoria",
       "categoryDefault": "Padrão",
       "categoryGovernance": "Governança",
-      "categorySPO": "Staking / Validadores",
-      "categoryTokens": "Tokens",
+      "categorySPO": "Staking / SPOs",
+      "categoryTokens": "Tokens (CNTs)",
       "categoryDeFi": "DeFi",
       "categoryTreasury": "Tesouraria / Financiamento",
       "categoryWallets": "Carteiras e Endereços",
       "categoryNetwork": "Rede / Performance",
       "categoryNFT": "NFTs",
       "categoryMarkets": "Mercados / DEX",
-      "categoryMetadata": "Metadados",
-      "positionLabel": "Posição",
-      "positionUnknown": "—",
+      "categoryMetadata": "Metadados / CIPs",
+      "positionValue": "#{n}",
       "saveFailed": "Não foi possível salvar as configurações do widget.",
       "moveFailed": "Falha ao mover o widget",
       "moveFailedUp": "Não foi possível mover o widget para cima.",
       "moveFailedDown": "Não foi possível mover o widget para baixo.",
       "moveUpDisabled": "Já está no topo.",
-      "moveDownDisabled": "Já está na última posição.",
-      "reorderOnlyManualHint": "A reordenação só está disponível quando a ordenação estiver definida como Ordem manual.",
-      "moveDisabledManualOnly": "Disponível apenas com ordenação manual"
+      "moveDownDisabled": "Já está no final.",
+      "positionLabel": "Posição",
+      "positionUnknown": "—",
+      "reorderOnlyManualHint": "Reordenar só está disponível quando a ordenação estiver em Manual.",
+      "moveDisabledManualOnly": "Apenas disponível com ordenação Manual"
     }
   },
   "admin": {
     "title": "Painel Admin",
     "accessDeniedTitle": "Acesso de administrador necessário",
-    "accessDeniedText": "Você precisa de privilégios de administrador para acessar esta página. Se acreditar que isso é um erro, entre em contato com os administradores da SAP.",
-    "searchPlaceholder": "Buscar por e-mail, nome de usuário ou carteira…",
+    "accessDeniedText": "Você precisa de privilégios de administrador para acessar esta página. Se achar que isso é um erro, entre em contato com os administradores do CAP.",
+    "searchPlaceholder": "Pesquisar por e-mail, usuário ou carteira…",
     "loading": "Carregando usuários…",
     "toastLoadError": "Erro ao carregar usuários admin",
     "colId": "ID",
     "colEmail": "E-mail",
-    "colUsername": "Nome de usuário",
+    "colUsername": "Usuário",
     "colWallet": "Carteira",
     "colConfirmed": "Confirmado",
     "colAdmin": "Admin",
@@ -478,61 +382,61 @@
     "systemStatsCpu": "Uso de CPU",
     "systemStatsMemory": "Uso de memória",
     "systemStatsDisk": "Uso de disco",
-    "userStatsFiltered": "Filtrado: {{count}}",
-    "userStatsAdminsCaption": "Usuários com privilégios de administrador",
-    "userStatsConfirmedCaption": "Contas com e-mail confirmado",
-    "subtitle": "Monitore usuários da SAP, métricas do sistema e a saúde dos serviços",
+    "userStatsFiltered": "Filtered: {{count}}",
+    "userStatsAdminsCaption": "Users with admin privileges",
+    "userStatsConfirmedCaption": "Accounts with confirmed email",
+    "subtitle": "Monitoramento de usuários, métricas do sistema, estado básico do nó",
     "userSectionTitle": "Visão geral de usuários",
-    "userSectionSubtitle": "Métricas de alto nível sobre contas registradas e usuários administradores.",
+    "userSectionSubtitle": "Métricas de alto nível sobre contas registradas e usuários admin.",
     "systemSectionTitle": "Visão geral do sistema",
-    "systemSectionSubtitle": "Visão rápida do uso de CPU, memória e disco no nó de backend da SAP.",
+    "systemSectionSubtitle": "Visão rápida do uso de CPU, memória e disco do backend do CAP.",
     "tableSectionTitle": "Diretório de usuários",
-    "tableSectionSubtitle": "Pesquise, inspecione e gerencie contas individuais da SAP.",
+    "tableSectionSubtitle": "Pesquise, inspecione e gerencie contas individuais do CAP.",
     "notifySectionTitle": "Alertas de novos usuários",
-    "notifySectionSubtitle": "Envie um e-mail para a equipe de operações sempre que uma nova conta for criada.",
+    "notifySectionSubtitle": "Envie um e-mail para o time de operações sempre que uma nova conta for criada.",
     "notifyToggleLabel": "Enviar e-mail quando um novo usuário se cadastrar",
-    "notifyRecipientsLabel": "Endereços de destinatários",
+    "notifyRecipientsLabel": "Endereços de e-mail",
     "notifyRecipientsPlaceholder": "<adicione um endereço de e-mail>",
-    "notifyRecipientsHelp": "Todos os destinatários marcados receberão a notificação quando uma nova conta de usuário for criada.",
+    "notifyRecipientsHelp": "Um e-mail por linha. Todos receberão a notificação quando uma nova conta for criada.",
     "notifyRecipientsCount": "{{count}} válidos, {{total}} no total",
     "notifyRecipientsInvalid": "{{count}} e-mail(s) inválido(s) detectado(s). Revise a lista antes de salvar.",
     "notifySaving": "Salvando...",
     "notifySaveButton": "Salvar configurações",
     "notifySaveSuccess": "Configurações de notificação salvas.",
-    "notifySaveError": "Falha ao salvar as configurações de notificação",
+    "notifySaveError": "Erro ao salvar as configurações de notificação",
     "notificationsSendTest": "Enviar e-mail de teste",
     "notificationsTesting": "Enviando teste...",
     "notificationsTestOk": "Notificação de teste disparada. Verifique sua caixa de entrada.",
     "notificationsTestError": "Não foi possível enviar a notificação de teste.",
     "colActions": "Ações",
-    "actionPromoteAdmin": "Promover a admin",
-    "actionDemoteAdmin": "Remover privilégios de admin",
-    "actionMarkConfirmed": "Marcar como confirmado (o usuário será notificado)",
-    "actionMarkUnconfirmed": "Marcar como não confirmado (o usuário será notificado)",
+    "actionPromoteAdmin": "Promover a administrador",
+    "actionDemoteAdmin": "Remover privilégios de administrador",
+    "actionMarkConfirmed": "Marcar como confirmado",
+    "actionMarkUnconfirmed": "Marcar como não confirmado",
+    "actionDeleteUser": "Excluir usuário",
     "actionDeleteUserHard": "Excluir usuário permanentemente",
-    "actionDeleteUserSoft": "Remover usuário, preservando conteúdo",
-    "toastPromotedAdmin": "Usuário promovido a admin",
-    "toastDemotedAdmin": "Privilégios de admin removidos",
+    "actionDeleteUserSoft": "Excluir usuário, preservando conteúdo",
+    "toastPromotedAdmin": "Usuário promovido a administrador",
+    "toastDemotedAdmin": "Privilégios de administrador removidos",
     "toastMarkedConfirmed": "Usuário marcado como confirmado",
     "toastMarkedUnconfirmed": "Usuário marcado como não confirmado",
     "confirmDeleteUser": "Tem certeza de que deseja excluir o usuário: {{email}}?",
-    "confirmDeleteUserOnce": "Isso irá anonimizar o usuário {{email}} e preservar seu conteúdo. Deseja continuar?",
-    "confirmDeleteUserAnonymized": "Este usuário já está anonimizado. Excluir novamente removerá permanentemente a conta e os dados relacionados. Deseja continuar?",
+    "confirmDeleteUserOnce": "Isso irá anonimizar o usuário {{email}} e preservar o conteúdo associado. Deseja continuar?",
+    "confirmDeleteUserAnonymized": "Este usuário já está anonimizado. Excluir novamente irá remover permanentemente a conta e os dados relacionados. Deseja continuar?",
     "toastUserAnonymized": "Usuário anonimizado e conteúdo preservado",
     "toastDeletedUser": "Usuário excluído com sucesso",
     "toastActionError": "Falha ao executar a ação",
-    "errorLastAdmin": "Você não pode excluir o último admin restante.",
-    "errorCannotSelfDeleteHere": "Você não pode excluir a si mesmo por esta tela. Use a página de configurações da sua própria conta.",
+    "errorLastAdmin": "Você não pode excluir o último administrador restante.",
+    "errorCannotSelfDeleteHere": "Você não pode excluir sua própria conta por aqui. Use a página de configurações da sua conta.",
     "anonymizedBadge": "Anonimizado",
-    "anonymizedTooltip": "Conta anonimizada; conteúdo preservado",
+    "anonymizedTooltip": "Conta anonimizada – conteúdo preservado",
     "systemStatsCpuThreads": "{{threads}} threads ({{cores}} núcleos físicos)",
     "tabOverview": "Visão geral",
     "tabUsers": "Usuários",
-    "tabMetrics": "Métricas",
     "tabAlerts": "Alertas",
     "tabSystem": "Sistema",
     "systemDetailsTitle": "Métricas do nó",
-    "systemDetailsSubtitle": "Métricas detalhadas de CPU, memória, disco e GPU do nó de backend da SAP.",
+    "systemDetailsSubtitle": "Métricas detalhadas de CPU, memória, disco e GPU do nó backend do CAP.",
     "systemStatsDiskRoot": "Uso de disco (raiz)",
     "systemStatsDiskMount": "Montado em {{mount}}",
     "systemStatsCpuLoad": "Carga média: {{load1}} (1m), {{load5}} (5m), {{load15}} (15m)",
@@ -548,17 +452,17 @@
     "systemGpusTitle": "GPUs",
     "systemGpusSubtitle": "Uso e memória por dispositivo de GPU.",
     "waitlistTitle": "Lista de Espera",
-    "waitlistSubtitle": "Usuários que solicitaram acesso antecipado, mas ainda não estão registrados.",
-    "waitlistSearchPlaceholder": "Buscar por e-mail ou ref…",
+    "waitlistSubtitle": "Usuários que solicitaram acesso antecipado, mas ainda não estão cadastrados.",
+    "waitlistSearchPlaceholder": "Buscar por e-mail ou referência…",
     "waitlistEmpty": "Não há usuários atualmente na lista de espera.",
     "noWaitlistResults": "Nenhuma entrada da lista de espera corresponde à sua busca.",
     "confirmDeleteWaitlist": "Remover {{email}} da lista de espera?",
     "createUser": "Criar usuário",
-    "createAndConfirmUser": "Criar e confirmar usuário (o usuário será notificado)",
+    "createAndConfirmUser": "Criar e confirmar usuário (usuário será notificado)",
     "deleteWaitlistEntry": "Excluir entrada da lista de espera",
     "toastWaitlistUserCreated": "Usuário criado a partir da lista de espera",
     "toastWaitlistUserCreatedConfirmed": "Usuário criado e confirmado",
-    "toastWaitlistDeleted": "Removido da lista de espera",
+    "toastWaitlistDeleted": "Entrada removida da lista de espera",
     "colRef": "Ref",
     "colLanguage": "Idioma",
     "colCreatedAt": "Criado em",
@@ -566,37 +470,38 @@
     "remove": "Remover",
     "normalize": "Normalizar",
     "alertRecipientsPoolTitle": "Destinatários de alertas",
-    "alertRecipientsPoolSubtitle": "Gerencie endereços de e-mail compartilhados usados em notificações de alerta.",
+    "alertRecipientsPoolSubtitle": "Gerencie e-mails compartilhados usados em todas as notificações de alerta.",
     "alertRecipientsPoolLabel": "Endereços de destinatários",
-    "alertRecipientsPoolPlaceholder": "adicionar endereço de e-mail",
-    "alertRecipientsPoolHelp": "Adicione endereços uma vez e reutilize-os em todos os tipos de alerta.",
+    "alertRecipientsPoolPlaceholder": "adicionar e-mail",
+    "alertRecipientsPoolHelp": "Adicione os e-mails uma vez e reutilize em todos os tipos de alerta.",
     "alertRecipientsPoolBulkPlaceholder": "Cole um e-mail por linha (opcional)",
     "alertRecipientsPoolEmpty": "Adicione destinatários ao pool compartilhado para selecioná-los aqui.",
     "waitlistNotifySectionTitle": "Alertas da lista de espera",
     "waitlistNotifySectionSubtitle": "Envie um e-mail para a equipe de operações sempre que um usuário entrar na lista de espera.",
     "waitlistNotifyToggleLabel": "Enviar e-mail quando um usuário entrar na lista de espera",
-    "waitlistNotifyRecipientsHelp": "Todos os destinatários marcados receberão a notificação quando uma nova entrada na lista de espera for criada.",
-    "waitlistNotificationsTestOk": "Notificação de teste da lista de espera disparada. Verifique sua caixa de entrada.",
+    "waitlistNotifyRecipientsHelp": "Um e-mail por linha. Todos receberão a notificação quando um novo cadastro na lista de espera for criado.",
+    "waitlistNotificationsTestOk": "Notificação de teste da lista de espera enviada. Verifique sua caixa de entrada.",
     "waitlistNotificationsTestError": "Não foi possível enviar a notificação de teste da lista de espera.",
     "waitlistSectionTitle": "Visão geral da lista de espera",
-    "waitlistSectionSubtitle": "Métricas de alto nível sobre solicitações de acesso antecipado.",
+    "waitlistSectionSubtitle": "Métricas de alto nível sobre pedidos de acesso antecipado.",
     "waitlistStatsTotal": "Total na lista",
     "waitlistStatsFiltered": "Filtrado: {{count}}",
-    "waitlistStatsWithRef": "Com indicação",
-    "waitlistStatsWithRefCaption": "Entradas que incluem um código de indicação",
+    "waitlistStatsWithRef": "Com referência",
+    "waitlistStatsWithRefCaption": "Entradas que incluem um código de referência",
     "waitlistStatsLanguages": "Idiomas",
     "waitlistStatsLanguagesCaption": "Valores distintos de idioma",
     "userConfirmedNotifySectionTitle": "Alertas de usuário confirmado",
-    "userConfirmedNotifySectionSubtitle": "Envie um e-mail para a equipe de operações sempre que um admin confirmar uma conta de usuário.",
+    "userConfirmedNotifySectionSubtitle": "Envie um e-mail para o time de operações sempre que um admin confirmar uma conta de usuário.",
     "userConfirmedNotifyToggleLabel": "Enviar e-mail quando um admin confirmar um usuário",
-    "userConfirmedNotifyRecipientsHelp": "Todos os destinatários marcados receberão a notificação quando um usuário for confirmado.",
+    "userConfirmedNotifyRecipientsHelp": "Um e-mail por linha. Todos os destinatários receberão a notificação quando um usuário for confirmado.",
+    "tabMetrics": "Métricas",
     "metrics": {
       "title": "Métricas da Plataforma",
-      "subtitle": "Indicadores globais de analytics e desempenho",
-      "totalQueries": "Total de consultas",
+      "subtitle": "Indicadores globais de uso, desempenho e qualidade",
+      "totalQueries": "Consultas totais",
       "uniqueLangs": "Idiomas",
       "validSparqlRate": "Taxa de SPARQL válido",
-      "semanticValidRate": "Taxa de validade semântica",
+      "semanticValidRate": "Validação semântica",
       "target": "Meta",
       "totalTriplesLoaded": "Triplas carregadas",
       "ontologyAlignmentRate": "Alinhamento ontológico",
@@ -616,7 +521,7 @@
       "title": "Consultas do Usuário",
       "subtitle": "Consultas em linguagem natural executadas pelo usuário #{{userId}}",
       "back": "Voltar ao admin",
-      "searchPlaceholder": "Buscar consultas, idioma, tipo de resultado…",
+      "searchPlaceholder": "Buscar por consulta, idioma, tipo de resultado…",
       "empty": "Nenhuma consulta encontrada para este usuário.",
       "cardLine": "LLM {{llm}} • SPARQL {{sparql}} • Resultados {{resultCount}} ({{resultType}}) • SPARQL válido: {{sparqlValid}} • Semântica válida: {{semanticValid}} • Federado: {{federated}}",
       "results": "Resultados",
@@ -628,7 +533,7 @@
       "language": "Idioma",
       "totalLatency": "Latência total",
       "resultType": "Tipo de resultado",
-      "succeeded": "Concluída com sucesso"
+      "succeeded": "Executada com sucesso"
     },
     "userActions": {
       "viewQueries": "Ver consultas"
@@ -646,13 +551,13 @@
       "createdAt": "Criado em",
       "complexity": "Complexidade",
       "sparqlValid": "SPARQL válido",
-      "semanticValid": "Semântica válida",
-      "federated": "Federado",
+      "semanticValid": "Semântico válido",
+      "federated": "Federada",
       "sequential": "Sequencial",
       "temporal": "Temporal",
       "offchainMetadata": "Metadados off-chain",
       "aggregation": "Agregação",
-      "multiRel": "Multirrelacionamento",
+      "multiRel": "Multi-relacionamento",
       "copy": "Copiar",
       "copied": "Copiado",
       "copySparql": "Copiar SPARQL para a área de transferência",
@@ -670,7 +575,7 @@
   "errors": {
     "storageRequired": {
       "title": "Armazenamento bloqueado",
-      "body": "SAP precisa de armazenamento do navegador (cookies/local storage) para manter você conectado. Ative o armazenamento para este site, desative o modo de privacidade estrito ou libere espaço e recarregue a página."
+      "body": "O CAP precisa de armazenamento do navegador (cookies/local storage) para manter seu login. Ative o armazenamento para este site, desative o modo de privacidade estrito ou libere espaço e recarregue a página."
     }
   }
 }

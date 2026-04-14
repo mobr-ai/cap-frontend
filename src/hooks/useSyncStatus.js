@@ -2,8 +2,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 
-// Optional: set VITE_APP_OFFLINE=true in .env.local to skip SPARQL during local dev
-const OFFLINE = import.meta.env?.VITE_APP_OFFLINE === "true";
+// Optional: set VITE_CAP_OFFLINE=true in .env.local to skip SPARQL during local dev
+const OFFLINE = import.meta.env?.VITE_CAP_OFFLINE === "true";
 
 // Canonical, i18n-friendly status codes (no UI strings in the hook)
 export const SYNC_STATUS = {
@@ -17,10 +17,10 @@ export const SYNC_STATUS = {
 // Dev/StrictMode singleton to avoid double loops
 function getSingleton() {
   if (typeof window === "undefined") return { running: false };
-  if (!window.__APP_SYNC_SINGLETON__) {
-    window.__APP_SYNC_SINGLETON__ = { running: false };
+  if (!window.__CAP_SYNC_SINGLETON__) {
+    window.__CAP_SYNC_SINGLETON__ = { running: false };
   }
-  return window.__APP_SYNC_SINGLETON__;
+  return window.__CAP_SYNC_SINGLETON__;
 }
 
 /**
@@ -29,15 +29,15 @@ function getSingleton() {
 export default function useSyncStatus(authFetch) {
   const location = useLocation();
   const [healthOnline, setHealthOnline] = useState(null);
-  const [indexedHead, setIndexedHead] = useState(null);
-  const [sourceHead, setSourceHead] = useState(null);
+  const [capBlock, setCapBlock] = useState(null);
+  const [cardanoBlock, setCardanoBlock] = useState(null);
 
   // Demo/offline simulation state
   const demoRef = useRef({
     startedAt: Date.now(),
     phase: 0,
-    baseSource: 12_755_323,
-    baseIndexed: 12_755_124,
+    baseChain: 12_755_323,
+    baseCap: 12_755_124,
     lastTick: 0,
   });
 
@@ -89,8 +89,8 @@ export default function useSyncStatus(authFetch) {
     // Phases:
     // 0: Checking (0–2s)  => healthOnline=null, no blocks
     // 1: Offline  (2–5s)  => healthOnline=false, no blocks
-    // 2: Syncing  (5–18s) => healthOnline=true, app lags then catches up
-    // 3: Synced   (18–26s)=> healthOnline=true, app within 0–3 blocks
+    // 2: Syncing  (5–18s) => healthOnline=true, cap lags then catches up
+    // 3: Synced   (18–26s)=> healthOnline=true, cap within 0–3 blocks
     // Loop every 26s
     const loopMs = 26_000;
     const t = elapsed % loopMs;
@@ -104,15 +104,15 @@ export default function useSyncStatus(authFetch) {
 
     if (phase === 0) {
       setHealthOnline(null);
-      setIndexedHead(null);
-      setSourceHead(null);
+      setCapBlock(null);
+      setCardanoBlock(null);
       return;
     }
 
     if (phase === 1) {
       setHealthOnline(false);
-      setIndexedHead(null);
-      setSourceHead(null);
+      setCapBlock(null);
+      setCardanoBlock(null);
       return;
     }
 
@@ -122,23 +122,23 @@ export default function useSyncStatus(authFetch) {
     // Advance chain slowly over time seeing "live" movement
     // (~1 block/sec equivalent for demo)
     const chainAdvance = Math.floor((elapsed - 5_000) / 1_000);
-    const chain = d.baseSource + Math.max(0, chainAdvance);
+    const chain = d.baseChain + Math.max(0, chainAdvance);
 
-    let appIndex;
+    let cap;
     if (phase === 2) {
       // Start behind and catch up
       // lag shrinks from ~900 to ~30 blocks during syncing window
       const syncingProgress = (t - 5_000) / (18_000 - 5_000); // 0..1
       const lag = Math.round(900 - syncingProgress * 870); // 900 -> 30
-      appIndex = chain - Math.max(0, lag);
+      cap = chain - Math.max(0, lag);
     } else {
       // Synced: keep within 0..3 blocks
       const wobble = Math.floor(now / 900) % 4; // 0..3
-      appIndex = chain - wobble;
+      cap = chain - wobble;
     }
 
-    setSourceHead(chain);
-    setIndexedHead(appIndex);
+    setCardanoBlock(chain);
+    setCapBlock(cap);
   }, []);
 
   const checkHealth = useCallback(
@@ -197,11 +197,11 @@ export default function useSyncStatus(authFetch) {
         const row = bindings?.[0];
 
         if (row) {
-          const indexed = Number(row?.capBlockNum?.value ?? NaN);
-          const source = Number(row?.currentCardanoHeight?.value ?? NaN);
+          const cap = Number(row?.capBlockNum?.value ?? NaN);
+          const chain = Number(row?.currentCardanoHeight?.value ?? NaN);
 
-          if (!Number.isNaN(indexed)) setIndexedHead(indexed);
-          if (!Number.isNaN(source)) setSourceHead(source);
+          if (!Number.isNaN(cap)) setCapBlock(cap);
+          if (!Number.isNaN(chain)) setCardanoBlock(chain);
           resetFailure();
         } else {
           console.debug("Sync info: no bindings in sync_data response", data);
@@ -221,11 +221,11 @@ export default function useSyncStatus(authFetch) {
   );
 
   const syncPct = useMemo(() => {
-    if (indexedHead == null || sourceHead == null) return null;
+    if (capBlock == null || cardanoBlock == null) return null;
 
-    const chain = Math.max(1, sourceHead);
-    const raw = (indexedHead / chain) * 100;
-    const lag = Math.max(0, chain - indexedHead);
+    const chain = Math.max(1, cardanoBlock);
+    const raw = (capBlock / chain) * 100;
+    const lag = Math.max(0, chain - capBlock);
 
     // Show 100% when we're under the threshold
     if (lag <= 50) return 100;
@@ -237,12 +237,12 @@ export default function useSyncStatus(authFetch) {
     if (clamped >= 100) return 100;
 
     return Math.floor(clamped * 10) / 10; // 99.99 -> 99.9
-  }, [indexedHead, sourceHead]);
+  }, [capBlock, cardanoBlock]);
 
   const syncLag = useMemo(() => {
-    if (indexedHead == null || sourceHead == null) return null;
-    return Math.max(0, sourceHead - indexedHead);
-  }, [indexedHead, sourceHead]);
+    if (capBlock == null || cardanoBlock == null) return null;
+    return Math.max(0, cardanoBlock - capBlock);
+  }, [capBlock, cardanoBlock]);
 
   // Machine-readable status object (no UI strings)
   const syncStatus = useMemo(() => {
@@ -252,22 +252,22 @@ export default function useSyncStatus(authFetch) {
     }
 
     // Unknown: nothing known yet
-    if (indexedHead == null && sourceHead == null) {
+    if (capBlock == null && cardanoBlock == null) {
       return { code: SYNC_STATUS.UNKNOWN, cls: "" };
     }
 
     // Checking: one side still missing
-    if (indexedHead == null || sourceHead == null) {
+    if (capBlock == null || cardanoBlock == null) {
       return { code: SYNC_STATUS.CHECKING, cls: "" };
     }
 
     // Synced vs syncing
-    if (sourceHead - indexedHead <= 5) {
+    if (cardanoBlock - capBlock <= 5) {
       return { code: SYNC_STATUS.SYNCED, cls: "synced" };
     }
 
     return { code: SYNC_STATUS.SYNCING, cls: "syncing" };
-  }, [healthOnline, indexedHead, sourceHead]);
+  }, [healthOnline, capBlock, cardanoBlock]);
 
   // Stable loop: no dependency on backoff/failCount
   useEffect(() => {
@@ -318,8 +318,8 @@ export default function useSyncStatus(authFetch) {
 
   return {
     healthOnline,
-    indexedHead,
-    sourceHead,
+    capBlock,
+    cardanoBlock,
     syncStatus, // { code, cls }
     syncPct,
     syncLag,

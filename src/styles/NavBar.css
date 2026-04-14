@@ -13,7 +13,7 @@
 }
 
 /* Bar container */
-.app-navbar {
+.cap-navbar {
   background: #1e293b !important;
   color: var(--nav-fg);
   font-family: var(--nav-font);
@@ -28,7 +28,7 @@
 }
 
 /* grid layout: Brand | Status | Controls */
-.app-navbar .app-navbar-row {
+.cap-navbar .cap-navbar-row {
   display: flex;
   grid-template-columns: minmax(220px, 32vw) 1fr auto;
   align-items: center;
@@ -36,7 +36,7 @@
 }
 
 /* When sidebar burger exists */
-.has-left-burger .app-navbar-row {
+.has-left-burger .cap-navbar-row {
   /* grid-template-columns: 48px minmax(200px, auto) 1fr auto; */
   margin-left: 1rem;
 }
@@ -230,7 +230,7 @@
 
 /* Responsive adjustments (tablet/desktop down) */
 @media (max-width: 992px) {
-  .app-navbar .app-navbar-row {
+  .cap-navbar .cap-navbar-row {
     grid-template-columns: 1fr auto;
     margin-left: auto;
   }
@@ -250,10 +250,10 @@
 
 /* Large screens: hide Bootstrap's burger, only sidebar burger is used */
 @media (min-width: 992px) {
-  .app-navbar .navbar-toggler {
+  .cap-navbar .navbar-toggler {
     display: none !important;
   }
-  .app-navbar .app-navbar-row {
+  .cap-navbar .cap-navbar-row {
     display: grid;
   }
 }
@@ -265,27 +265,27 @@
     display: none;
   }
 
-  .app-navbar .app-navbar-row {
+  .cap-navbar .cap-navbar-row {
     grid-template-columns: 1fr auto;
   }
 }
 
 /* Navbar toggler (burger) */
-.app-navbar .navbar-toggler {
+.cap-navbar .navbar-toggler {
   border-radius: 0.9rem;
   padding: 0.25rem 0.6rem;
   border-color: rgba(148, 163, 184, 0.4);
 }
 
 /* Make the expanded mobile menu use a solid dark background */
-.app-navbar .navbar-collapse {
+.cap-navbar .navbar-collapse {
   background-color: transparent;
 }
 
 @media (max-width: 991.98px) {
-  .app-navbar .navbar-collapse,
-  .app-navbar .navbar-collapse.collapsing,
-  .app-navbar .navbar-collapse.show {
+  .cap-navbar .navbar-collapse,
+  .cap-navbar .navbar-collapse.collapsing,
+  .cap-navbar .navbar-collapse.show {
     background-color: var(--nav-bg);
     padding: 0.5rem 1rem 0.75rem;
     margin-top: 0.35rem;
@@ -324,8 +324,8 @@
   }
 }
 
-/* Shift navbar content so burger sits left of app logo in desktop sidebar mode */
-.app-navbar-with-sidebar {
+/* Shift navbar content so burger sits left of CAP logo in desktop sidebar mode */
+.cap-navbar-with-sidebar {
   padding-left: 3rem;
 }
 
@@ -363,7 +363,7 @@
    Compact radial sync indicator
    ─────────────────────────────── */
 
-.app-sync {
+.cap-sync {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -373,14 +373,14 @@
   cursor: help;
 }
 
-.app-sync-label {
+.cap-sync-label {
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.6px;
   color: rgba(229, 231, 235, 0.85);
 }
 
-.app-sync-ring {
+.cap-sync-ring {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -390,7 +390,7 @@
   flex: 0 0 26px;
 }
 
-.app-sync-ring-text {
+.cap-sync-ring-text {
   position: absolute;
   inset: 0;
   display: flex;
@@ -407,17 +407,17 @@
   user-select: none;
 }
 
-.app-sync-svg {
+.cap-sync-svg {
   transform: rotate(-90deg);
 }
 
-.app-sync-track {
+.cap-sync-track {
   fill: none;
   stroke: rgba(148, 163, 184, 0.25);
   stroke-width: 2.5;
 }
 
-.app-sync-progress {
+.cap-sync-progress {
   fill: none;
   stroke-width: 2.5;
   stroke-linecap: round;
@@ -427,14 +427,14 @@
     opacity 200ms ease;
 }
 
-.app-sync-slash {
+.cap-sync-slash {
   fill: none;
   stroke-width: 2.2;
   stroke-linecap: round;
   opacity: 0;
 }
 
-/* .app-sync-pct {
+/* .cap-sync-pct {
   font-size: 0.82rem;
   font-weight: 700;
   color: #e5e7eb;
@@ -442,20 +442,20 @@
 } */
 
 /* States */
-.app-sync[data-state="synced"] .app-sync-progress {
+.cap-sync[data-state="synced"] .cap-sync-progress {
   stroke: #10b981;
 }
 
-.app-sync[data-state="syncing"] .app-sync-progress {
+.cap-sync[data-state="syncing"] .cap-sync-progress {
   stroke: #f59e0b;
 }
 
 /* Only animate when syncing */
-.app-sync[data-state="syncing"] .app-sync-ring {
-  animation: app-sync-breathe 1.8s ease-in-out infinite;
+.cap-sync[data-state="syncing"] .cap-sync-ring {
+  animation: cap-sync-breathe 1.8s ease-in-out infinite;
 }
 
-@keyframes app-sync-breathe {
+@keyframes cap-sync-breathe {
   0% {
     transform: scale(0.9);
     opacity: 0.75;
@@ -471,16 +471,16 @@
 }
 
 /* Checking: subtle spinner */
-.app-sync[data-state="checking"] .app-sync-progress {
+.cap-sync[data-state="checking"] .cap-sync-progress {
   stroke: rgba(229, 231, 235, 0.65);
   stroke-dasharray: 10 999;
 }
 
-.app-sync[data-state="checking"] .app-sync-svg {
-  animation: app-sync-spin 1.1s linear infinite;
+.cap-sync[data-state="checking"] .cap-sync-svg {
+  animation: cap-sync-spin 1.1s linear infinite;
 }
 
-@keyframes app-sync-spin {
+@keyframes cap-sync-spin {
   from {
     transform: rotate(-90deg);
   }
@@ -490,22 +490,22 @@
 }
 
 /* Offline: gray + slash */
-.app-sync[data-state="offline"] {
+.cap-sync[data-state="offline"] {
   opacity: 0.75;
 }
 
-.app-sync[data-state="offline"] .app-sync-progress {
+.cap-sync[data-state="offline"] .cap-sync-progress {
   stroke: rgba(148, 163, 184, 0.35);
   stroke-dasharray: 0 999;
 }
 
-.app-sync[data-state="offline"] .app-sync-slash {
+.cap-sync[data-state="offline"] .cap-sync-slash {
   stroke: rgba(239, 68, 68, 0.85);
   opacity: 1;
 }
 
 /* Tooltip */
-.app-sync-tooltip {
+.cap-sync-tooltip {
   will-change: opacity, transform;
   position: absolute;
   top: calc(100% + 10px);
@@ -536,7 +536,7 @@
   z-index: 2000;
 }
 
-.app-sync:hover .app-sync-tooltip {
+.cap-sync:hover .cap-sync-tooltip {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -546,27 +546,27 @@
     visibility 0s;
 }
 
-.app-sync-tooltip-blocked {
+.cap-sync-tooltip-blocked {
   display: flex;
   gap: 10px;
   align-items: flex-start;
 }
 
-.app-sync-tooltip-text {
+.cap-sync-tooltip-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.app-sync-tooltip-title {
+.cap-sync-tooltip-title {
   font-weight: 600;
 }
 
-.app-sync-tooltip-body {
+.cap-sync-tooltip-body {
   opacity: 0.9;
 }
 
-.app-tip-icon {
+.cap-tip-icon {
   width: 18px;
   height: 18px;
   border-radius: 999px;

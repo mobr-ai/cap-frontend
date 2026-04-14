@@ -7,11 +7,7 @@
   justify-content: center;
   gap: 0.75rem;
   text-align: center;
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
 }
 
@@ -19,8 +15,11 @@
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background:
-    radial-gradient(circle at top, rgba(52, 152, 219, 0.12), transparent),
+  background: radial-gradient(
+      circle at top,
+      rgba(52, 152, 219, 0.12),
+      transparent
+    ),
     radial-gradient(circle at bottom, rgba(155, 89, 182, 0.12), transparent),
     #050509;
   backdrop-filter: blur(4px);
@@ -42,10 +41,10 @@
 
 /* Vanilla spin */
 .LoadingPage-spin {
-  animation: app-spin 1.2s linear infinite;
+  animation: cap-spin 1.2s linear infinite;
 }
 
-@keyframes app-spin {
+@keyframes cap-spin {
   from {
     transform: rotate(0deg);
   }
@@ -69,11 +68,11 @@
   border-radius: 50%;
   background: radial-gradient(circle, rgba(52, 152, 219, 0.5), transparent);
   opacity: 0.25;
-  animation: app-pulse 1.6s ease-in-out infinite;
+  animation: cap-pulse 1.6s ease-in-out infinite;
   z-index: -1;
 }
 
-@keyframes app-pulse {
+@keyframes cap-pulse {
   0% {
     transform: scale(0.85);
     opacity: 0.18;
@@ -104,7 +103,7 @@
   height: 115px;
   border-radius: 50%;
   border: 1px dashed rgba(255, 255, 255, 0.2);
-  animation: app-orbit-rotate 2.4s linear infinite;
+  animation: cap-orbit-rotate 2.4s linear infinite;
 }
 
 .LoadingPage-orbit-dot {
@@ -140,7 +139,7 @@
   transform: translateY(-50%);
 }
 
-@keyframes app-orbit-rotate {
+@keyframes cap-orbit-rotate {
   0% {
     transform: rotate(0deg);
   }
@@ -167,10 +166,10 @@
   border: 3px solid rgba(255, 255, 255, 0.06);
   border-top-color: #00d4ff;
   border-right-color: #8e44ad;
-  animation: app-ring-spin 1.4s linear infinite;
+  animation: cap-ring-spin 1.4s linear infinite;
 }
 
-@keyframes app-ring-spin {
+@keyframes cap-ring-spin {
   0% {
     transform: rotate(0deg);
   }

@@ -184,7 +184,7 @@ export function useLandingStreamManager({
 
       if (cid && !activeStreamRef.current._streamStartEmitted) {
         activeStreamRef.current._streamStartEmitted = true;
-        emitStreamEvent("app:stream-start", { conversationId: cid });
+        emitStreamEvent("cap:stream-start", { conversationId: cid });
       }
     },
     [conversationMetaRef, emitStreamEvent, migrateProcessingKey],
@@ -211,7 +211,7 @@ export function useLandingStreamManager({
       activeStreamRef.current.startedRouteConversationId ||
       null;
 
-    if (cid) emitStreamEvent("app:stream-end", { conversationId: cid });
+    if (cid) emitStreamEvent("cap:stream-end", { conversationId: cid });
   }, [
     emitStreamEvent,
     isViewingStreamConversation,
@@ -243,7 +243,7 @@ export function useLandingStreamManager({
         activeStreamRef.current.startedRouteConversationId ||
         null;
 
-      if (cid) emitStreamEvent("app:stream-end", { conversationId: cid });
+      if (cid) emitStreamEvent("cap:stream-end", { conversationId: cid });
     },
     [
       addMessage,
@@ -298,10 +298,11 @@ export function useLandingStreamManager({
           },
           {
             query:
-              "Plot a pie chart to show how much the top 1% SOL holders represent from the total supply on the Solana network",
+              "Plot a pie chart to show how much the top 1% ADA holders represent from the total supply on the Cardano network",
           },
           {
-            query: "how many blocks were produced in the current epoch?",
+            query:
+              "how many blocks were produced by this SPO pool18rjrygm3knlt67n3r3prlhnzcjxun7wa8d3l8w9nmlpasquv4au in the current epoch?",
           },
         ]
       : undefined,
