@@ -1,5 +1,6 @@
 // src/components/wallet/SolanaWalletLogin.jsx
 import { useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import Button from "react-bootstrap/Button";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
@@ -11,25 +12,31 @@ function truncateKey(value, left = 4, right = 4) {
 }
 
 export default function SolanaWalletLogin({ showToast, disabled = false }) {
+  const { t } = useTranslation();
   const { publicKey, connected, connecting, disconnect, wallet } = useWallet();
   const { setVisible } = useWalletModal();
 
   const prevConnectedRef = useRef(false);
 
   const address = useMemo(() => publicKey?.toBase58() || "", [publicKey]);
-  const walletName = wallet?.adapter?.name || "Solana wallet";
+  const walletName = wallet?.adapter?.name || t("wallet.solanaDefaultName");
 
   useEffect(() => {
     if (!prevConnectedRef.current && connected && address) {
-      showToast?.(`Connected: ${truncateKey(address, 6, 6)}`, "success");
+      showToast?.(
+        t("wallet.connectedToast", {
+          address: truncateKey(address, 6, 6),
+        }),
+        "success",
+      );
     }
 
     if (prevConnectedRef.current && !connected) {
-      showToast?.("Wallet disconnected", "secondary");
+      showToast?.(t("wallet.disconnectedToast"), "secondary");
     }
 
     prevConnectedRef.current = connected;
-  }, [connected, address, showToast]);
+  }, [connected, address, showToast, t]);
 
   const handleConnectClick = () => {
     if (disabled || connecting) return;
@@ -40,7 +47,7 @@ export default function SolanaWalletLogin({ showToast, disabled = false }) {
     try {
       await disconnect();
     } catch {
-      showToast?.("Failed to disconnect wallet", "danger");
+      showToast?.(t("wallet.disconnectError"), "danger");
     }
   };
 
@@ -57,7 +64,9 @@ export default function SolanaWalletLogin({ showToast, disabled = false }) {
           <span className="Auth-oauth-logo" aria-hidden="true">
             ◎
           </span>
-          {connecting ? "Connecting wallet..." : "Connect Solana Wallet"}
+          {connecting
+            ? t("wallet.connecting")
+            : t("wallet.connectSolanaWallet")}
         </Button>
       ) : (
         <>
@@ -70,7 +79,10 @@ export default function SolanaWalletLogin({ showToast, disabled = false }) {
             <span className="Auth-oauth-logo" aria-hidden="true">
               ◎
             </span>
-            {`${walletName}: ${truncateKey(address, 6, 6)}`}
+            {t("wallet.connectedLabel", {
+              wallet: walletName,
+              address: truncateKey(address, 6, 6),
+            })}
           </Button>
 
           <Button
@@ -83,7 +95,7 @@ export default function SolanaWalletLogin({ showToast, disabled = false }) {
             <span className="Auth-oauth-logo" aria-hidden="true">
               ◎
             </span>
-            Disconnect Wallet
+            {t("wallet.disconnectWallet")}
           </Button>
         </>
       )}
