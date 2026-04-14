@@ -1,19 +1,19 @@
 /* src/styles/landing/ChatInput.css */
 
 /* Input area */
-.cap-root .input-container {
+.app-root .input-container {
   padding: 1.5rem;
   background: var(--background);
   border-top: 1px solid var(--border);
 }
 
-.cap-root .input-wrapper {
+.app-root .input-wrapper {
   display: flex;
   gap: 1rem;
   align-items: flex-start;
 }
 
-.cap-root .input-field {
+.app-root .input-field {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -21,7 +21,7 @@
 }
 
 /* Textarea */
-.cap-root textarea {
+.app-root textarea {
   width: 100%;
   min-height: 60px;
   max-height: 200px;
@@ -42,29 +42,29 @@
     opacity 0.2s;
 }
 
-.cap-root textarea:focus {
+.app-root textarea:focus {
   outline: none;
   border-color: var(--primary);
 }
 
-.cap-root textarea:disabled {
+.app-root textarea:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.cap-root textarea::placeholder {
+.app-root textarea::placeholder {
   color: var(--secondary);
 }
 
 /* Char counter */
-.cap-root .char-count {
+.app-root .char-count {
   font-size: 0.75rem;
   color: var(--text-secondary);
   text-align: right;
 }
 
 /* Send button */
-.cap-root .send-button {
+.app-root .send-button {
   padding: 0.875rem 1.5rem;
   background: var(--primary);
   color: white;
@@ -85,23 +85,23 @@
   align-self: flex-start;
 }
 
-.cap-root .send-button:hover:not(:disabled) {
+.app-root .send-button:hover:not(:disabled) {
   background: var(--primary-dark);
   transform: translateY(-1px);
 }
 
-.cap-root .send-button:disabled {
+.app-root .send-button:disabled {
   background: var(--secondary);
   cursor: not-allowed;
   opacity: 0.6;
 }
 
-.cap-root .send-button.processing {
+.app-root .send-button.processing {
   background: var(--secondary);
 }
 
 /* Small spinner inside button */
-.cap-root .button-spinner {
+.app-root .button-spinner {
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
@@ -118,31 +118,31 @@
 
 /* Mobile */
 @media (max-width: 768px) {
-  .cap-root .input-wrapper {
+  .app-root .input-wrapper {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .cap-root .send-button {
+  .app-root .send-button {
     width: 100%;
     justify-content: center;
     align-self: stretch;
   }
 
-  .cap-root .input-container {
+  .app-root .input-container {
     padding: 1rem;
     max-width: 100vw;
   }
 }
 
 /* Send tooltip (sync blocked) */
-.cap-root .cap-send-btn-wrap {
+.app-root .app-send-btn-wrap {
   position: relative;
   display: inline-flex;
   align-items: flex-start;
 }
 
-.cap-root .cap-send-tooltip {
+.app-root .app-send-tooltip {
   position: absolute;
   right: 0;
   top: calc(100% + 10px);
@@ -170,7 +170,7 @@
   z-index: 2000;
 }
 
-.cap-root .cap-tip-icon {
+.app-root .app-tip-icon {
   width: 18px;
   height: 18px;
   border-radius: 999px;
@@ -185,7 +185,7 @@
   flex: 0 0 auto;
 }
 
-.cap-root .cap-send-btn-wrap:hover .cap-send-tooltip {
+.app-root .app-send-btn-wrap:hover .app-send-tooltip {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);

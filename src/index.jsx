@@ -45,12 +45,12 @@ import useSyncStatus from "./hooks/useSyncStatus";
 // Components
 import Header from "./components/Header";
 
-const SESSION_KEY = "cap_user_session";
+const SESSION_KEY = "app_user_session";
 
 function canUseLocalStorage() {
   try {
     if (typeof window === "undefined" || !window.localStorage) return false;
-    const k = "__cap_ls_test__";
+    const k = "__app_ls_test__";
     window.localStorage.setItem(k, "1");
     window.localStorage.removeItem(k);
     return true;
@@ -208,9 +208,15 @@ function Layout() {
   // --- Authenticated fetch wrapper -----------------------------------------
   const { authFetch } = useAuthRequest({ session, showToast, handleLogout });
 
-  // --- CAP status polling (health + sync)
-  const { healthOnline, capBlock, cardanoBlock, syncStatus, syncPct, syncLag } =
-    useSyncStatus(session ? authFetch : null);
+  // --- Status polling (health + sync)
+  const {
+    healthOnline,
+    indexedHead,
+    sourceHead,
+    syncStatus,
+    syncPct,
+    syncLag,
+  } = useSyncStatus(session ? authFetch : null);
 
   const setUser = useCallback(
     (next) => {
@@ -240,8 +246,8 @@ function Layout() {
       setLoading,
       loading,
       healthOnline,
-      capBlock,
-      cardanoBlock,
+      indexedHead,
+      sourceHead,
       syncStatus,
       syncPct,
       syncLag,
@@ -254,8 +260,8 @@ function Layout() {
       setUser,
       loading,
       healthOnline,
-      capBlock,
-      cardanoBlock,
+      indexedHead,
+      sourceHead,
       syncStatus,
       syncPct,
       syncLag,
@@ -297,8 +303,8 @@ function Layout() {
         <Header
           user={session}
           handleLogout={handleLogout}
-          capBlock={capBlock}
-          cardanoBlock={cardanoBlock}
+          indexedHead={indexedHead}
+          sourceHead={sourceHead}
           syncStatus={syncStatus}
           syncLag={syncLag}
           syncPct={syncPct}
@@ -390,7 +396,7 @@ function AppRouter() {
 function NotFound() {
   return (
     <div className="container py-5">
-      <Image className="Auth-logo" src="./icons/logo.png" alt="CAP logo" />
+      <Image className="Auth-logo" src="./icons/logo.png" alt="App logo" />
 
       <h3 className="mb-3">Page not found</h3>
       <p>

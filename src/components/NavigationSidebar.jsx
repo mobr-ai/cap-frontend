@@ -17,7 +17,7 @@ import {
 import { useTranslation } from "react-i18next";
 import "../styles/NavigationSidebar.css";
 
-const LS_KEY = "cap.sidebar.isOpen";
+const LS_KEY = "app.sidebar.isOpen";
 
 function SidebarTypingTitle({ title, isJustCreated, onDone }) {
   const FULL = String(title || "");
@@ -146,10 +146,10 @@ export default function NavigationSidebar({
 
   const setGlobalProcessingId = (cid) => {
     // Keep a single source of truth that survives route changes.
-    window.__capProcessingConversationId = cid ?? null;
+    window.__appProcessingConversationId = cid ?? null;
     // Optional: notify late subscribers if you want
     window.dispatchEvent(
-      new CustomEvent("cap:stream-state", {
+      new CustomEvent("app:stream-state", {
         detail: { conversationId: cid ?? null },
       }),
     );
@@ -178,12 +178,12 @@ export default function NavigationSidebar({
       });
     };
 
-    window.addEventListener("cap:stream-start", onStart);
-    window.addEventListener("cap:stream-end", onEnd);
+    window.addEventListener("app:stream-start", onStart);
+    window.addEventListener("app:stream-end", onEnd);
 
     return () => {
-      window.removeEventListener("cap:stream-start", onStart);
-      window.removeEventListener("cap:stream-end", onEnd);
+      window.removeEventListener("app:stream-start", onStart);
+      window.removeEventListener("app:stream-end", onEnd);
     };
   }, []);
 
@@ -336,9 +336,9 @@ export default function NavigationSidebar({
   };
 
   return (
-    <div className="cap-sidebar-shell">
+    <div className="app-sidebar-shell">
       <aside
-        className={`cap-sidebar ${collapsed ? "collapsed" : "expanded"} ${
+        className={`app-sidebar ${collapsed ? "collapsed" : "expanded"} ${
           collapsed && hoverExpandZone ? "expand-cursor" : ""
         }`}
         aria-label={t("nav.sidebarAriaLabel")}
@@ -362,7 +362,7 @@ export default function NavigationSidebar({
                 className="sidebar-expand-chevron"
               />
             ) : (
-              <img src="/icons/logo.png" alt="CAP" className="sidebar-logo" />
+              <img src="/icons/logo.png" alt="SAP" className="sidebar-logo" />
             )}
           </button>
 

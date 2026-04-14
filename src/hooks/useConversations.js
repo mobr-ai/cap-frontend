@@ -8,14 +8,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
  *  1) useConversations(authFetch, enabled)
  *  2) useConversations({ authFetch, enabled, showToast, t, limit })
  *
- * Backend (cap/api/conversation.py):
+ * Backend (api/conversation.py):
  *  - GET    /api/v1/conversations/?limit=50   -> List[ConversationSummary]
  *  - PATCH  /api/v1/conversations/{id}        -> ConversationSummary
  *  - DELETE /api/v1/conversations/{id}        -> 204 No Content
  *
  * Events:
- *  - cap:conversation-created  detail: { conversation: { id, title, _justCreated: true, ... } }
- *  - cap:conversation-touched  detail: { conversation: { id, updated_at } }
+ *  - app:conversation-created  detail: { conversation: { id, title, _justCreated: true, ... } }
+ *  - app:conversation-touched  detail: { conversation: { id, updated_at } }
  */
 export function useConversations(arg1, arg2) {
   const opts = useMemo(() => {
@@ -61,7 +61,7 @@ export function useConversations(arg1, arg2) {
     (msg, variant) => {
       if (typeof showToast === "function") showToast(msg, variant);
     },
-    [showToast]
+    [showToast],
   );
 
   const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
@@ -139,8 +139,8 @@ export function useConversations(arg1, arg2) {
 
       setConversations((prev) =>
         (Array.isArray(prev) ? prev : []).map((c) =>
-          String(c.id) === idKey ? { ...c, _justCreated: false } : c
-        )
+          String(c.id) === idKey ? { ...c, _justCreated: false } : c,
+        ),
       );
 
       delete typingTimersRef.current[idKey];
@@ -203,7 +203,7 @@ export function useConversations(arg1, arg2) {
         scheduleClearJustCreated(incoming.id, len);
       }
     },
-    [normalizeConversation, scheduleClearJustCreated, sortConversations]
+    [normalizeConversation, scheduleClearJustCreated, sortConversations],
   );
 
   const updateConversationTitle = useCallback((id, title) => {
@@ -218,8 +218,8 @@ export function useConversations(arg1, arg2) {
               title: nextTitle ? nextTitle : null,
               updated_at: new Date().toISOString(),
             }
-          : c
-      )
+          : c,
+      ),
     );
   }, []);
 
@@ -227,8 +227,8 @@ export function useConversations(arg1, arg2) {
     if (!id) return;
     setConversations((prev) =>
       (Array.isArray(prev) ? prev : []).filter(
-        (c) => String(c.id) !== String(id)
-      )
+        (c) => String(c.id) !== String(id),
+      ),
     );
   }, []);
 
@@ -250,7 +250,7 @@ export function useConversations(arg1, arg2) {
         if (!res?.ok) {
           const text = await res.text().catch(() => "");
           throw new Error(
-            text || `Failed to load conversations (${res?.status})`
+            text || `Failed to load conversations (${res?.status})`,
           );
         }
 
@@ -291,7 +291,7 @@ export function useConversations(arg1, arg2) {
           (t &&
             t("nav.conversationsLoadFailed", "Failed to load conversations")) ||
             "Failed to load conversations",
-          "danger"
+          "danger",
         );
       } finally {
         inFlightRef.current = false;
@@ -306,7 +306,7 @@ export function useConversations(arg1, arg2) {
       safeToast,
       sortConversations,
       t,
-    ]
+    ],
   );
 
   const renameConversation = useCallback(
@@ -330,7 +330,7 @@ export function useConversations(arg1, arg2) {
         if (!res?.ok) {
           const text = await res.text().catch(() => "");
           throw new Error(
-            text || `Failed to rename conversation (${res?.status})`
+            text || `Failed to rename conversation (${res?.status})`,
           );
         }
 
@@ -344,7 +344,7 @@ export function useConversations(arg1, arg2) {
         safeToast(
           (t && t("nav.renameFailed", "Failed to rename conversation")) ||
             "Failed to rename conversation",
-          "danger"
+          "danger",
         );
       }
     },
@@ -356,7 +356,7 @@ export function useConversations(arg1, arg2) {
       t,
       upsertConversation,
       updateConversationTitle,
-    ]
+    ],
   );
 
   const deleteConversation = useCallback(
@@ -376,7 +376,7 @@ export function useConversations(arg1, arg2) {
         if (!res?.ok) {
           const text = await res.text().catch(() => "");
           throw new Error(
-            text || `Failed to delete conversation (${res?.status})`
+            text || `Failed to delete conversation (${res?.status})`,
           );
         }
       } catch (err) {
@@ -386,11 +386,11 @@ export function useConversations(arg1, arg2) {
         safeToast(
           (t && t("nav.deleteFailed", "Failed to delete conversation")) ||
             "Failed to delete conversation",
-          "danger"
+          "danger",
         );
       }
     },
-    [authFetch, enabled, load, removeConversation, safeToast, t]
+    [authFetch, enabled, load, removeConversation, safeToast, t],
   );
 
   useEffect(() => {
@@ -424,9 +424,9 @@ export function useConversations(arg1, arg2) {
       else load({ force: true });
     };
 
-    window.addEventListener("cap:conversation-created", onCreated);
+    window.addEventListener("app:conversation-created", onCreated);
     return () =>
-      window.removeEventListener("cap:conversation-created", onCreated);
+      window.removeEventListener("app:conversation-created", onCreated);
   }, [enabled, load, upsertConversation]);
 
   // touched event: used to bump recency after stream ends
@@ -448,9 +448,9 @@ export function useConversations(arg1, arg2) {
       });
     };
 
-    window.addEventListener("cap:conversation-touched", onTouched);
+    window.addEventListener("app:conversation-touched", onTouched);
     return () =>
-      window.removeEventListener("cap:conversation-touched", onTouched);
+      window.removeEventListener("app:conversation-touched", onTouched);
   }, [enabled, upsertConversation]);
 
   return {

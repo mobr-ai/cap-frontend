@@ -1,15 +1,25 @@
 {
   "welcomeTitle": "Welcome",
   "welcomeSubtitle": "Sign in to access your workspace, dashboards, and analytics.",
-  "loginMsg": "Log in to your CAP account",
-  "signUpMsg": "Sign up for CAP",
+  "welcomeHeroKicker": "SAP · Solana Analytics Platform",
+  "welcomeHeroTitle": "The intelligence layer for grounded Solana analytics.",
+  "welcomeHeroSubtitle": "Empowering builders with semantic querying, explainable insights, interactive dashboards, and ontology-backed blockchain intelligence.",
+  "welcomeHeroHighlight1": "Grounded AI reasoning",
+  "welcomeHeroHighlight2": "Semantic knowledge graph",
+  "welcomeHeroHighlight3": "Streaming analytics experience",
+  "welcomeHeroOverlayTop": "Natural-language discovery",
+  "welcomeHeroOverlayTitle": "Grounded insight generation",
+  "welcomeHeroOverlayBody": "From conversational questions to explainable Solana analytics.",
+  "welcomeScrollHint": "Explore the SAP architecture",
+  "loginMsg": "Sign in to SAP",
+  "signUpMsg": "Create your SAP account",
   "mailPlaceholder": "Enter your email",
   "processingMail": "Processing…",
   "authNextStep": "Continue",
-  "keepMeLoggedIn": "Keep me logged in",
+  "keepMeLoggedIn": "Keep me signed in",
   "forgotPass": "Forgot your password?",
   "signUpButton": "Sign up",
-  "loginButton": "Log in",
+  "loginButton": "Sign in",
   "signUpAlternativeMsg": "Don’t have an account? {}",
   "loginAlternativeMsg": "Already have an account? {}",
   "signUpOR": "OR",
@@ -29,11 +39,11 @@
   "requestNewSetupLinkCta": "Send new link",
   "emailRequiredForSetupLink": "Please enter a valid email to send a new setup link.",
   "setupLinkSent": "A new setup link has been sent to your email.",
-  "passwordAlreadySet": "A password is already set for this account. Please log in.",
+  "passwordAlreadySet": "A password is already set for this account. Please sign in.",
   "accessNotGranted": "This account has not been approved yet.",
-  "loginWithGoogle": "Login with Google",
-  "sessionExpired": "Your session has expired. Please log in again.",
-  "emailConfirmed": "Your email has been confirmed. You can now log in.",
+  "loginWithGoogle": "Sign in with Google",
+  "sessionExpired": "Your session has expired. Please sign in again.",
+  "emailConfirmed": "Your email has been confirmed. You can now sign in.",
   "accountNotConfirmedMessage": "Your account is not confirmed. Please confirm your email.",
   "confirmationEmailResent": "A new confirmation email has been sent.",
   "errorResendingConfirmation": "There was an error resending the confirmation email.",
@@ -45,24 +55,24 @@
   "registerError": "Registration failed. Please check your details.",
   "userExistsError": "This email is already associated with another account. Please try a different address.",
   "walletEmailAlreadySet": "This wallet is already associated with another email address.",
-  "oauthExistsError": "This account is linked with Google login.",
-  "confirmationError": "Email confirmation required before login.",
+  "oauthExistsError": "This account is linked with Google sign-in.",
+  "confirmationError": "Email confirmation required before sign-in.",
   "googleLinkedPasswordLoginNotice": "This account is also linked to Google. Next time, you can sign in with Google in one click.",
   "googleAuthFailed": "Google authentication failed",
   "googleAuthNoCallback": "Google sign-in did not complete. Please try again.",
   "googleAuthCancelled": "Google sign-in was cancelled. Please try again.",
   "googleAuthUnavailable": "Google sign-in is not ready yet. Please refresh and try again.",
   "popupBlockedMsg": "Pop-up blocked by your browser. Please allow pop-ups for this site and try again.",
-  "joinWaitList": "Join the CAP waiting list",
-  "joinWaitListSubtitle": "Get early access to the Cardano Analytics Platform.",
+  "joinWaitList": "Join the SAP waiting list",
+  "joinWaitListSubtitle": "Get early access to the Solana Analytics Platform.",
   "enterEmailPlaceholder": "Enter your email address",
-  "successWaitListMsg": "Thanks for joining! You’re on the waiting list.",
+  "successWaitListMsg": "Thanks for joining. You’re on the waiting list.",
   "errorWaitListMsg": "Something went wrong. Please try again later.",
-  "alreadyOnWaitListMsg": "Great! Your email is on our waiting list. Stay tuned for what's next.",
-  "loginWithWallet": "Connect with a Cardano wallet",
+  "alreadyOnWaitListMsg": "Great. Your email is already on our waiting list. Stay tuned for what comes next.",
+  "loginWithWallet": "Connect with a blockchain wallet",
   "connectWallet": "Connect {{wallet}} Wallet",
-  "joinWaitListSubtitleWallet": "You connected a Cardano wallet. Enter your email to complete registration and join the waiting list.",
-  "walletNotFound": "No Cardano wallets detected. Install <nami>Nami</nami>, <lace>Lace</lace>, <flint>Flint</flint> or <eternl>Eternl</eternl> and reload.",
+  "joinWaitListSubtitleWallet": "You connected a wallet. Enter your email to complete registration and join the waiting list.",
+  "walletNotFound": "No compatible wallets detected. Install a supported wallet and reload.",
   "walletLoginSuccess": "Wallet login successful",
   "loginError": "Login failed. Please try again.",
   "tooltipAvatar": "Change your avatar",
@@ -78,13 +88,13 @@
   "share": "Share",
   "copiedToClipboard": "Copied to clipboard.",
   "copyFailed": "Copy failed.",
-  "shareMessageIntro": "Join me on CAP — Cardano Analytics Platform",
-  "shareMessageOutro": "#Cardano #Analytics #CAP",
+  "shareMessageIntro": "Join me on SAP — Solana Analytics Platform",
+  "shareMessageOutro": "#Solana #Analytics #SAP",
   "invalidUsername": "Invalid username. It must start with a letter and have 6–30 characters (letters, numbers, dot or underscore).",
   "invalidEmailFormat": "Please enter a valid email address.",
   "requestInvalid": "Invalid request. Please check your details and try again.",
-  "oauthPendingApproval": "Account created. Pending approval before you can log in.",
-  "walletPendingApproval": "Wallet linked. Pending approval before you can log in.",
+  "oauthPendingApproval": "Account created. Pending approval before you can sign in.",
+  "walletPendingApproval": "Wallet linked. Pending approval before you can sign in.",
   "usernameTaken": "This username is already taken.",
   "settingsSaved": "Settings saved.",
   "settingsFailed": "Could not save your settings.",
@@ -98,88 +108,170 @@
   "language": "Language",
   "learnMore": "Learn more",
   "welcome": {
-    "cap": {
-      "scrollHint": "Discover CAP",
-
-      "headline": "Welcome to CAP: Cardano Analytics Powered by AI",
-
-      "lead": "Simplifying Cardano blockchain data exploration through natural language, bridging complex on-chain data with user-friendly insights via a custom LLM and a Semantic Knowledge Graph.",
-
+    "sap": {
+      "eyebrow": "SAP",
+      "headline": "SAP: The Intelligence Layer for Solana",
+      "hero": {
+        "badges": {
+          "0": "Grounded AI reasoning",
+          "1": "Ontology-backed insights",
+          "2": "Streaming analytics UX"
+        }
+      },
+      "features": {
+        "kg": {
+          "eyebrow": "Semantic intelligence",
+          "title": "Ontology-Backed Knowledge Graph",
+          "desc": "Models Solana-specific constructs into a formal semantic layer that supports reusable analytics, explainable querying, and grounded AI outputs."
+        },
+        "etl": {
+          "eyebrow": "Reliable ingestion",
+          "title": "Deterministic ETL Pipelines",
+          "desc": "Synchronizes raw on-chain activity into structured, queryable representations designed for downstream analytics, reasoning, and visualization."
+        },
+        "ai": {
+          "eyebrow": "Ground truth first",
+          "title": "Hallucination-Resistant AI Reasoning",
+          "desc": "Uses the knowledge graph as a grounding layer so answers, charts, and summaries stay traceable to structured blockchain evidence."
+        },
+        "discovery": {
+          "eyebrow": "Professional UX",
+          "title": "Natural Language Discovery",
+          "desc": "Enables complex blockchain investigations through plain-language prompts, guided follow-ups, and explainable results."
+        },
+        "dashboard": {
+          "eyebrow": "Live monitoring",
+          "title": "Interactive Smart Dashboards",
+          "desc": "Generates user-defined charts and tables for real-time monitoring of token activity, program behavior, and ecosystem patterns."
+        },
+        "context": {
+          "eyebrow": "Holistic analysis",
+          "title": "On-Chain + Off-Chain Context",
+          "desc": "Merges live network activity with semantic metadata and external context for deeper investigation and more meaningful insights."
+        }
+      },
+      "core": {
+        "mark": "SAP",
+        "nodes": {
+          "0": "Wallet intelligence",
+          "1": "Validator activity",
+          "2": "Transaction flows",
+          "3": "Semantic graph exploration"
+        }
+      },
+      "mini": {
+        "discoveryLabel": "Natural language discovery",
+        "discoveryPrompt": "Search query...",
+        "liveData": "Live Network Data",
+        "externalContext": "External Context"
+      },
+      "queries": {
+        "eyebrow": "Query experience",
+        "title": "Natural-language investigation, grounded by structure",
+        "body": "SAP turns conversational requests into structured semantic operations, returning explainable results that can be pinned, shared, and revisited."
+      },
+      "stack": {
+        "eyebrow": "Technical service stack",
+        "title": "Infrastructure designed for grounded analytics",
+        "qlever": {
+          "title": "QLever KG",
+          "subtitle": "Knowledge graph engine",
+          "desc": "Processes large semantic datasets for grounded retrieval and explainable query execution."
+        },
+        "triton": {
+          "title": "Triton RPC",
+          "subtitle": "Blockchain data access",
+          "desc": "Provides high-concurrency access to historical and live Solana ledger activity."
+        },
+        "openai": {
+          "title": "OpenAI API",
+          "subtitle": "Reasoning layer",
+          "desc": "Transforms natural-language requests into grounded analyses, narratives, and artifacts."
+        }
+      },
+      "scrollHint": "Discover SAP",
+      "lead": "Simplifying Solana blockchain data exploration through natural language, connecting complex on-chain data to usable insights through grounded reasoning and a semantic knowledge graph.",
       "cta": {
-        "primary": "Explore CAP",
+        "title": "Ready to explore Solana through a semantic intelligence layer?",
+        "desc": "Sign in above to access your workspace and start building grounded analytics workflows.",
+        "primary": "Explore SAP",
         "secondary": "Join the Waitlist",
         "button": "Get Early Access",
-        "title": "Ready to explore Cardano data the fast way?",
         "description": "Sign in above to access your workspace and start pinning insights."
       },
-
       "pillars": {
-        "title": "Our Roadmap: The Three Pillars of Innovation",
+        "title": "The Roadmap: Three Core Capabilities",
         "llm": {
-          "title": "Cardano-tailored LLM Pipeline",
-          "desc": "A specialized AI reasoning engine trained to understand Cardano’s domain-specific data structures, ontologies, and governance mechanics."
+          "title": "Solana-Tailored LLM Pipeline",
+          "desc": "A specialized AI reasoning engine built to understand Solana-specific data structures, analytics workflows, and semantic models."
         },
         "kg": {
-          "title": "Cardano Knowledge Graph",
-          "desc": "A semantic source of truth linking on-chain activity with off-chain metadata for holistic, contextual blockchain analysis."
+          "title": "Solana Knowledge Graph",
+          "desc": "A semantic source of truth linking on-chain activity with off-chain metadata for contextual, explainable blockchain analysis."
         },
         "dashboards": {
           "title": "User-Centric Smart Dashboards",
-          "desc": "Interactive, customizable workspaces where users pin AI-generated charts and tables for real-time monitoring and exploration."
+          "desc": "Interactive workspaces where users pin AI-generated charts and tables for real-time monitoring and exploration."
         }
       },
-
       "flow": {
         "title": "From Question to Insight",
         "step1": {
           "title": "Ask in Natural Language",
-          "desc": "Users can input blockchain queries using everyday language — no SQL or SPARQL required."
+          "desc": "Users can input blockchain questions using everyday language — no SQL or SPARQL required."
         },
         "step2": {
           "title": "Semantic Translation",
-          "desc": "CAP’s AI translates your human question into precise, executable SPARQL queries over the Cardano knowledge graph."
+          "desc": "SAP translates human questions into structured semantic operations over the Solana intelligence layer."
         },
         "step3": {
           "title": "Instant Visual Results",
-          "desc": "Results are automatically rendered into interactive Vega-Lite charts or structured tables."
+          "desc": "Results are automatically rendered into charts, tables, and reusable artifacts."
         }
       },
-
       "kpis": {
-        "ask": { "title": "Ask", "subtitle": "in plain language" },
-        "federate": {
-          "title": "Federate (planned)",
-          "subtitle": "on-chain + off-chain"
+        "ask": {
+          "title": "Ask",
+          "subtitle": "in plain language"
         },
-        "visualize": { "title": "Visualize", "subtitle": "instantly" }
+        "federate": {
+          "title": "Connect",
+          "subtitle": "on-chain + context"
+        },
+        "visualize": {
+          "title": "Visualize",
+          "subtitle": "instantly"
+        }
       },
-
       "examples": {
-        "body": "Examples of advanced queries the platform targets",
+        "0": "Show validator activity with the largest stake movement in the last 24 hours",
+        "1": "Compare transaction flow patterns for the top Solana programs this week",
+        "2": "Summarize token activity anomalies and explain what changed",
+        "body": "Examples of advanced queries the platform is designed to support.",
         "colQuery": "User Query Example",
         "colSources": "Data Sources Combined",
-        "title": "Our Target: Complex and Advanced Queries Made Easy",
+        "title": "Complex Analytics Made More Accessible",
         "items": [
           {
-            "query": "List top 5 meme tokens by volume",
-            "sources": "On-chain transactions + Off-chain token descriptions"
+            "query": "List the top 5 Solana tokens by recent volume change",
+            "sources": "On-chain transaction activity + token metadata"
           },
           {
-            "query": "Compare voter turnout by proposal label",
-            "sources": "Governance actions + Metadata anchors"
+            "query": "Compare validator activity with the largest stake movement this week",
+            "sources": "Validator data + staking activity"
           },
           {
-            "query": "Show pools with metadata discrepancies",
-            "sources": "Registration certificates + Off-chain registry"
+            "query": "Show programs with unusual transaction flow patterns",
+            "sources": "Program interactions + behavioral analysis"
           }
         ]
       }
     },
-
     "footer": {
       "tagline": "Building advanced data and AI infrastructure for decentralized ecosystems.",
       "followUs": "Follow Us",
-      "allRights": "All rights reserved."
+      "allRights": "All rights reserved.",
+      "linksAria": "Links"
     }
   },
   "nav": {
@@ -198,11 +290,15 @@
     "conversationsLoadFailed": "Failed to load conversations",
     "renameFailed": "Failed to rename conversation",
     "deleteFailed": "Failed to delete conversation",
-    "analyses": "My analyses"
+    "analyses": "My analyses",
+    "confirmDeleteConversation": "Delete this conversation?",
+    "conversationOptions": "Options",
+    "rename": "Rename",
+    "delete": "Delete"
   },
   "analyses": {
     "title": "My Analyses",
-    "subtitle": "Browse your conversations on a dedicated view.",
+    "subtitle": "Browse your conversations in a dedicated view.",
     "tip": "Great on desktop and mobile",
     "searchPlaceholder": "Search by title, preview, or id…",
     "loading": "Loading analyses…",
@@ -210,12 +306,12 @@
     "noPreview": "No preview available yet.",
     "loadError": "Failed to load analyses.",
     "accessDeniedTitle": "Access denied",
-    "accessDeniedText": "Please log in to view your analyses."
+    "accessDeniedText": "Please sign in to view your analyses."
   },
   "landing": {
-    "emptyTitle": "Ask about Cardano",
-    "emptySubtitle": "Query the Cardano blockchain using natural language. Ask about transactions, blocks, stake pools, governance, or any on-chain data.",
-    "topQueriesTitle": "Ask anything about Cardano",
+    "emptyTitle": "Ask about Solana",
+    "emptySubtitle": "Explore Solana in natural language. Ask about transactions, accounts, validators, programs, token activity, or other on-chain data.",
+    "topQueriesTitle": "Ask anything about Solana",
     "inputPlaceholder": "Question here...",
     "charCount": "{{count}} / {{max}}",
     "processing": "Processing",
@@ -233,11 +329,11 @@
     "syncBlockedOffline": "Sync service is offline. Queries are temporarily disabled.",
     "syncBlockedUnknown": "Sync status is unavailable. Please wait a moment and retry.",
     "emptyRotating": {
-      "0": "Show the latest 5 blocks on Cardano",
-      "1": "What trends are visible in Cardano transactions this month?",
-      "2": "Plot a chart of monthly NFT minting activity in December 2025",
-      "3": "How much of the ADA supply is held by the top 1%?",
-      "4": "Show the latest governance proposals and their IPFS links"
+      "0": "Show the latest 5 blocks on Solana",
+      "1": "What trends are visible in Solana transaction activity this month?",
+      "2": "Plot a chart of recent token activity across the top Solana programs",
+      "3": "Show the validators with the largest recent stake movement",
+      "4": "Summarize notable on-chain changes across Solana this week"
     }
   },
   "sync": {
@@ -253,17 +349,17 @@
       "offlineBody": "The sync service is offline. Queries are disabled.",
       "unknownBody": "Sync status is not available yet. Please wait and retry.",
       "statusLabel": "Status",
-      "capLabel": "CAP",
-      "cardanoLabel": "Cardano",
+      "indexedLabel": "Indexed",
+      "sourceLabel": "Solana",
       "lagLabel": "Lag",
       "blocksSuffix": "blocks"
     }
   },
   "loading": {
     "default": "",
-    "workspace": "Loading your CAP workspace…",
+    "workspace": "Loading your SAP workspace…",
     "dashboardItems": "Loading dashboard widgets…",
-    "wallet": "Waiting wallet connection…"
+    "wallet": "Waiting for wallet connection…"
   },
   "dashboard": {
     "emptyPrompt": "Pin any table or chart from the chat to create your dashboard automatically.",
@@ -338,15 +434,15 @@
       "categoryLabel": "Category",
       "categoryDefault": "Default",
       "categoryGovernance": "Governance",
-      "categorySPO": "Staking / SPOs",
-      "categoryTokens": "Tokens (CNTs)",
+      "categorySPO": "Staking / Validators",
+      "categoryTokens": "Tokens",
       "categoryDeFi": "DeFi",
       "categoryTreasury": "Treasury / Funding",
       "categoryWallets": "Wallets & Addresses",
       "categoryNetwork": "Network / Performance",
       "categoryNFT": "NFTs",
       "categoryMarkets": "Markets / DEX",
-      "categoryMetadata": "Metadata / CIPs",
+      "categoryMetadata": "Metadata",
       "positionLabel": "Position",
       "positionUnknown": "—",
       "saveFailed": "Unable to save widget settings.",
@@ -362,7 +458,7 @@
   "admin": {
     "title": "Admin Panel",
     "accessDeniedTitle": "Admin access required",
-    "accessDeniedText": "You need admin privileges to access this page. If you believe this is an error, contact the CAP administrators.",
+    "accessDeniedText": "You need admin privileges to access this page. If you believe this is an error, contact the SAP administrators.",
     "searchPlaceholder": "Search by email, username, or wallet…",
     "loading": "Loading users…",
     "toastLoadError": "Error loading admin users",
@@ -385,13 +481,13 @@
     "userStatsFiltered": "Filtered: {{count}}",
     "userStatsAdminsCaption": "Users with admin privileges",
     "userStatsConfirmedCaption": "Accounts with confirmed email",
-    "subtitle": "Monitor CAP users, system metrics, basic node health",
+    "subtitle": "Monitor SAP users, system metrics, and service health",
     "userSectionTitle": "User overview",
     "userSectionSubtitle": "High-level metrics about registered accounts and admin users.",
     "systemSectionTitle": "System overview",
-    "systemSectionSubtitle": "Quick snapshot of CPU, memory and disk usage on the CAP backend node.",
+    "systemSectionSubtitle": "Quick snapshot of CPU, memory, and disk usage on the SAP backend node.",
     "tableSectionTitle": "User directory",
-    "tableSectionSubtitle": "Search, inspect and manage individual CAP accounts.",
+    "tableSectionSubtitle": "Search, inspect, and manage individual SAP accounts.",
     "notifySectionTitle": "New user alerts",
     "notifySectionSubtitle": "Send an email to the ops team whenever a new account is created.",
     "notifyToggleLabel": "Send email when a new user signs up",
@@ -436,7 +532,7 @@
     "tabAlerts": "Alerts",
     "tabSystem": "System",
     "systemDetailsTitle": "Node metrics",
-    "systemDetailsSubtitle": "Detailed CPU, memory, disk and GPU metrics for the CAP backend node.",
+    "systemDetailsSubtitle": "Detailed CPU, memory, disk, and GPU metrics for the SAP backend node.",
     "systemStatsDiskRoot": "Disk usage (root)",
     "systemStatsDiskMount": "Mounted at {{mount}}",
     "systemStatsCpuLoad": "Load avg: {{load1}} (1m), {{load5}} (5m), {{load15}} (15m)",
@@ -574,7 +670,7 @@
   "errors": {
     "storageRequired": {
       "title": "Storage is blocked",
-      "body": "CAP needs browser storage (cookies/local storage) to keep you signed in. Please enable storage for this site, disable strict privacy mode, or free up storage space, then reload."
+      "body": "SAP needs browser storage (cookies/local storage) to keep you signed in. Please enable storage for this site, disable strict privacy mode, or free up storage space, then reload."
     }
   }
 }

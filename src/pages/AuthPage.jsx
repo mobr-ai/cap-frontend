@@ -248,9 +248,9 @@ function AuthPage(props) {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     const redirectUri = getGoogleRedirectUri();
 
-    const state = `cap_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+    const state = `app_${Math.random().toString(36).slice(2)}_${Date.now()}`;
     try {
-      sessionStorage.setItem("cap_google_oauth_state", state);
+      sessionStorage.setItem("app_google_oauth_state", state);
     } catch {}
 
     const params = new URLSearchParams({
@@ -357,7 +357,7 @@ function AuthPage(props) {
     googleHandledHashRef.current = true;
 
     try {
-      const expected = sessionStorage.getItem("cap_google_oauth_state") || "";
+      const expected = sessionStorage.getItem("app_google_oauth_state") || "";
       if (expected && state && expected !== state) {
         window.history.replaceState(
           null,
@@ -367,7 +367,7 @@ function AuthPage(props) {
         showToast(t("googleAuthFailed"), "danger");
         return;
       }
-      sessionStorage.removeItem("cap_google_oauth_state");
+      sessionStorage.removeItem("app_google_oauth_state");
     } catch {}
 
     window.history.replaceState(
