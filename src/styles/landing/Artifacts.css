@@ -139,7 +139,7 @@
 }
 
 /* Artifact action row */
-.cap-root .artifact-actions {
+.app-root .artifact-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.35rem;
@@ -147,7 +147,7 @@
 }
 
 /* Buttons */
-.cap-root .artifact-toolBtn {
+.app-root .artifact-toolBtn {
   appearance: none;
   border: 1px solid #374151;
   background: #111827;
@@ -168,12 +168,12 @@
     border-color 120ms ease;
 }
 
-.cap-root .artifact-toolBtn:hover:not(:disabled) {
+.app-root .artifact-toolBtn:hover:not(:disabled) {
   background: #1f2937;
   transform: translateY(-1px);
 }
 
-.cap-root .artifact-toolBtn:disabled {
+.app-root .artifact-toolBtn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }

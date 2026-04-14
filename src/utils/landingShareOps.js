@@ -141,7 +141,7 @@ export async function createSharePayloadForArtifact({
     return {
       title,
       imageDataUrl,
-      hashtags: ["CAP", "Cardano", "Analytics"],
+      hashtags: ["SAP", "Solana", "Analytics"],
       message: sourceQuery || "",
     };
   } catch (err) {
@@ -150,9 +150,9 @@ export async function createSharePayloadForArtifact({
     console.error("[landingShareOps] share export failed:", err);
 
     return {
-      title: "CAP",
+      title: "SAP",
       imageDataUrl: null,
-      hashtags: ["CAP", "Cardano", "Analytics"],
+      hashtags: ["SAP", "Solana", "Analytics"],
       message: "",
       error: "share_failed",
     };

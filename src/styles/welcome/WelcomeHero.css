@@ -158,3 +158,52 @@
 .WelcomePage-auth {
   width: 100%;
 }
+
+.WelcomePage-kicker {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.38rem 0.72rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(210, 240, 255, 0.14);
+  color: rgba(220, 234, 255, 0.84);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 14px 40px rgba(0, 0, 0, 0.28);
+}
+
+.WelcomePage-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.68rem;
+  margin-top: 1.1rem;
+}
+
+.WelcomePage-highlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 40px;
+  padding: 0.6rem 0.88rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(236, 243, 255, 0.82);
+  font-size: 0.92rem;
+  backdrop-filter: blur(10px);
+}
+
+.WelcomePage-highlightDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #9ef7cf 0%, #b78dff 100%);
+  box-shadow:
+    0 0 0 4px rgba(158, 247, 207, 0.08),
+    0 0 24px rgba(183, 141, 255, 0.3);
+}
