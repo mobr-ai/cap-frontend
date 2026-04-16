@@ -1,6 +1,6 @@
 // Single-instance pollers per "key" (e.g., "dashboard", "dashboard-items").
 const g = typeof window !== "undefined" ? window : globalThis;
-if (!g.__CAP_POLLERS__) g.__CAP_POLLERS__ = new Map();
+if (!g.__APP_POLLERS__) g.__APP_POLLERS__ = new Map();
 
 function now() {
   return Date.now();
@@ -14,7 +14,7 @@ export function getPoller(key, opts) {
     runImmediately = true,
   } = opts || {};
 
-  if (g.__CAP_POLLERS__.has(key)) return g.__CAP_POLLERS__.get(key);
+  if (g.__APP_POLLERS__.has(key)) return g.__APP_POLLERS__.get(key);
 
   let timer = null;
   let inFlight = false;
@@ -28,7 +28,7 @@ export function getPoller(key, opts) {
     if (failCount === 0) return interval;
     const backoff = Math.min(
       maxInterval,
-      interval * 2 ** Math.min(failCount, 6)
+      interval * 2 ** Math.min(failCount, 6),
     );
     return backoff;
   };
@@ -97,6 +97,6 @@ export function getPoller(key, opts) {
     },
   };
 
-  g.__CAP_POLLERS__.set(key, api);
+  g.__APP_POLLERS__.set(key, api);
   return api;
 }

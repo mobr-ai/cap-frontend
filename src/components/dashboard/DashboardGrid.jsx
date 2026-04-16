@@ -89,9 +89,9 @@ export default function DashboardGrid({
     visualOrderRef.current = next;
 
     // Broadcast so other components can use visual order without prop threading.
-    window.__capDashboardVisualOrder = next;
+    window.__appDashboardVisualOrder = next;
     window.dispatchEvent(
-      new CustomEvent("cap:dashboard-visual-order", { detail: next })
+      new CustomEvent("app:dashboard-visual-order", { detail: next }),
     );
   };
 

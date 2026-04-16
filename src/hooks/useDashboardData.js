@@ -5,7 +5,7 @@ import { shallowEqualArray, setIfChanged } from "@/utils/arrays";
 
 export default function useDashboardData(authFetch) {
   const DISABLE_DASH =
-    String(import.meta.env.VITE_CAP_DISABLE_DASHBOARD_POLL ?? "false") ===
+    String(import.meta.env.VITE_APP_DISABLE_DASHBOARD_POLL ?? "false") ===
     "true";
 
   const [dashboard, setDashboard] = useState([]);
@@ -27,7 +27,7 @@ export default function useDashboardData(authFetch) {
         interval: 30_000,
         maxInterval: 300_000,
       }),
-    []
+    [],
   );
 
   const getItemsPoller = useCallback(
@@ -36,7 +36,7 @@ export default function useDashboardData(authFetch) {
         interval: 25_000,
         maxInterval: 180_000,
       }),
-    []
+    [],
   );
   const itemsPollerRef = useRef(null);
 
@@ -147,7 +147,7 @@ export default function useDashboardData(authFetch) {
         try {
           const res = await authFetchRef.current(
             `/api/v1/dashboard/${defaultId}/items`,
-            { signal: ac.signal }
+            { signal: ac.signal },
           );
           if (!res.ok) throw new Error(`items ${res.status}`);
           const data = await res.json();
@@ -178,7 +178,7 @@ export default function useDashboardData(authFetch) {
       acItemsRef.current = new AbortController();
       const res = await authFetchRef.current(
         `/api/v1/dashboard/${defaultId}/items`,
-        { signal: acItemsRef.current.signal }
+        { signal: acItemsRef.current.signal },
       );
       if (!res.ok) throw new Error(`items ${res.status}`);
       return res.json();

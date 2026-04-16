@@ -7,7 +7,7 @@ import reactStringReplace from "react-string-replace";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import LoadingPage from "../../pages/LoadingPage";
-import CardanoWalletLogin from "../wallet/CardanoWalletLogin";
+import SolanaWalletLogin from "../../wallet/SolanaWalletLogin";
 
 export default function EmailAuthPanel({
   t,
@@ -198,7 +198,11 @@ export default function EmailAuthPanel({
           />
         }
       >
-        <CardanoWalletLogin onLogin={handleLogin} showToast={showToast} />
+        <SolanaWalletLogin
+          onLogin={handleLogin}
+          showToast={showToast}
+          disabled={processing}
+        />
       </Suspense>
     </>
   );

@@ -27,7 +27,7 @@ export default function AnalysesPage() {
   // Gleam effect for processing convos
   useEffect(() => {
     // If a stream started before this page mounted, pick up the current state.
-    const initial = window.__capProcessingConversationId;
+    const initial = window.__appProcessingConversationId;
     if (initial) setProcessingConversationId(Number(initial));
 
     const onStart = (e) => {
@@ -54,13 +54,13 @@ export default function AnalysesPage() {
       setProcessingConversationId(cid && !Number.isNaN(cid) ? cid : null);
     };
 
-    window.addEventListener("cap:stream-start", onStart);
-    window.addEventListener("cap:stream-end", onEnd);
-    window.addEventListener("cap:stream-state", onState);
+    window.addEventListener("app:stream-start", onStart);
+    window.addEventListener("app:stream-end", onEnd);
+    window.addEventListener("app:stream-state", onState);
     return () => {
-      window.removeEventListener("cap:stream-start", onStart);
-      window.removeEventListener("cap:stream-end", onEnd);
-      window.removeEventListener("cap:stream-state", onState);
+      window.removeEventListener("app:stream-start", onStart);
+      window.removeEventListener("app:stream-end", onEnd);
+      window.removeEventListener("app:stream-state", onState);
     };
   }, []);
 

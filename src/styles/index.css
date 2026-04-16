@@ -19,19 +19,19 @@
 }
 
 :root {
-  --cap-sidebar-expanded: 280px;
-  --cap-sidebar-collapsed: 64px;
+  --app-sidebar-expanded: 280px;
+  --app-sidebar-collapsed: 64px;
 }
 
 /* Sidebar fixed on the left, app shifts via #page-wrap padding-left */
-.cap-sidebar-shell {
+.app-sidebar-shell {
   position: fixed;
   inset: 0 auto 0 0;
   z-index: 1200;
 }
 
-.cap-sidebar {
-  width: var(--cap-sidebar-expanded);
+.app-sidebar {
+  width: var(--app-sidebar-expanded);
   height: 100vh;
   background: radial-gradient(circle at top left, #111827 0%, #020617 55%);
   border-right: 1px solid rgba(148, 163, 184, 0.25);
@@ -44,11 +44,11 @@
   transition: width 0.18s ease;
 }
 
-.cap-sidebar.collapsed {
-  width: var(--cap-sidebar-collapsed);
+.app-sidebar.collapsed {
+  width: var(--app-sidebar-collapsed);
 }
 
-.cap-sidebar.expand-cursor {
+.app-sidebar.expand-cursor {
   cursor: e-resize;
 }
 
@@ -121,7 +121,9 @@
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease,
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
     transform 0.08s ease;
 }
 
@@ -153,13 +155,13 @@
 }
 
 /* Collapsed: center icons and hide labels */
-.cap-sidebar.collapsed .sidebar-item {
+.app-sidebar.collapsed .sidebar-item {
   justify-content: center;
   padding: 10px 0;
   gap: 0;
 }
 
-.cap-sidebar.collapsed .sidebar-item span {
+.app-sidebar.collapsed .sidebar-item span {
   display: none;
 }
 
@@ -200,7 +202,9 @@
   padding: 10px 10px;
   cursor: pointer;
   color: #e5e7eb;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .sidebar-conversation:hover {
@@ -305,8 +309,8 @@
 }
 
 :root {
-  --cap-sidebar-expanded: 280px;
-  --cap-sidebar-collapsed: 64px;
+  --app-sidebar-expanded: 280px;
+  --app-sidebar-collapsed: 64px;
 }
 
 /* Ensure the app surface is ALWAYS dark */
@@ -335,11 +339,11 @@ body,
 }
 
 #page-wrap.has-static-sidebar.sidebar-expanded {
-  padding-left: var(--cap-sidebar-expanded);
+  padding-left: var(--app-sidebar-expanded);
 }
 
 #page-wrap.has-static-sidebar.sidebar-collapsed {
-  padding-left: var(--cap-sidebar-collapsed);
+  padding-left: var(--app-sidebar-collapsed);
 }
 
 /* Prevent layout shift when bootstrap modal toggles body scrollbars */
