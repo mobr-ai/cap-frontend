@@ -44,14 +44,13 @@ import useSyncStatus from "./hooks/useSyncStatus";
 
 // Components
 import Header from "./components/Header";
-import SapWalletProvider from "./wallet/SapWalletProvider";
 
-const SESSION_KEY = "app_user_session";
+const SESSION_KEY = "cap_user_session";
 
 function canUseLocalStorage() {
   try {
     if (typeof window === "undefined" || !window.localStorage) return false;
-    const k = "__app_ls_test__";
+    const k = "__cap_ls_test__";
     window.localStorage.setItem(k, "1");
     window.localStorage.removeItem(k);
     return true;
@@ -97,12 +96,16 @@ function getInitialLoading() {
     const sess = canUseLocalStorage() ? safeGetSession() : null;
     const path = window.location.pathname;
     if (!sess) return false;
+    // Start with loader ON for dashboard (and optionally landing)
     return path === "/dashboard";
   } catch {
     return false;
   }
 }
 
+// ---------------------------
+// Layout wrapper
+// ---------------------------
 function Layout() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -116,6 +119,7 @@ function Layout() {
   const storageWorksRef = useRef(canUseLocalStorage());
   const storageWarnedRef = useRef(false);
 
+  // --- Toasts ---------------------------------------------------------------
   const [toast, setToast] = useState({
     show: false,
     message: "",
@@ -147,6 +151,7 @@ function Layout() {
 
   const persistSessionOrWarn = useCallback(
     (value) => {
+      // If we already know storage doesn't work, warn once and stop trying.
       if (!storageWorksRef.current) {
         warnStorageOnce();
         return false;
@@ -176,9 +181,13 @@ function Layout() {
     return ok;
   }, [warnStorageOnce]);
 
+  // --- Auth & Session -------------------------------------------------------
   const handleLogin = useCallback(
     (userObj) => {
+      // Always set state, even if persistence fails.
       setSession(userObj);
+
+      // Best-effort persistence + user feedback if it fails.
       persistSessionOrWarn(userObj);
 
       const from = (location.state && location.state.from) || "/";
@@ -188,28 +197,32 @@ function Layout() {
   );
 
   const handleLogout = useCallback(() => {
+    // Best-effort clear + warning if blocked.
     clearSessionOrWarn();
+
     setSession(null);
     setSidebarOpen(false);
     navigate("/login", { replace: true });
   }, [navigate, clearSessionOrWarn]);
 
+  // --- Authenticated fetch wrapper -----------------------------------------
   const { authFetch } = useAuthRequest({ session, showToast, handleLogout });
 
-  const {
-    healthOnline,
-    indexedHead,
-    sourceHead,
-    syncStatus,
-    syncPct,
-    syncLag,
-  } = useSyncStatus(session ? authFetch : null);
+  // --- CAP status polling (health + sync)
+  const { healthOnline, capBlock, cardanoBlock, syncStatus, syncPct, syncLag } =
+    useSyncStatus(session ? authFetch : null);
 
   const setUser = useCallback(
     (next) => {
       setSession((prev) => {
         const resolved = typeof next === "function" ? next(prev) : next;
-        persistSessionOrWarn(resolved);
+
+        // Only attempt to persist if there's a session object; still ok to persist null.
+        const ok = persistSessionOrWarn(resolved);
+        if (!ok) {
+          // Keep state updated in-memory regardless.
+        }
+
         return resolved;
       });
     },
@@ -220,15 +233,15 @@ function Layout() {
     () => ({
       session,
       user: session,
-      setUser,
+      setUser: setUser,
       handleLogout,
       handleLogin,
       showToast,
       setLoading,
       loading,
       healthOnline,
-      indexedHead,
-      sourceHead,
+      capBlock,
+      cardanoBlock,
       syncStatus,
       syncPct,
       syncLag,
@@ -241,14 +254,15 @@ function Layout() {
       setUser,
       loading,
       healthOnline,
-      indexedHead,
-      sourceHead,
+      capBlock,
+      cardanoBlock,
       syncStatus,
       syncPct,
       syncLag,
     ],
   );
 
+  // --- Enforce allowed routes when not logged in ---------------------------
   useEffect(() => {
     const allowlist = new Set(["/login", "/signup", "/welcome"]);
     if (!session && !allowlist.has(location.pathname)) {
@@ -260,6 +274,7 @@ function Layout() {
     }
   }, [session, location.pathname, navigate]);
 
+  // --- Prevent logged-in users from visiting auth pages ---------------------
   useEffect(() => {
     if (!session) return;
 
@@ -270,18 +285,20 @@ function Layout() {
     }
   }, [session, location.pathname, navigate]);
 
+  // Optional: if storage is blocked, warn once early (helps users understand “won’t stay logged in after refresh”)
   useEffect(() => {
     if (!storageWorksRef.current) warnStorageOnce();
   }, [warnStorageOnce]);
 
   return (
     <div id="outer-container">
+      {/* Header is part of the page wrap so it shifts with content */}
       <div id="page-wrap">
         <Header
           user={session}
           handleLogout={handleLogout}
-          indexedHead={indexedHead}
-          sourceHead={sourceHead}
+          capBlock={capBlock}
+          cardanoBlock={cardanoBlock}
           syncStatus={syncStatus}
           syncLag={syncLag}
           syncPct={syncPct}
@@ -290,10 +307,9 @@ function Layout() {
           setSidebarOpen={setSidebarOpen}
           authFetch={authFetch}
         />
-
         {loading && (
           <LoadingPage
-            type="ring"
+            type="ring" // try "spin", "pulse", "orbit", "ring"
             fullscreen={true}
             message={t("loading.workspace")}
           />
@@ -328,48 +344,54 @@ function Layout() {
   );
 }
 
+// ---------------------------
+// App Router
+// ---------------------------
 function AppRouter() {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
-
   return (
     <GoogleOAuthProvider clientId={googleClientId}>
-      <SapWalletProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<LandingPage />} />
-              <Route
-                path="/conversations/:conversationId"
-                element={<LandingPage />}
-              />
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/admin" element={<AdminPage />} />
-              <Route path="/analyses" element={<AnalysesPage />} />
-              <Route
-                path="/admin/users/:userId/queries"
-                element={<UserQueryMetricsPage />}
-              />
-              <Route
-                path="/admin/conversations/:conversationId"
-                element={<LandingPage />}
-              />
-              <Route path="/login" element={<WelcomePage type="login" />} />
-              <Route path="/welcome" element={<WelcomePage type="login" />} />
-              <Route path="/signup" element={<WaitingListPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </SapWalletProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<LandingPage />} />
+            <Route
+              path="/conversations/:conversationId"
+              element={<LandingPage />}
+            />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/analyses" element={<AnalysesPage />} />
+            <Route
+              path="/admin/users/:userId/queries"
+              element={<UserQueryMetricsPage />}
+            />
+            <Route
+              path="/admin/conversations/:conversationId"
+              element={<LandingPage />}
+            />
+
+            {/* <Route path="/login" element={<AuthPage type="login" />} /> */}
+            <Route path="/login" element={<WelcomePage type="login" />} />
+            <Route path="/welcome" element={<WelcomePage type="login" />} />
+            <Route path="/signup" element={<WaitingListPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
     </GoogleOAuthProvider>
   );
 }
 
+// ---------------------------
+// 404 Page
+// ---------------------------
 function NotFound() {
   return (
     <div className="container py-5">
-      <Image className="Auth-logo" src="./icons/logo.png" alt="App logo" />
+      <Image className="Auth-logo" src="./icons/logo.png" alt="CAP logo" />
+
       <h3 className="mb-3">Page not found</h3>
       <p>
         The page you’re looking for doesn’t exist. Go to{" "}
@@ -379,4 +401,7 @@ function NotFound() {
   );
 }
 
+// ---------------------------
+// Mount
+// ---------------------------
 createRoot(document.getElementById("root")).render(<AppRouter />);

@@ -5,7 +5,7 @@ export default function AuthShell({ title, children }) {
   return (
     <Container className="Auth-container-wrapper" fluid>
       <Container className="Auth-container">
-        <Image className="Auth-logo" src="./icons/logo.png" alt="SAP logo" />
+        <Image className="Auth-logo" src="./icons/logo.png" alt="CAP logo" />
         <h2 className="Auth-title">{title}</h2>
         {children}
       </Container>

@@ -1,10 +1,8 @@
-# SAP Frontend Guide
+# CAP Frontend Guide
 
-**Solana Analytics Platform — User & Developer Documentation**
+**Cardano Analytics Platform – User & Developer Documentation**
 
-This guide explains how to use, customize, and extend the **SAP Frontend**,
-the React/Vite interface for natural-language Solana analytics, semantic
-querying, dashboards, and artifact-driven exploration.
+This guide explains how to use, customize, and contribute to the **CAP Frontend**, the React/Vite interface powering natural language blockchain analytics, dashboards, and Cardano wallet integration.
 
 ---
 
@@ -12,8 +10,8 @@ querying, dashboards, and artifact-driven exploration.
 
 1. [Overview](#overview)
 2. [User Guide](#user-guide)
-   - [Signing In](#signing-in)
-   - [Welcome Experience](#welcome-experience)
+
+   - [Logging In](#logging-in)
    - [Landing Page](#landing-page)
    - [Natural Language Queries](#natural-language-queries)
    - [Interpreting Results](#interpreting-results)
@@ -21,7 +19,9 @@ querying, dashboards, and artifact-driven exploration.
    - [Pinning Items to Dashboard](#pinning-items-to-dashboard)
    - [Dashboard Usage](#dashboard-usage)
    - [Settings Page](#settings-page)
+
 3. [Developer Guide](#developer-guide)
+
    - [Project Structure](#project-structure)
    - [Environment Variables](#environment-variables)
    - [Running Locally](#running-locally)
@@ -29,131 +29,111 @@ querying, dashboards, and artifact-driven exploration.
    - [Key Hooks & Components](#key-hooks--components)
    - [Artifacts Architecture](#artifacts-architecture)
    - [Dashboard Architecture](#dashboard-architecture)
-   - [Migration Context](#migration-context)
-4. [Internationalization](#internationalization)
-5. [Styling & Theming](#styling--theming)
-6. [Contributing](#contributing)
+
+4. [Cardano Wallet Integration](#cardano-wallet-integration)
+5. [Internationalization](#internationalization)
+6. [Styling & Theming](#styling--theming)
+7. [Contributing](#contributing)
 
 ---
 
 # Overview
 
-The **SAP Frontend** is a React/Vite SPA that provides:
+The **CAP Frontend** is a React/Vite SPA that communicates with the CAP backend to provide:
 
-- natural-language analytics for Solana-focused workflows
-- streaming AI-assisted query experiences
-- interactive charts and tables
-- reusable dashboards built from saved artifacts
-- multilingual UX (EN + PT-BR)
-- service/sync awareness in the shared shell
-- responsive layouts for desktop and mobile usage
+- Natural language blockchain analytics
+- Interactive dashboard widgets
+- Multilingual interface (EN + PT-BR)
+- Wallet-based authentication (CIP-30)
+- Real-time ETL sync indicators
+- Responsive mobile-friendly UI
 
-SAP Frontend is being evolved from the reusable core of CAP Frontend, with the
-goal of becoming a clean **Solana-first analytics product** rather than a
-surface-level reskin.
+This document helps both **users** and **developers** operate and extend the frontend.
 
 ---
 
 # User Guide
 
-## Signing In
+## Logging In
 
-SAP currently supports:
+CAP supports **three authentication methods**:
 
-1. **Email + Password**
+1. **Email + Password** (with confirmation flow)
 2. **Google OAuth**
+3. **Cardano Wallet Login (CIP-30)** for on-chain actions
 
-The frontend preserves a shared authentication/session model across the app.
-
-<!-- <p align="center">
+<p align="center">
   <img src="./images/login.png"
        alt="Login Page"
        width="700"
        style="border-radius: 12px; box-shadow: 0 2px 12px rgba(56, 56, 56, 0.45);" />
-</p> -->
-
----
-
-## Welcome Experience
-
-The Welcome page introduces the SAP product positioning and serves as the main
-entry point into the application.
-
-It combines:
-
-- a hero section
-- sign-in / sign-up flow
-- animated video surface
-- architecture/feature showcase
-- progressive reveal on scroll
-
-This page is intended to communicate SAP’s core value clearly before the user
-enters the analytics workspace.
+</p>
 
 ---
 
 ## Landing Page
 
-After sign-in, users are taken to the main analytics workspace where they can
-ask questions in natural language and receive streamed answers, charts, tables,
-and derived artifacts.
+After login, you’re greeted with the **Natural Language Query Interface**, where you can ask things like:
 
-Examples of supported investigation styles:
+- “What is a datum?“
+- “Plot a pie chart to show how much the top 1% ADA holders represent from the total supply on the Cardano network.“
+- “Plot a bar chart showing monthly multi assets created in 2021.“
+- “List the latest 5 blocks.“
+- “Plot a line chart showing monthly number of transactions and outputs.“
 
-- “Show the latest 5 blocks on Solana”
-- “Compare validator activity with the largest recent stake movement”
-- “Summarize notable on-chain changes across Solana this week”
-- “Plot recent token activity across major Solana programs”
-
-<!-- <p align="center">
+<p align="center">
   <img src="./images/landing.png"
-       alt="Landing Page"
+       alt="Login Page"
        width="700"
        style="border-radius: 12px; box-shadow: 0 2px 12px rgba(56, 56, 56, 0.45);" />
-</p> -->
+</p>
 
 Key elements:
 
-- natural-language input
-- streamed response area
-- charts/tables rendered from structured results
-- sidebar conversation history
-- artifact actions such as sharing and pinning
+- Input box for NL queries
+- Streamed responses (real-time token updates)
+- Auto-detected charts/tables displayed below
+- “Pin to Dashboard” button for any artifact
+- Toast notifications on pinning
+- Query history scrollable on the left sidebar
 
 ---
 
 ## Natural Language Queries
 
-The frontend supports a streaming analytics workflow:
+The NL pipeline works like this:
 
-1. The user enters a request
-2. The backend interprets and plans the query
-3. Structured results are returned
-4. The frontend detects renderable artifacts
-5. Charts, tables, and narrative outputs are displayed together
+1. User enters a message
+2. Backend LLM interprets → generates SPARQL
+3. SPARQL executed on knowledge graph
+4. Results returned in a standardized `kv_results` format
+5. Frontend detects chart/table & displays automatically
 
-Features include:
+Features:
 
-- incremental streamed text
-- markdown rendering
-- chart/table auto-detection
-- reusable artifact actions
-- conversation persistence and reload
+- Markdown formatting
+- KaTeX math support
+- Code / SPARQL highlighting
+- Chunked/streamed text
+- Cancelable queries
 
 ---
 
 ## Interpreting Results
 
-Responses may include:
+Every system response includes:
 
-- narrative explanation
-- structured artifact data
-- tables
-- chart-ready results
-- dashboard-pin-ready outputs
+- **Textual explanation**
+- **Structured `kv_results`**:
 
-The frontend is responsible for turning structured result payloads into clear,
-reusable visual artifacts.
+  - `metadata`
+  - `result_type: table | bar_chart | line_chart | ...`
+  - `data.values`
+
+The frontend uses `kvToChartSpec` to automatically convert results into:
+
+- Vega-Lite charts (`VegaChart`)
+- Smart tables (`KVTable`)
 
 ---
 
@@ -161,66 +141,73 @@ reusable visual artifacts.
 
 Artifacts support:
 
-- responsive rendering
-- chart/table display
-- sharing
-- dashboard pinning
-- reusable metadata/config payloads
-- visual consistency across landing and dashboard contexts
+- Responsive layout
+- Click-to-expand (for charts)
+- Sortable columns (for tables)
+- Overflow detection for wide tables
+- Consistent dark/light theming
+- Toolbar with:
+
+  - Pin to dashboard
+  - Info tooltip
+  - Expand/close buttons
 
 ---
 
 ## Pinning Items to Dashboard
 
-Any compatible artifact can be pinned to a dashboard.
+Any artifact (chart or table) includes a **Pin to Dashboard** button.
 
-Typical flow:
+Workflow:
 
-1. User reviews an artifact
-2. User clicks **Pin to dashboard**
-3. A toast confirms the action
-4. The dashboard can be opened directly
-5. The widget persists as a saved artifact-based element
+1. User clicks **📌 Pin to Dashboard**
+2. A toast appears (“Pinned to your dashboard!”)
+3. Clicking the toast opens the dashboard directly
+4. Layout persists across sessions
 
 ---
 
 ## Dashboard Usage
 
-<!-- <p align="center">
+<p align="center">
   <img src="./images/dashboard.png"
-       alt="Dashboard"
+       alt="Login Page"
        width="700"
        style="border-radius: 12px; box-shadow: 0 2px 12px rgba(56, 56, 56, 0.45);" />
-</p> -->
+</p>
 
-Dashboard features include:
+Dashboard features:
 
-- pinned widgets
-- configurable widget metadata
-- responsive widget layout
-- chart expansion and interaction
-- persistent saved state
+- Widgets (drag & drop, resize planned)
+- Responsive cards (mobile-friendly)
+- Chart modal (click widget to enlarge)
+- Persistent layout stored in PostgreSQL
 
-Widgets are based on saved artifacts rather than raw query state, which makes
-them easier to reuse, revisit, and share.
+Each dashboard widget corresponds to a saved **artifact**, not raw data—preserving:
+
+- Chart type
+- Formatting
+- Query metadata
+- Config object
 
 ---
 
 ## Settings Page
 
-<!-- <p align="center">
+<p align="center">
   <img src="./images/settings.png"
-       alt="Settings"
+       alt="Login Page"
        width="700"
        style="border-radius: 12px; box-shadow: 0 2px 12px rgba(56, 56, 56, 0.45);" />
-</p> -->
+</p>
 
-Settings currently support or prepare for:
+Settings allow:
 
-- language selection
-- profile metadata
-- general user preferences
-- account-level actions
+- Language selection
+- Profile details (display name, username, avatar)
+- Notification preferences (planned)
+- Wallet connection status (planned)
+- Logout controls (planned)
 
 ---
 
@@ -228,41 +215,29 @@ Settings currently support or prepare for:
 
 ## Project Structure
 
-```text
+```
 src/
 ├── components/
-│   ├── artifacts/        # Charts, tables, renderers
-│   ├── auth/             # Auth shell and panels
-│   ├── dashboard/        # Grid, widgets, settings
-│   ├── landing/          # Query UX components
-│   ├── welcome/          # Welcome hero/showcase
+│   ├── artifacts/        # VegaChart, KVTable, artifact toolbars
+│   ├── dashboard/        # Grid, toolbar, widget components
+│   ├── layout/           # NavBar, Header, NavigationSidebar
 │   └── ...
 ├── hooks/
 │   ├── useAuthRequest.js
 │   ├── useLLMStream.js
-│   ├── useLandingStreamManager.js
-│   ├── useConversations.js
-│   ├── useSyncStatus.js
-│   └── ...
-├── locales/
-│   ├── en/
-│   └── pt/
+│   ├── useDashboardData.js
+│   ├── useDashboardItems.js
+│   └── useSyncStatus.js
 ├── pages/
-│   ├── WelcomePage.jsx
 │   ├── LandingPage.jsx
 │   ├── DashboardPage.jsx
-│   ├── AnalysesPage.jsx
 │   ├── SettingsPage.jsx
 │   └── ...
-├── styles/
-│   ├── landing/
-│   ├── welcome/
-│   └── ...
 ├── utils/
-│   ├── share/
-│   ├── kvCharts/
+│   ├── kvCharts.js
+│   ├── streamSanitizers.js
 │   └── ...
-└── index.jsx
+└── styles/
 ```
 
 ---
@@ -278,16 +253,16 @@ Vite loads variables depending on the mode:
 | `.env.development` | `npm run dev`   | Dev-only overrides      |
 | `.env.production`  | `npm run build` | Production settings     |
 
-Typical variables:
+Important variables:
 
-```env
+```
 VITE_API_URL=http://localhost:8000/api
+VITE_NL_ENDPOINT=http://localhost:8000/query
 VITE_GOOGLE_CLIENT_ID=...
 VITE_ENV_LABEL=DEV
-VITE_SAP_OFFLINE=false
 ```
 
-Adapt these to your local backend and deployment model.
+---
 
 ## Running Locally
 
@@ -302,138 +277,157 @@ Frontend runs on:
 http://localhost:5173
 ```
 
-To produce a production build:
+Hot reload is fully supported.
 
-```
-npm run build
-```
+---
 
 ## API Dependencies
 
-The frontend expects backend support for:
+The frontend communicates with:
 
-- authentication and session endpoints
-- analytics and query endpoints
-- dashboard CRUD flows
-- artifact and sharing-related operations
-- service and sync status reporting
+- `POST /query` — NL → SPARQL pipeline
+- `GET /api/v1/dashboard/*` — dashboards
+- `POST /api/v1/auth/*` — authentication
+- `POST /api/v1/wallet/*` — wallet sessions
+- `GET /api/v1/sync-status` — blockchain sync
 
-Exact endpoint details may evolve during the SAP migration as chain-specific CAP assumptions are removed and Solana-focused services mature.
+Ensure the backend is running (FastAPI + Postgres + Virtuoso).
+
+---
 
 ## Key Hooks & Components
 
 ### Hooks
 
-- useAuthRequest — authenticated request layer
-- useLLMStream — streamed response handling
-- useLandingStreamManager — landing-page query orchestration
-- useConversations — conversation loading and state updates
-- useSyncStatus — service and sync health polling
+- **useLLMStream** – Handles chunked streaming from NL endpoint
+- **useDashboardData** – Fetches dashboards list & defaults
+- **useDashboardItems** – Fetches widgets inside dashboards
+- **useSyncStatus** – Polls backend for ETL status
+- **useAuthRequest** – Authenticated fetch layer
 
 ### Components
 
-- WelcomeShowcase — SAP product and architecture marketing surface
-- NavBar / Header / NavigationSidebar — shared shell
-- VegaChart — chart renderer
-- DashboardGrid — widget layout container
-- DashboardWidget — saved artifact wrapper
-- ShareModal — sharing UI for artifacts and analyses
+- **VegaChart** – Auto-rendered Vega-Lite chart
+- **KVTable** – Auto-built dynamic table
+- **DashboardGrid** – Drag/resizable grid container
+- **DashboardWidget** – Wrapper for each artifact
+- **NavigationSidebar** – Sliding left sidebar
+- **Header / NavBar** – Top navigation
+- **Toast Notifications** – Click-to-open-dashboard support
+
+---
 
 ## Artifacts Architecture
 
-The frontend uses a structured artifact model so results can be rendered consistently across chat-like landing flows and dashboards.
+Artifacts standardize all chart/table results using:
 
-Artifacts generally carry:
+```
+{
+  result_type: "bar_chart" | "line_chart" | "table",
+  data: { values: [...] },
+  metadata: { columns: [...], count: ... }
+}
+```
 
-- result type
-- data payload
-- metadata
-- share and display information
-- optional visualization config
+Conversion is handled by:
 
-This allows tables and charts to be:
+```
+kvToChartSpec()
+```
 
-- rendered consistently
-- pinned to dashboards
-- shared externally
-- reopened later with preserved meaning
+Tables are rendered via **KVTable**, charts via **VegaChart**.
+
+Artifacts are reusable both in:
+
+- LandingPage (via NL query)
+- DashboardPage (widgets)
+
+---
 
 ## Dashboard Architecture
 
-Dashboard widgets are based on saved artifacts and layout metadata.
+Dashboard widgets are stored in PostgreSQL with fields:
 
-The frontend is responsible for:
+- `artifact_type`
+- `title`
+- `source_query`
+- `config`
+- `position`, `width`, `height`
 
-- widget rendering
-- layout behavior
-- widget settings
-- visual ordering
-- share and export behavior
+Frontend uses:
 
-As SAP evolves, the dashboard layer remains one of the key reusable assets from the original CAP frontend codebase.
+- **react-grid-layout** style grid
+- Resize + drag
+- Widget removal
+- Persisted layout
 
-## Migration Context
+---
 
-SAP Frontend is being migrated incrementally from CAP Frontend.
+# Cardano Wallet Integration
 
-Working principles:
+CAP supports any **CIP-30 wallet**, including:
 
-- keep the app buildable at every step
-- prefer incremental refactors over a rewrite
-- reuse chain-agnostic frontend infrastructure
-- move toward a Solana-first product and IA/UX model
+- Eternl
+- Flint
+- Lace
+- Nami (legacy)
 
-This means some legacy internals may still exist temporarily while the visible product, shared shell, and interaction model are being actively aligned to SAP.
+Capabilities:
 
-## Internationalization
+- Connect/disconnect
+- Read balance (ADA + multi-assets)
+- Sign transactions
+- Submit transactions (via backend proxy if configured)
 
-Translations live under:
+Used primarily for:
+
+- Publishing on-chain artifacts
+- Signing authentication requests
+- Confirming dashboard actions (future extensions)
+
+---
+
+# Internationalization
+
+Translations live in:
 
 ```
-src/locales/
+src/i18n/
 ```
 
-Current default languages:
+Languages supported:
 
-- English
-- Brazilian Portuguese
+- 🇬🇧 English
+- 🇧🇷 Portuguese
 
-All UI strings should go through t(...).
+All UI strings go through `t(...)`.
 
-When adding new user-facing features:
+Add new languages by adding new JSON files and updating the i18n init.
 
-- add EN and PT-BR entries together
-- avoid hardcoded copy unless it is a deliberate temporary fallback during migration
-- keep terminology consistent across welcome, landing, dashboard, and share flows
+---
 
-## Styling & Theming
+# Styling & Theming
 
-SAP uses:
+CAP uses:
 
-- React-Bootstrap as a base UI layer
-- custom CSS in src/styles/
-- shared app-\* namespace for generic shell and layout styling
-- feature-specific styles for landing, dashboard, and welcome flows
+- React-Bootstrap for base components
+- Custom CSS modules under `src/styles/`
+- Dark mode as the primary design
+- Tailored scrollbars, toasts, modals, and grid cards
 
-Current visual direction:
+Developers can modify:
 
-- dark premium shell
-- tight spacing and smooth motion
-- glassy panels and soft gradients
-- progressive reveal behavior on the Welcome experience
+- Theme colors
+- NavBar / Sidebar appearance
+- Dashboard card styles
+- Artifact spacing and shadows
 
-## Contributing
+---
 
-1. Create a feature branch
-2. Keep changes scoped and buildable
-3. Run a production build before opening a PR
-4. Include screenshots for meaningful UI changes
-5. Prefer migration-friendly refactors over large rewrites
+# Contributing
 
-Areas especially worth improving:
-
-- Solana-first product copy
-- artifact and dashboards UX
-- bundle cleanup and code-splitting
-- legacy dependency isolation
-- accessibility and responsive polish
+1. Fork the repository
+2. Create a feature branch
+3. Ensure ESLint passes
+4. Submit a PR with clear description
+5. Include screenshots when modifying UI

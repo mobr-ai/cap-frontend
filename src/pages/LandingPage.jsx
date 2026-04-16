@@ -240,7 +240,7 @@ export default function LandingPage() {
   const isEmptyState = messages.length === 0 && !isLoadingConversation;
 
   return (
-    <div className="app-root">
+    <div className="cap-root">
       <div className="container">
         <div className={`chat-container ${isEmptyState ? "is-empty" : ""}`}>
           <div className="messages">
@@ -313,8 +313,8 @@ export default function LandingPage() {
         <ShareModal
           show={shareOpen}
           onHide={() => setShareOpen(false)}
-          title={sharePayload?.title || "SAP"}
-          hashtags={sharePayload?.hashtags || ["SAP"]}
+          title={sharePayload?.title || "CAP"}
+          hashtags={sharePayload?.hashtags || ["CAP"]}
           link={null}
           message={sharePayload?.message || ""}
           imageDataUrl={sharePayload?.imageDataUrl || null}

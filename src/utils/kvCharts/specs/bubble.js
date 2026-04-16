@@ -4,7 +4,7 @@ import { detectUriField } from "../linking.js";
 
 function getColumnsDict(kv) {
   const m = kv?.metadata || {};
-  // Support multiple possible shapes used across pipelines.
+  // Support multiple possible shapes used across CAP/DFCT pipelines.
   return (
     m.columns || m.columns_dict || m.metadata_columns || m.columnsDict || {}
   );

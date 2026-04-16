@@ -52,12 +52,12 @@ export default function DashboardPage() {
   const [sharePayload, setSharePayload] = useState(null);
 
   const [sortOrder, setSortOrder] = useState(
-    () => localStorage.getItem("app.dashboard.sort") || "position",
+    () => localStorage.getItem("cap.dashboard.sort") || "position",
   );
 
   const handleChangeSort = useCallback((next) => {
     setSortOrder(next);
-    localStorage.setItem("app.dashboard.sort", next);
+    localStorage.setItem("cap.dashboard.sort", next);
   }, []);
 
   const handleExpandItem = useCallback((item) => {
@@ -326,7 +326,7 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="app-root">
+    <div className="cap-root">
       <div className="container py-4">
         <DashboardToolbar
           dashboards={dashboards}
@@ -402,8 +402,8 @@ export default function DashboardPage() {
         <ShareModal
           show={shareOpen}
           onHide={() => setShareOpen(false)}
-          title={sharePayload?.title || "SAP"}
-          hashtags={sharePayload?.hashtags || ["SAP"]}
+          title={sharePayload?.title || "CAP"}
+          hashtags={sharePayload?.hashtags || ["CAP"]}
           link={null}
           message={sharePayload?.message || ""}
           imageDataUrl={sharePayload?.imageDataUrl || null}

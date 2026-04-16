@@ -76,7 +76,7 @@ export function useLLMStream({
         createdEventEmitted = true;
 
         window.dispatchEvent(
-          new CustomEvent("app:conversation-created", {
+          new CustomEvent("cap:conversation-created", {
             detail: {
               conversation: {
                 id: convId,
@@ -98,7 +98,7 @@ export function useLLMStream({
         if (!convId) return;
 
         window.dispatchEvent(
-          new CustomEvent("app:conversation-touched", {
+          new CustomEvent("cap:conversation-touched", {
             detail: {
               conversation: {
                 id: convId,
