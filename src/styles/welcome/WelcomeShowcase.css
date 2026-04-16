@@ -476,6 +476,7 @@
   box-shadow:
     0 0 18px rgba(120, 255, 216, 0.26),
     0 0 36px rgba(171, 133, 255, 0.18);
+  z-index: -1;
 }
 
 .WelcomeCore-stem--up,

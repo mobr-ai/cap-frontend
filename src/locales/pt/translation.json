@@ -7,11 +7,11 @@
   "welcomeHeroHighlight1": "Raciocínio de IA com grounding",
   "welcomeHeroHighlight2": "Grafo de conhecimento semântico",
   "welcomeHeroHighlight3": "Experiência de analytics em streaming",
-  "welcomeHeroOverlayTop": "Descoberta em linguagem natural",
+  "welcomeHeroOverlayTop": "Explore em linguagem natural",
   "welcomeHeroOverlayTitle": "Geração de insights com grounding",
   "welcomeHeroOverlayBody": "De perguntas conversacionais a análises explicáveis sobre Solana.",
   "welcomeScrollHint": "Explore a arquitetura da plataforma",
-  "loginMsg": "Entrar na SAP",
+  "loginMsg": "Acessar seu workspace",
   "signUpMsg": "Criar sua conta SAP",
   "mailPlaceholder": "Digite seu e-mail",
   "processingMail": "Processando…",
@@ -135,8 +135,8 @@
         },
         "discovery": {
           "eyebrow": "UX profissional",
-          "title": "Descoberta em Linguagem Natural",
-          "desc": "Permite investigações blockchain complexas por meio de prompts em linguagem natural, perguntas de refinamento e resultados explicáveis."
+          "title": "Explore em Linguagem Natural",
+          "desc": "Permite investigações complexas na blockchain por meio de prompts em linguagem natural, perguntas de refinamento e resultados explicáveis."
         },
         "dashboard": {
           "eyebrow": "Monitoramento ao vivo",
@@ -159,9 +159,9 @@
         }
       },
       "mini": {
-        "discoveryLabel": "Descoberta em linguagem natural",
-        "discoveryPrompt": "Buscar consulta...",
-        "liveData": "Dados de Rede ao Vivo",
+        "discoveryLabel": "Explore em linguagem natural",
+        "discoveryPrompt": "Fazer consulta...",
+        "liveData": "Dados da Blockchain em Tempo Real",
         "externalContext": "Contexto Externo"
       },
       "queries": {
