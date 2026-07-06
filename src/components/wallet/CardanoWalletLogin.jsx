@@ -89,8 +89,7 @@ export default function CardanoWalletLogin({ onLogin, showToast }) {
     document.addEventListener("visibilitychange", onVis);
 
     const poll = setInterval(onUpdate, 500);
-
-    return () => {
+  return () => {
       clearInterval(poll);
       window.removeEventListener("cardano#initialized", onUpdate);
       window.removeEventListener("focus", onUpdate);
@@ -259,14 +258,6 @@ export default function CardanoWalletLogin({ onLogin, showToast }) {
           <Trans
             i18nKey="walletNotFound"
             components={{
-              nami: (
-                <a
-                  className="Auth-wallet-link"
-                  href="https://namiwallet.io/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                />
-              ),
               lace: (
                 <a
                   className="Auth-wallet-link"
@@ -275,10 +266,10 @@ export default function CardanoWalletLogin({ onLogin, showToast }) {
                   rel="noopener noreferrer"
                 />
               ),
-              flint: (
+              gero: (
                 <a
                   className="Auth-wallet-link"
-                  href="https://flint-wallet.com/"
+                  href="https://gerowallet.io/"
                   target="_blank"
                   rel="noopener noreferrer"
                 />

@@ -62,7 +62,7 @@
   "loginWithWallet": "Connect with a Cardano wallet",
   "connectWallet": "Connect {{wallet}} Wallet",
   "joinWaitListSubtitleWallet": "You connected a Cardano wallet. Enter your email to complete registration and join the waiting list.",
-  "walletNotFound": "No Cardano wallets detected. Install <lace>Lace</lace>, <eternl>Eternl</eternl>, <gero>GeroWallet</gero> or <yoroi>SecondFi (Yoroi)</yoroi> and reload.",
+  "walletNotFound": "No Cardano wallets detected. Install <lace>Lace</lace>, <eternl>Eternl</eternl> or <gero>GeroWallet</gero> and reload.",
   "walletLocked": "Please unlock your wallet and try again.",
   "walletLoginSuccess": "Wallet login successful",
   "loginError": "Login failed. Please try again.",

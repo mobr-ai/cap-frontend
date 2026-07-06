@@ -213,7 +213,7 @@ cap/src/cap/static/
 - **Vega-Lite & vega-embed** — chart rendering
 - **i18next** — multilingual support
 - **FastAPI backend** — REST endpoints for NL queries, dashboards, auth
-- **Cardano CIP-30** — wallet integration (Lace, Eternl, GeroWallet, SecondFi (Yoroi), etc.)
+- **Cardano CIP-30** — wallet integration (Lace, Eternl, GeroWallet, etc.)
 
 ---
 
