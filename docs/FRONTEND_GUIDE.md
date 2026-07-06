@@ -368,9 +368,7 @@ Frontend uses:
 CAP supports any **CIP-30 wallet**, including:
 
 - Eternl
-- Flint
 - Lace
-- Nami (legacy)
 
 Capabilities:
 
