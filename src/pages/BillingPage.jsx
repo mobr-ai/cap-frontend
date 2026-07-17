@@ -103,19 +103,25 @@ function formatWalletName(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function formatBillingActivityDate(value) {
+function formatBillingActivityDate(value, locale) {
   if (!value) return "";
-  try {
-    return new Date(value).toLocaleString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return "";
-  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  const normalizedLocale =
+    String(locale || "").toLowerCase().startsWith("pt")
+      ? "pt-BR"
+      : "en-US";
+
+  return parsed.toLocaleString(normalizedLocale, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: normalizedLocale !== "pt-BR",
+  });
 }
 
 function getBillingActivityReasonKey(reason) {
@@ -410,9 +416,23 @@ export default function BillingPage() {
 
 
 
-  const handleBillingPaid = async () => {
+  const handleBillingPaid = async ({ paymentKind } = {}) => {
+    /*
+     * Refresh access first because this request may synchronously consume a
+     * newly credited balance through Premium auto-renewal. Then reload the
+     * page-level billing data from the final post-renewal state.
+     */
+    await outlet.refreshBillingAccess?.();
     await refreshBilling();
-    showToast?.(t("settingsBilling.paymentVerified"), "success");
+
+    const messageKey =
+      paymentKind === "credit_deposit"
+        ? "settingsBilling.depositPaymentVerified"
+        : paymentKind === "support_contribution"
+          ? "settingsBilling.supportPaymentVerified"
+          : "settingsBilling.planPaymentVerified";
+
+    showToast?.(t(messageKey), "success");
   };
 
   const handleOpenDepositModal = () => {
@@ -1059,7 +1079,10 @@ export default function BillingPage() {
                           ) : null}
                         </div>
                         <div className="Settings-activity-date">
-                          {formatBillingActivityDate(item?.created_at)}
+                          {formatBillingActivityDate(
+                            item?.created_at,
+                            i18n.resolvedLanguage || i18n.language,
+                          )}
                           {item?.metadata?.tx_hash ? (
                             <a
                               className="Settings-activity-hash"

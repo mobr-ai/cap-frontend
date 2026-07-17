@@ -983,7 +983,9 @@
       "supportSubtitle": "Help fund open analytics infrastructure for Cardano.",
       "supportPlanName": "Voluntary contribution",
       "supportMeta": "Support contribution",
-      "supportNote": "This is a voluntary contribution. It does not add Balance or activate Premium."
+      "supportNote": "This is a voluntary contribution. It does not add Balance or activate Premium.",
+      "depositSuccess": "Payment verified. Your CAP Balance was credited. Premium auto-renewal may use this balance immediately.",
+      "supportSuccess": "Contribution verified. Thank you for supporting CAP."
     },
     "status": {
       "ready": "Ready",
@@ -1135,7 +1137,10 @@
     "autoRenewEnabled": "Premium auto-renew enabled.",
     "autoRenewDisabled": "Premium auto-renew disabled.",
     "premiumExtendThrough": "Extends Premium through {{date}}.",
-    "premiumActivateForDays": "Activates Premium for {{days}} days."
+    "premiumActivateForDays": "Activates Premium for {{days}} days.",
+    "depositPaymentVerified": "Payment verified. Your CAP Balance was credited. Because Premium auto-renewal was enabled, the balance may have been used immediately to activate Premium.",
+    "planPaymentVerified": "Payment verified. Premium access is now active.",
+    "supportPaymentVerified": "Contribution verified. Thank you for supporting CAP."
   },
   "connectingWallet": "Connecting {{wallet}}...",
   "billingAccess": {

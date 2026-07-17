@@ -379,7 +379,10 @@ export default function CardanoPaymentModal({
 
       setStatus("paid");
       await refreshWalletBalance();
-      onPaid?.(verified);
+      await onPaid?.({
+        ...verified,
+        paymentKind,
+      });
     } catch (err) {
       console.error("[Billing] Cardano payment failed:", err);
       setError(getErrorMessage(t, err));
@@ -557,7 +560,11 @@ export default function CardanoPaymentModal({
 
         {status === "paid" ? (
           <div className="CardanoPaymentModal-success">
-            {t("billing.modal.success")}
+            {isDepositPayment
+              ? t("billing.modal.depositSuccess")
+              : isSupportPayment
+                ? t("billing.modal.supportSuccess")
+                : t("billing.modal.success")}
           </div>
         ) : null}
 
