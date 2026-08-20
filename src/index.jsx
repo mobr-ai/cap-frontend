@@ -30,7 +30,6 @@ import { useTranslation } from "react-i18next";
 
 // Pages
 import AuthPage from "./pages/AuthPage";
-import WaitingListPage from "./pages/WaitingListPage";
 import SettingsPage from "./pages/SettingsPage";
 import BillingPage from "./pages/BillingPage";
 import LandingPage from "./pages/LandingPage";
@@ -494,8 +493,7 @@ function Layout() {
 
   // --- Enforce allowed routes when not logged in ---------------------------
   useEffect(() => {
-    const publicPaths = ["/login", "/signup", "/welcome"];
-    if (BETA_PROGRAM_ENABLED) publicPaths.push("/beta", "/closed-beta");
+    const publicPaths = ["/login", "/signup", "/welcome", "/beta", "/closed-beta"];
     const allowlist = new Set(publicPaths);
     if (!session && !allowlist.has(location.pathname)) {
       setSidebarOpen(false);
@@ -619,7 +617,9 @@ function AppRouter() {
               <>
               </>
             )}
-            <Route path="/signup" element={<WaitingListPage />} />
+            <Route path="/signup" element={<WelcomePage type="create" />} />
+            <Route path="/beta" element={<BetaProgramPage />} />
+            <Route path="/closed-beta" element={<BetaProgramPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/billing" element={<BillingPage />} />
             <Route path="*" element={<NotFound />} />

@@ -196,22 +196,6 @@ export default function CardanoWalletLogin({ onLogin, showToast }) {
         return;
       }
 
-      if (data?.status === "pending_confirmation") {
-        const uid = data?.id;
-        const wallet = data?.wallet_address;
-
-        if (uid && wallet) {
-          window.location.href =
-            `/signup?state=wallet` +
-            `&uid=${encodeURIComponent(uid)}` +
-            `&wallet=${encodeURIComponent(wallet)}`;
-          return;
-        }
-
-        showToast?.(t("walletPendingApproval"), "secondary");
-        return;
-      }
-
       showToast?.(t("loginError"), "danger");
     } catch (err) {
       console.error("Cardano Auth Error:", err);

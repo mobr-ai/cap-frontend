@@ -37,6 +37,10 @@ export default function WelcomePage(props) {
   const [email, setEmail] = useState();
   const [pass, setPass] = useState();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const isPendingConfirmation =
+    searchParams.get("confirmed") === "false";
+
   const [showPassword, setShowPassword] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [confirmationError, setConfirmationError] = useState(false);
@@ -86,9 +90,16 @@ export default function WelcomePage(props) {
     setSetupToken(tok);
     setSetupTokenError(false);
 
-    if (isSetPass && urlEmail && isValidEmail(urlEmail)) {
+    if (
+      urlEmail &&
+      isValidEmail(urlEmail) &&
+      (isSetPass || isPendingConfirmation)
+    ) {
       setEmail(urlEmail);
-      setRequestLinkEmail(urlEmail);
+
+      if (isSetPass) {
+        setRequestLinkEmail(urlEmail);
+      }
     }
 
     if (isSetPass) setConfirmationError(false);
@@ -107,7 +118,8 @@ export default function WelcomePage(props) {
       }
     },
     onError: () => {},
-    disabled: processing || setupMode,
+    disabled:
+      processing || setupMode || isPendingConfirmation,
     use_fedcm_for_prompt: true,
     cancel_on_tap_outside: false,
     promptMomentNotification: (n) => {
@@ -343,11 +355,19 @@ export default function WelcomePage(props) {
 
       if (apiResponse?.status === "pending_confirmation") {
         const pendingEmail = apiResponse?.email || "";
+
+        const redirect =
+          apiResponse?.redirect || "/login?confirmed=false";
+
+        const separator = redirect.includes("?") ? "&" : "?";
+
         navigate(
-          `/signup?state=already${
-            pendingEmail ? `&email=${encodeURIComponent(pendingEmail)}` : ""
-          }`,
+          pendingEmail
+            ? `${redirect}${separator}email=${encodeURIComponent(pendingEmail)}`
+            : redirect,
+          { replace: true },
         );
+
         return;
       }
 
@@ -472,8 +492,6 @@ export default function WelcomePage(props) {
       ? t("signUpMsg")
       : t("loginMsg");
 
-  const isConfirmFalse = searchParams.get("confirmed") === "false";
-
   useRevealOnScroll();
 
   return (
@@ -521,7 +539,7 @@ export default function WelcomePage(props) {
               )}
             </div>
 
-            {!loading && !isConfirmFalse && (
+            {!loading && !isPendingConfirmation && (
               <div className="WelcomePage-auth">
                 <AuthShell title={titleText}>
                   {setupMode ? (
@@ -573,7 +591,7 @@ export default function WelcomePage(props) {
               </div>
             )}
 
-            {!loading && isConfirmFalse && !setupMode && (
+            {!loading && isPendingConfirmation && !setupMode && (
               <div className="WelcomePage-auth">
                 <ConfirmMessageBox
                   t={t}

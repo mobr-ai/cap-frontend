@@ -12,12 +12,6 @@ function envEnabled(name, fallback = true) {
   return !["0", "false", "no", "off", "disabled"].includes(value);
 }
 
-export const BETA_PROGRAM_ENABLED = envEnabled(
-  "VITE_CAP_BETA_PROGRAM_ENABLED",
-  true,
-);
+export const BETA_PROGRAM_ENABLED = false;
 
-export const BETA_ADMIN_TAB_ENABLED = envEnabled(
-  "VITE_CAP_BETA_ADMIN_TAB_ENABLED",
-  BETA_PROGRAM_ENABLED,
-);
+export const BETA_ADMIN_TAB_ENABLED = envEnabled("VITE_CAP_BETA_ADMIN_TAB_ENABLED", true);

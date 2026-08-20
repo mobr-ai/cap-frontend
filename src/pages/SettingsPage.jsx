@@ -40,6 +40,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useAuthRequest } from "../hooks/useAuthRequest";
+import EmailSettingsControl from "../components/settings/EmailSettingsControl";
 import { useLocalUpload } from "../hooks/useLocalUpload";
 import { resizeImage } from "../utils/resizeImage";
 import useOnClickOutside from "../hooks/useOnClickOutside";
@@ -989,10 +990,13 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              {/* Email */}
-              <p className="Settings-username-wallet mb-1">
-                {user.email || ""}
-              </p>
+              {/* Optional verified email */}
+              <EmailSettingsControl
+                user={user}
+                session={outlet?.session}
+                setUser={setUser}
+                showToast={showToast}
+              />
 
               <small className="Settings-referral-row">
                 {t("referralLink")}:

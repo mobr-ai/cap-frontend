@@ -33,6 +33,10 @@ function AuthPage(props) {
   const [email, setEmail] = useState();
   const [pass, setPass] = useState();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const isPendingConfirmation =
+    searchParams.get("confirmed") === "false";
+
   const [showPassword, setShowPassword] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [confirmationError, setConfirmationError] = useState(false);
@@ -63,9 +67,16 @@ function AuthPage(props) {
     setSetupToken(tok);
     setSetupTokenError(false);
 
-    if (isSetPass && urlEmail && isValidEmail(urlEmail)) {
+    if (
+      urlEmail &&
+      isValidEmail(urlEmail) &&
+      (isSetPass || isPendingConfirmation)
+    ) {
       setEmail(urlEmail);
-      setRequestLinkEmail(urlEmail);
+
+      if (isSetPass) {
+        setRequestLinkEmail(urlEmail);
+      }
     }
 
     if (isSetPass) setConfirmationError(false);
@@ -84,7 +95,11 @@ function AuthPage(props) {
       }
     },
     onError: () => {},
-    disabled: loading || processing || setupMode,
+    disabled:
+      loading ||
+      processing ||
+      setupMode ||
+      isPendingConfirmation,
     cancel_on_tap_outside: false,
   });
 
@@ -304,11 +319,19 @@ function AuthPage(props) {
 
       if (apiResponse?.status === "pending_confirmation") {
         const pendingEmail = apiResponse?.email || "";
+
+        const redirect =
+          apiResponse?.redirect || "/login?confirmed=false";
+
+        const separator = redirect.includes("?") ? "&" : "?";
+
         navigate(
-          `/signup?state=already${
-            pendingEmail ? `&email=${encodeURIComponent(pendingEmail)}` : ""
-          }`,
+          pendingEmail
+            ? `${redirect}${separator}email=${encodeURIComponent(pendingEmail)}`
+            : redirect,
+          { replace: true },
         );
+
         return;
       }
 
@@ -434,8 +457,6 @@ function AuthPage(props) {
       ? t("signUpMsg")
       : t("loginMsg");
 
-  const isConfirmFalse = searchParams.get("confirmed") === "false";
-
   return (
     <Container className="Auth-body-wrapper" fluid>
       {loading && (
@@ -444,7 +465,7 @@ function AuthPage(props) {
         </Container>
       )}
 
-      {!loading && !isConfirmFalse && (
+      {!loading && !isPendingConfirmation && (
         <AuthShell title={titleText}>
           {setupMode ? (
             <SetPasswordPanel
@@ -494,7 +515,7 @@ function AuthPage(props) {
         </AuthShell>
       )}
 
-      {!loading && isConfirmFalse && !setupMode && (
+      {!loading && isPendingConfirmation && !setupMode && (
         <ConfirmMessageBox
           t={t}
           resendLoading={resendLoading}
